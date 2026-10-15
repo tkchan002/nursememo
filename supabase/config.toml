@@ -1,0 +1,4 @@
+# Authenticated account-management calls require a signed-in user JWT.
+# The function ALSO independently checks the user_access maintenance role.
+[functions.admin-users]
+verify_jwt = true

@@ -6,7 +6,7 @@ export const CONFIG = Object.freeze({
   // Explicit local-only demonstration environment; never inferred from missing keys.
   FORCE_DEMO_MODE: false,
 
-  APP_NAME: 'Night Memo',
+  APP_NAME: 'Nurse Memo',
   RECENT_HISTORY_LIMIT: 30,
 });
 

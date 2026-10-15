@@ -1,4 +1,4 @@
-name: Build and Deploy Night Memo
+name: Build and Deploy Nurse Memo
 
 on:
   push:

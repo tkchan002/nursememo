@@ -1,4 +1,4 @@
-// Original Night Memo print renderer adapted for the Supabase ward page.
+// Original Ward memo print renderer adapted for the Supabase ward page.
 // The visual structure and default font sizes follow the legacy Ward C5 app.
 
 import { formatEmptyBedEntries } from './domain/empty-bed-reporting.js';

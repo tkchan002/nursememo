@@ -9,6 +9,7 @@ import { qs, qsa, esc } from '../core/dom.js';
 import { todayISO, toDisplayDate, formatDateTime } from '../core/dates.js';
 import { flash } from '../core/ui.js';
 import { setAppHeader } from '../components/app-shell.js';
+import { CONFIG } from '../config.js';
 import { initMaintenanceTestData, refreshGeneratedDemoBatches } from './maintenance-test-data.js';
 import { moveOrderedItem, sortByOrder } from '../domain/ordering.js';
 import { emptyBedGenderLabel, validateWardName } from '../domain/ward.js';
@@ -39,7 +40,7 @@ init().catch(error => { console.error(error); flash(error.message || String(erro
 async function init() {
   state.access = await requireRole('maintenance');
   if (!state.access) return;
-  setAppHeader({ title: 'Night Memo Maintenance', subtitle: 'Configuration and lifecycle console', access: state.access, mode: DB_MODE });
+  setAppHeader({ title: CONFIG.APP_NAME, subtitle: 'Maintenance · Configuration and lifecycle console', access: state.access, mode: DB_MODE });
   initMaintenanceTestData();
   bind();
   // Only the visible Wards tab is on the initial critical path. Accounts,

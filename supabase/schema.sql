@@ -297,6 +297,14 @@ create policy audit_maint_read on public.audit_log for select to authenticated u
 drop policy if exists audit_maint_insert on public.audit_log;
 create policy audit_maint_insert on public.audit_log for insert to authenticated with check (public.app_role()='maintenance');
 
+-- Privileged server-side setup and Maintenance account administration.
+-- New Supabase projects may disable automatic grants to Data API roles.
+-- BYPASSRLS on service_role does not bypass missing SQL table privileges.
+-- Keep these grants narrow and never grant them to anon.
+grant select on table public.wards to service_role;
+grant select, insert on table public.user_access to service_role;
+grant insert on table public.audit_log to service_role;
+
 -- Minimum grants for authenticated users; RLS still decides row access.
 grant select on public.wards,public.ward_operating_periods,public.ward_capacity_history,public.user_access,public.ward_staff,public.form_versions,public.report_items,public.audit_log to authenticated;
 grant insert,update on public.wards,public.ward_operating_periods,public.ward_capacity_history,public.ward_staff,public.form_versions,public.report_items,public.audit_log to authenticated;

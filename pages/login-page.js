@@ -3,7 +3,7 @@ import { qs, qsa } from '../core/dom.js';
 import { flash } from '../core/ui.js';
 import { modeBadge } from '../components/app-shell.js';
 
-const DB_MODE = isSupabaseConfigured() ? 'supabase' : 'demo';
+const DB_MODE = CONFIG.FORCE_DEMO_MODE ? 'demo' : 'supabase';
 const titles = {
   ward: 'Ward Login',
   manager: 'Patrol Night Login',

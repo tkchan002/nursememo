@@ -145,3 +145,15 @@ body.login-page{
 }
 @keyframes login-spin{to{transform:rotate(360deg)}}
 @media(prefers-reduced-motion:reduce){#loginBtn[aria-busy="true"]::before{animation:none}}
+
+/* Fail-closed startup state: visible even before the user selects a role. */
+.login-config-error{
+  max-width:800px;
+  margin:0 auto 22px;
+  padding:14px 18px;
+  border:1px solid #bd5555;
+  background:#fff4f4;
+  color:#762424;
+  border-radius:6px;
+}
+.login-role-card:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}

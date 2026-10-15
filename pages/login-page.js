@@ -1,9 +1,9 @@
-import { CONFIG } from '../config.js';
+import { APP_RUNTIME } from '../config.js';
 import { qs, qsa } from '../core/dom.js';
 import { flash } from '../core/ui.js';
 import { modeBadge } from '../components/app-shell.js';
 
-const DB_MODE = CONFIG.FORCE_DEMO_MODE ? 'demo' : 'supabase';
+const DB_MODE = APP_RUNTIME.mode;
 const titles = {
   ward: 'Ward Login',
   manager: 'Patrol Night Login',
@@ -23,7 +23,20 @@ const destinations = {
 let role = null;
 let authPromise = null;
 
-qs('#modeBadge').innerHTML = modeBadge(DB_MODE);
+qs('#modeBadge').innerHTML = APP_RUNTIME.ready
+  ? modeBadge(DB_MODE)
+  : '<span class="mode-badge">Setup required</span>';
+
+// A misconfigured production connection is visible and non-interactive from
+// first paint; never show demo credentials or wait for login to discover it.
+if (!APP_RUNTIME.ready) {
+  const message = qs('#loginConfigError');
+  message.textContent = APP_RUNTIME.error;
+  message.classList.remove('hidden');
+  qsa('.login-option').forEach(button => { button.disabled = true; });
+  qs('#loginBtn').disabled = true;
+}
+
 
 function loadAuth() {
   if (!authPromise) authPromise = import('../services/auth-service.js');
@@ -32,7 +45,7 @@ function loadAuth() {
 
 // Let the page paint first, then prepare the auth/Supabase module in the
 // background so the Login click normally waits only for credential auth.
-if (DB_MODE === 'supabase') {
+if (APP_RUNTIME.ready && DB_MODE === 'supabase') {
   const warmAuth = () => { loadAuth().catch(() => {}); };
   if ('requestIdleCallback' in window) {
     window.requestIdleCallback(warmAuth, { timeout: 800 });
@@ -50,7 +63,7 @@ qs('#togglePassword').onclick = () => {
 };
 qs('#loginForm').onsubmit = async event => {
   event.preventDefault();
-  if (!role) return;
+  if (!role || !APP_RUNTIME.ready) return;
 
   let navigating = false;
   setLoginBusy(true);
@@ -67,6 +80,7 @@ qs('#loginForm').onsubmit = async event => {
 };
 
 function selectRole(nextRole) {
+  if (!APP_RUNTIME.ready) return;
   role = nextRole;
   qs('#loginTitle').textContent = titles[nextRole];
   qs('#loginRolePrompt').textContent = `Sign in to ${titles[nextRole]}.`;

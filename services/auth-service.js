@@ -1,6 +1,7 @@
 import { DB_MODE, supabase } from '../data/client.js';
 import { ensureDemoState } from '../data/demo-state.js';
 import { getCurrentAccess } from '../data/repositories/access-repository.js';
+import { loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
 
 const LOGIN_PAGE = './index.html';
 
@@ -51,8 +52,10 @@ export async function signIn(account, password, expectedRole = null) {
     return demoAccount;
   }
 
+  // Users enter their short Night Memo ID. Supabase Auth still expects email.
+  // Conversion is deterministic and does not expose a username lookup endpoint.
   const { data, error } = await supabase.auth.signInWithPassword({
-    email: account,
+    email: loginIdToEmail(account),
     password,
   });
   if (error) throw error;

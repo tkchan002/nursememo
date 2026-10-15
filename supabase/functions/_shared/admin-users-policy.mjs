@@ -1,3 +1,4 @@
+import { normalizeLoginId } from './login-identity.mjs';
 /** Input contract for the privileged account-management Edge Function.
  * Kept independent of Supabase/Deno so it can be tested in Node.
  */
@@ -7,7 +8,6 @@ export class InputError extends Error {
 
 const ROLES = new Set(['ward', 'manager', 'maintenance']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function text(value, name, maxLength, required = true) {
   if (value == null && !required) return null;
@@ -23,10 +23,9 @@ function userId(value) {
   return value;
 }
 
-function email(value) {
-  const result = text(value, 'Account email', 254)?.toLowerCase();
-  if (!EMAIL.test(result)) throw new InputError('Enter a valid email address.');
-  return result;
+function accountId(value) {
+  try { return normalizeLoginId(value); }
+  catch (error) { throw new InputError(error.message); }
 }
 
 function password(value) {
@@ -62,7 +61,7 @@ export function parseAdminCommand(body) {
     case 'create':
       validateFields(body, ['action', 'login_id', 'display_name', 'role', 'ward_id', 'password']);
       return {
-        action: 'create', login_id: email(body.login_id),
+        action: 'create', login_id: accountId(body.login_id),
         display_name: optionalDisplayName(body.display_name),
         ...access(body), password: password(body.password),
       };
@@ -70,7 +69,7 @@ export function parseAdminCommand(body) {
       validateFields(body, ['action', 'auth_user_id', 'login_id', 'display_name']);
       return {
         action: 'rename_login', auth_user_id: userId(body.auth_user_id),
-        login_id: email(body.login_id), display_name: optionalDisplayName(body.display_name),
+        login_id: accountId(body.login_id), display_name: optionalDisplayName(body.display_name),
       };
     case 'update_access':
       validateFields(body, ['action', 'auth_user_id', 'role', 'ward_id', 'active', 'display_name']);

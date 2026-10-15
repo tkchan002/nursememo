@@ -1,5 +1,6 @@
 import { withSupabase } from 'npm:@supabase/server@1';
 import { InputError, parseAdminCommand } from '../_shared/admin-users-policy.mjs';
+import { loginIdToEmail } from '../_shared/login-identity.mjs';
 
 // The browser MUST never receive a service-role/secret key. The wrapper supplies
 // an RLS-scoped client for authentication and an admin client for controlled writes.
@@ -59,7 +60,7 @@ export default {
       // write fails, clean up the newly-created Auth user rather than leave
       // an orphaned account that cannot log in.
       const { data: created, error: authError } = await db.auth.admin.createUser({
-        email: command.login_id,
+        email: loginIdToEmail(command.login_id),
         password: command.password,
         email_confirm: true,
       });
@@ -115,7 +116,7 @@ export default {
         if (findError || !authUser?.user?.email) return reply('Authentication account not found.', 404);
         const previousEmail = authUser.user.email;
         const { error: renameError } = await db.auth.admin.updateUserById(targetId, {
-          email: command.login_id, email_confirm: true,
+          email: loginIdToEmail(command.login_id), email_confirm: true,
         });
         if (renameError) return reply('Unable to change account email.', 409);
         const { data, error } = await writeAccess(db, actorId, 'rename_login', {

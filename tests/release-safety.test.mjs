@@ -22,14 +22,15 @@ test('demo login defaults match real demo account names and accept non-email IDs
     assert.ok(accounts.DEMO_ACCOUNTS.some(a => a.login_id === id), id);
     assert.ok(login.includes(`'${id}'`), `${id} must be selectable`);
   }
-  assert.match(login, /DB_MODE === 'demo' \? 'text' : 'email'/);
+  assert.match(login, /qs\('#loginId'\)\.type = 'text'/);
 });
 
 test('local service role environment files are Git-ignored', async () => {
   const ignore = await file('.gitignore');
   assert.match(ignore, /^\.env$/m);
   assert.match(ignore, /^\.env\.\*$/m);
-  const script = await file('scripts/create-demo-users.mjs');
+  const script = await file('scripts/bootstrap-accounts.mjs');
   assert.doesNotMatch(script, /import 'dotenv\/config'/);
-  assert.match(script, /login_id:email/);
+  assert.match(script, /login_id: account\.loginId/);
+  assert.match(ignore, /^\.private\/$/m);
 });

@@ -7,3 +7,7 @@ dist/
 .env
 .env.*
 !.env.example
+
+# One-time account credentials and other private operator outputs.
+.private/
+account-credentials*.csv

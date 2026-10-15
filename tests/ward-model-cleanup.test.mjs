@@ -62,7 +62,7 @@ test('runtime sources contain no legacy ward_code, ward.code, or dynamic gender 
     'data/demo-state.js',
     'demo-data.js',
     'night-roster-print.js',
-    'scripts/create-demo-users.mjs',
+    'scripts/bootstrap-accounts.mjs',
   ];
   const combined = runtimeFiles.map(file => `\n// ${file}\n${read(file)}`).join('\n');
   assert.doesNotMatch(combined, /\bward_code\b|ward\??\.code|\bw\.code\b|mWardCode|manager_section|mWardSection|value="dynamic"|empty_bed_gender_mode\s*===\s*['"]dynamic['"]/);

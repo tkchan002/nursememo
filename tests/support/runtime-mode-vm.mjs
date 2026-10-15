@@ -52,9 +52,10 @@ const roleButtons = ['ward', 'manager', 'maintenance'].map(role => {
   return button;
 });
 let createClientCalls = 0;
+let capturedLogin = null;
 const client = {
   auth: {
-    signInWithPassword: async () => ({ data: { user: { id: 'test-user' }, session: { user: { id: 'test-user' } } }, error: null }),
+    signInWithPassword: async credentials => { capturedLogin = credentials; return { data: { user: { id: 'test-user' }, session: { user: { id: 'test-user' } } }, error: null }; },
     getSession: async () => ({ data: { session: { user: { id: 'test-user' } } }, error: null }),
     signOut: async () => {},
   },
@@ -150,11 +151,17 @@ if (scenario === 'missing') {
   assert.equal(wardButton.disabled, false);
   assert.equal(introError.classList.contains('hidden'), true);
   wardButton.onclick();
-  assert.equal(loginId.type, 'email');
+  assert.equal(loginId.type, 'text');
   assert.equal(loginId.value, '');
   assert.equal(password.value, '');
   const database = await entry('data/client.js');
   assert.equal(database.DB_MODE, 'supabase');
   assert.equal(createClientCalls, 1);
+  loginId.value = 'c10';
+  password.value = 'example-test-password';
+  await el('#loginForm').onsubmit({ preventDefault: () => {} });
+  assert.equal(capturedLogin?.email, 'c10@accounts.nightmemo.example.com');
+  assert.equal(capturedLogin?.password, 'example-test-password');
+  assert.equal(ctx.location.target, './ward.html');
 }
 console.log(`Runtime integration ${scenario}: passed`);

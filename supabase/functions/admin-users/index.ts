@@ -1,6 +1,7 @@
 import { withSupabase } from 'npm:@supabase/server@1';
 import { InputError, parseAdminCommand } from '../_shared/admin-users-policy.mjs';
 import { loginIdToEmail } from '../_shared/login-identity.mjs';
+import { loadAccountDirectory } from '../_shared/account-directory.mjs';
 
 // The browser MUST never receive a service-role/secret key. The wrapper supplies
 // an RLS-scoped client for authentication and an admin client for controlled writes.
@@ -52,6 +53,17 @@ export default {
     }
 
     const db = ctx.supabaseAdmin;
+    if (command.action === 'list_accounts') {
+      // Both public.user_access and the actual Auth directory are read under
+      // the already-verified Maintenance permission. Never return Auth's full
+      // user objects: they can contain sensitive, irrelevant information.
+      try {
+        return Response.json(await loadAccountDirectory(db, PUBLIC_COLUMNS));
+      } catch (error) {
+        console.error('Supabase Auth account listing failed:', error instanceof Error ? error.name : 'unknown');
+        return reply('Unable to verify Supabase Authentication accounts.', 503);
+      }
+    }
     let targetId: string;
     let result: unknown;
 

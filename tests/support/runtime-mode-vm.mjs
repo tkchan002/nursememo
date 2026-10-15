@@ -1,5 +1,5 @@
 // Executes the REAL browser modules against a minimal, deterministic browser API.
-// Run via: node --experimental-vm-modules tests/support/runtime-mode-vm.mjs demo|missing|live
+// Run via: node --experimental-vm-modules tests/support/runtime-mode-vm.mjs demo|missing|live|secure
 import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
@@ -8,7 +8,7 @@ import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
 const scenario = process.argv[2];
-assert.ok(['demo', 'missing', 'live'].includes(scenario));
+assert.ok(['demo', 'missing', 'live', 'secure'].includes(scenario));
 const storage = () => {
   const records = new Map();
   return {
@@ -90,7 +90,10 @@ async function load(filepath) {
   let source = await readFile(filepath, 'utf8');
   if (filepath === resolve(root, 'config.js')) {
     if (scenario !== 'demo') source = source.replace('FORCE_DEMO_MODE: true', 'FORCE_DEMO_MODE: false');
-    if (scenario === 'live') source = source.replace('https://YOUR-PROJECT.supabase.co', 'https://example.supabase.co').replace('YOUR_SUPABASE_PUBLISHABLE_KEY', 'sb_publishable_example123');
+    if (scenario === 'live' || scenario === 'secure') source = source.replace('https://YOUR-PROJECT.supabase.co', 'https://example.supabase.co').replace('YOUR_SUPABASE_PUBLISHABLE_KEY', 'sb_publishable_example123');
+  }
+  if (scenario === 'secure' && filepath.endsWith('core/test-password-mode.js')) {
+    source = source.replace('INSECURE_TEST_PASSWORDS = true', 'INSECURE_TEST_PASSWORDS = false');
   }
   const mod = new vm.SourceTextModule(source, {
     context: ctx,
@@ -162,6 +165,13 @@ if (scenario === 'missing') {
   await el('#loginForm').onsubmit({ preventDefault: () => {} });
   assert.equal(capturedLogin?.email, 'c10@accounts.nightmemo.example.com');
   assert.equal(capturedLogin?.password, 'example-test-password');
+  // Real login module converts a short test password only on explicit opt-in.
+  const auth = await entry('services/auth-service.js');
+  await auth.signIn('C10', 'c10', 'ward');
+  assert.equal(capturedLogin?.email, 'c10@accounts.nightmemo.example.com');
+  assert.equal(capturedLogin?.password, scenario === 'secure' ? 'c10' : 'NM-DEMO-c10-Aa1!');
+  await auth.signIn('E10', 'wrong', 'ward');
+  assert.equal(capturedLogin?.password, 'wrong', 'incorrect credentials must not be normalized');
   assert.equal(ctx.location.target, './ward.html');
 }
 console.log(`Runtime integration ${scenario}: passed`);

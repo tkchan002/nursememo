@@ -13,6 +13,8 @@ import { initMaintenanceTestData, refreshGeneratedDemoBatches } from './maintena
 import { moveOrderedItem, sortByOrder } from '../domain/ordering.js';
 import { emptyBedGenderLabel, validateWardName } from '../domain/ward.js';
 import { editableCapacity, capacityNumber } from '../domain/capacity-history.js';
+import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
+import { validateMaintenancePassword, toStoredMaintenancePassword } from '../domain/maintenance-accounts.js';
 
 const $ = qs;
 const state = {
@@ -22,6 +24,7 @@ const state = {
   accounts: [],
   items: [],
   editingAccount: null,
+  passwordAccount: null,
   editingItem: null,
   editingWard: null,
   wardModalSequence: 0,
@@ -51,8 +54,14 @@ function bind() {
   $('#addWardBtn').onclick = () => openWardModal();
   $('#wardFormModal').onsubmit = saveWardFromModal;
   $('#addAccountBtn').onclick = () => openAccountModal();
+  $('#refreshAccountsBtn').onclick = () => ensureAccountsLoaded(true);
   $('#accountForm').onsubmit = saveAccount;
   $('#passwordForm').onsubmit = savePassword;
+  $('#showNewPassword').onchange = () => {
+    const type = $('#showNewPassword').checked ? 'text' : 'password';
+    $('#newPassword').type = type;
+    $('#confirmNewPassword').type = type;
+  };
   $('#staffWard').onchange = renderMaintStaff;
   $('#maintAddStaff').onclick = () => appendMaintStaffEditor();
   $('#addItemBtn').onclick = () => openItemModal();
@@ -107,7 +116,7 @@ async function ensureWardsLoaded(force = false) {
 async function ensureAccountsLoaded(force = false) {
   if (state.loaded.accounts && !force) { renderAccounts(); return; }
   if (state.loading.accounts) return state.loading.accounts;
-  $('#accountRows').innerHTML = '<tr><td colspan="5" class="muted">Loading accounts...</td></tr>';
+  $('#accountRows').innerHTML = '<tr><td colspan="7" class="muted">Loading accounts...</td></tr>';
   state.loading.accounts = (async () => {
     state.accounts = await getAccounts();
     state.loaded.accounts = true;
@@ -295,29 +304,109 @@ async function closeWard(wardId) {
   await closeOperatingPeriod(open.id, date, 'Ward closed from maintenance console'); flash('Ward operating period closed.', 'success'); await refreshWardConfiguration();
 }
 async function reopenWard(wardId) { const date = prompt('Reopening date (YYYY-MM-DD):', todayISO()); if (!date) return; await addOperatingPeriod(wardId, date, null, 'Ward reopened from maintenance console'); flash('Ward reopened.', 'success'); await refreshWardConfiguration(); }
+function openPasswordModal(account) {
+  if (!account?.auth_exists) return flash('No corresponding Supabase Authentication account exists.', 'error');
+  state.passwordAccount = account;
+  $('#passwordUserId').value = account.auth_user_id;
+  $('#passwordModalTitle').textContent = `Set New Password — ${account.login_id}`;
+  $('#newPassword').value = '';
+  $('#confirmNewPassword').value = '';
+  $('#showNewPassword').checked = false;
+  $('#newPassword').type = 'password';
+  $('#confirmNewPassword').type = 'password';
+  $('#passwordInstructions').textContent = INSECURE_TEST_PASSWORDS
+    ? `Test-only: enter ${account.login_id.toLowerCase()} in both fields for matching demo credentials, or use at least 8 characters. This replaces the real Supabase password; the previous password cannot be retrieved.`
+    : 'Enter at least 8 characters. The new password replaces the real Supabase password; the previous password cannot be retrieved.';
+  openModal('#passwordModal');
+}
+
 function renderAccounts() {
-  $('#accountRows').innerHTML = state.accounts.map(a => `<tr><td>${esc(a.login_id)}</td><td>${esc(a.role)}</td><td>${esc(a.wards?.name || '—')}</td><td>${a.active ? '<span class="tag">Active</span>' : '<span class="tag subtle">Disabled</span>'}</td><td><div class="inline-actions"><button class="btn secondary small" data-edit-account="${esc(a.auth_user_id)}">Edit</button><button class="btn secondary small" data-password="${esc(a.auth_user_id)}">Reset Password</button></div></td></tr>`).join('');
-  qsa('[data-edit-account]').forEach(b => { b.onclick = () => openAccountModal(state.accounts.find(a => a.auth_user_id === b.dataset.editAccount)); });
-  qsa('[data-password]').forEach(b => { b.onclick = () => { const a = state.accounts.find(x => x.auth_user_id === b.dataset.password); $('#passwordUserId').value = a.auth_user_id; $('#newPassword').value = ''; openModal('#passwordModal'); }; });
+  const accounts = state.accounts;
+  $('#accountRows').innerHTML = accounts.length ? accounts.map(a => {
+    const exists = a.auth_exists !== false;
+    const authStatus = !exists
+      ? '<span class="tag subtle">Missing in Auth</span>'
+      : a.auth_login_matches === false
+        ? '<span class="tag subtle">Login ID mismatch</span>'
+        : '<span class="tag">Confirmed</span>';
+    const lastLogin = a.auth_last_sign_in_at ? esc(formatDateTime(a.auth_last_sign_in_at)) : '—';
+    const disabled = exists ? '' : ' disabled title="No Supabase Authentication account"';
+    return `<tr><td>${esc(a.login_id)}${a.auth_email ? `<div class="muted" style="font-size:0.8em">${esc(a.auth_email)}</div>` : ''}</td><td>${esc(a.role)}</td><td>${esc(a.wards?.name || '—')}</td><td>${a.active ? '<span class="tag">Active</span>' : '<span class="tag subtle">Disabled</span>'}</td><td>${authStatus}</td><td>${lastLogin}</td><td><div class="inline-actions"><button class="btn secondary small" data-edit-account="${esc(a.auth_user_id)}"${disabled}>Edit</button><button class="btn secondary small" data-password="${esc(a.auth_user_id)}"${disabled}>Set Password</button></div></td></tr>`;
+  }).join('') : '<tr><td colspan="7" class="muted">No accounts. Create accounts using Maintenance or run the account bootstrap.</td></tr>';
+  qsa('[data-edit-account]').forEach(b => {
+    b.onclick = () => openAccountModal(accounts.find(a => a.auth_user_id === b.dataset.editAccount));
+  });
+  qsa('[data-password]').forEach(b => {
+    b.onclick = () => openPasswordModal(accounts.find(a => a.auth_user_id === b.dataset.password));
+  });
 }
 function openAccountModal(a = null) {
-  state.editingAccount = a; $('#accountModalTitle').textContent = a ? 'Edit Account' : 'Create Account'; $('#accountUserId').value = a?.auth_user_id || '';
-  $('#accountLogin').value = a?.login_id || ''; $('#accountDisplay').value = a?.display_name || ''; $('#accountRole').value = a?.role || 'ward'; $('#accountWard').value = a?.ward_id || '';
-  $('#accountActive').value = String(a?.active ?? true); $('#accountPassword').value = ''; $('#accountPasswordWrap').classList.toggle('hidden', !!a); openModal('#accountModal');
+  state.editingAccount = a;
+  $('#accountModalTitle').textContent = a ? 'Edit Supabase Account' : 'Create Supabase Account';
+  $('#accountUserId').value = a?.auth_user_id || '';
+  $('#accountLogin').value = a?.login_id || '';
+  $('#accountDisplay').value = a?.display_name || '';
+  $('#accountRole').value = a?.role || 'ward';
+  $('#accountWard').value = a?.ward_id || '';
+  $('#accountActive').value = String(a?.active ?? true);
+  $('#accountPassword').value = '';
+  $('#accountPasswordWrap').classList.toggle('hidden', !!a);
+  $('#accountPassword').required = !a;
+  openModal('#accountModal');
 }
 async function saveAccount(event) {
   event.preventDefault();
   try {
-    if (!state.editingAccount) await adminAccount('create', { login_id: $('#accountLogin').value.trim(), display_name: $('#accountDisplay').value.trim(), role: $('#accountRole').value, ward_id: $('#accountRole').value === 'ward' ? ($('#accountWard').value || null) : null, password: $('#accountPassword').value });
-    else {
+    const loginId = $('#accountLogin').value.trim();
+    if (!state.editingAccount) {
+      const enteredPassword = $('#accountPassword').value;
+      validateMaintenancePassword(loginId, enteredPassword, INSECURE_TEST_PASSWORDS);
+      await adminAccount('create', {
+        login_id: loginId, display_name: $('#accountDisplay').value.trim(),
+        role: $('#accountRole').value,
+        ward_id: $('#accountRole').value === 'ward' ? ($('#accountWard').value || null) : null,
+        password: toStoredMaintenancePassword(loginId, enteredPassword, INSECURE_TEST_PASSWORDS, DB_MODE),
+      });
+    } else {
       const a = state.editingAccount;
-      if ($('#accountLogin').value.trim() !== a.login_id) await adminAccount('rename_login', { auth_user_id: a.auth_user_id, login_id: $('#accountLogin').value.trim(), display_name: $('#accountDisplay').value.trim() });
-      await adminAccount('update_access', { auth_user_id: a.auth_user_id, role: $('#accountRole').value, ward_id: $('#accountRole').value === 'ward' ? ($('#accountWard').value || null) : null, active: $('#accountActive').value === 'true', display_name: $('#accountDisplay').value.trim() });
+      const renamed = loginId.toLowerCase() !== a.login_id.toLowerCase();
+      if (renamed) await adminAccount('rename_login', { auth_user_id: a.auth_user_id, login_id: loginId, display_name: $('#accountDisplay').value.trim() });
+      await adminAccount('update_access', {
+        auth_user_id: a.auth_user_id, role: $('#accountRole').value,
+        ward_id: $('#accountRole').value === 'ward' ? ($('#accountWard').value || null) : null,
+        active: $('#accountActive').value === 'true', display_name: $('#accountDisplay').value.trim(),
+      });
+      if (renamed && INSECURE_TEST_PASSWORDS) {
+        flash('Account renamed. Reset the password to the new matching account ID before logging in with it.', 'warning', 10000);
+      }
     }
-    closeModal('#accountModal'); await ensureAccountsLoaded(true); flash('Account saved.', 'success');
+    closeModal('#accountModal');
+    await ensureAccountsLoaded(true);
+    flash('Supabase account saved.', 'success');
   } catch (error) { flash(error.message || String(error), 'error', 7000); }
 }
-async function savePassword(event) { event.preventDefault(); try { await adminAccount('reset_password', { auth_user_id: $('#passwordUserId').value, password: $('#newPassword').value }); closeModal('#passwordModal'); flash('Password reset.', 'success'); } catch (error) { flash(error.message || String(error), 'error', 7000); } }
+async function savePassword(event) {
+  event.preventDefault();
+  const account = state.passwordAccount;
+  if (!account || account.auth_user_id !== $('#passwordUserId').value) {
+    return flash('Select an account again.', 'error');
+  }
+  const password = $('#newPassword').value;
+  if (password !== $('#confirmNewPassword').value) return flash('The two new passwords do not match.', 'error');
+  try {
+    validateMaintenancePassword(account.login_id, password, INSECURE_TEST_PASSWORDS);
+    await adminAccount('reset_password', {
+      auth_user_id: account.auth_user_id,
+      password: toStoredMaintenancePassword(account.login_id, password, INSECURE_TEST_PASSWORDS, DB_MODE),
+    });
+    closeModal('#passwordModal');
+    state.passwordAccount = null;
+    $('#newPassword').value = '';
+    $('#confirmNewPassword').value = '';
+    flash('Supabase Authentication password replaced. Existing passwords cannot be viewed.', 'success');
+    await ensureAccountsLoaded(true);
+  } catch (error) { flash(error.message || String(error), 'error', 7000); }
+}
 async function renderMaintStaff() {
   const wardId = $('#staffWard').value; if (!wardId) { $('#maintStaffTable').innerHTML = ''; return; }
   const staff = await getWardStaff(wardId, true); $('#maintStaffTable').innerHTML = '<table class="data-table"><thead><tr><th>Role</th><th>Name</th><th>Appointment</th><th>Status</th><th></th></tr></thead><tbody id="maintStaffRows"></tbody></table>'; staff.forEach(s => appendMaintStaffEditor(s));

@@ -58,6 +58,9 @@ export function parseAdminCommand(body) {
     throw new InputError('Expected a JSON object.');
   }
   switch (body.action) {
+    case 'list_accounts':
+      validateFields(body, ['action']);
+      return { action: 'list_accounts' };
     case 'create':
       validateFields(body, ['action', 'login_id', 'display_name', 'role', 'ward_id', 'password']);
       return {

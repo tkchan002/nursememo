@@ -8,11 +8,15 @@ import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const root = resolve(dirname(fileURLToPath(import.meta.url)), '../..');
+const scenario = process.argv[2] || 'easy';
+assert.ok(['easy', 'secure', 'missing-ack'].includes(scenario));
+const easy = scenario !== 'secure';
 const url = 'https://fakeproject.supabase.co';
 const wardNames = ['C10','E10','G2','F10','E6','C6','G10','G11','B10','H6'];
 const wards = wardNames.map((name, i) => ({ id: `ward-id-${i}`, name, active:true }));
 const fileSystem = new Map();
 const users = [];
+const authPasswords = new Map();
 const access = [];
 let createdCount = 0;
 const client = {
@@ -28,10 +32,14 @@ const client = {
     listUsers: async () => ({ data: { users: [...users] }, error: null }),
     createUser: async ({ email, password, email_confirm }) => {
       assert.equal(email_confirm, true);
-      assert.ok(password.length >= 30);
+      if (easy) {
+        const id = email.split('@')[0];
+        assert.equal(password, `NM-DEMO-${id}-Aa1!`);
+      } else assert.ok(password.length >= 30);
       assert.ok(!users.some(u => u.email === email));
       const user = { id: `new-auth-${createdCount++}`, email };
       users.push(user);
+      authPasswords.set(email, password);
       return { data:{ user }, error:null };
     },
     deleteUser: async id => { const i=users.findIndex(u => u.id===id); if(i >= 0)users.splice(i,1); return {error:null}; },
@@ -61,7 +69,7 @@ const fs = {
 async function run() {
   const ctx = vm.createContext({
     console:{ log:()=>{} },
-    process:{env:{ SUPABASE_URL:url, SUPABASE_SECRET_KEY:'sb_secret_test_secret_key' }},
+    process:{env:{ SUPABASE_URL:url, SUPABASE_SECRET_KEY:'sb_secret_test_secret_key', NIGHT_MEMO_DEMO_PASSWORDS: scenario === 'easy' ? 'yes' : undefined }},
     Set, Map, URL, Error, JSON, String,
   });
   const cache = new Map();
@@ -78,7 +86,10 @@ async function run() {
     }
     const filepath = resolve(dirname(parent.identifier), specifier);
     if (cache.has(filepath)) return cache.get(filepath);
-    const source = await readFile(filepath,'utf8');
+    let source = await readFile(filepath,'utf8');
+    if (scenario === 'secure' && filepath.endsWith('core/test-password-mode.js')) {
+      source = source.replace('INSECURE_TEST_PASSWORDS = true', 'INSECURE_TEST_PASSWORDS = false');
+    }
     const mod = new vm.SourceTextModule(source,{context:ctx,identifier:filepath});
     cache.set(filepath,mod);
     return mod;
@@ -89,6 +100,12 @@ async function run() {
   await main.evaluate();
 }
 
+if (scenario === 'missing-ack') {
+  await assert.rejects(run(), /NIGHT_MEMO_DEMO_PASSWORDS=yes/);
+  assert.equal(createdCount, 0);
+  console.log('Bootstrap missing explicit demo acknowledgement: blocked before creation.');
+  process.exit(0);
+}
 await run();
 assert.equal(createdCount,12);
 assert.equal(access.length,12);
@@ -105,7 +122,13 @@ const initialCsv = fileSystem.get('.private/initial-accounts.csv');
 const credentials = initialCsv.trim().split('\n');
 assert.equal(credentials.length,13);
 assert.equal(new Set(credentials.slice(1).map(x=>x.split(',')[2])).size,12);
+for (const line of credentials.slice(1)) {
+  const [loginId, _role, displayedPassword] = line.split(',');
+  const email = `${loginId.toLowerCase()}@accounts.nightmemo.example.com`;
+  assert.equal(displayedPassword, easy ? loginId.toLowerCase() : authPasswords.get(email));
+}
+
 await run();
 assert.equal(createdCount,12, 'rerun must not recreate or reset accounts');
 assert.equal(fileSystem.get('.private/initial-accounts.csv'), initialCsv);
-console.log('Bootstrap runtime integration: 12 accounts provisioned; rerun preserved passwords.');
+console.log(`Bootstrap runtime integration ${scenario}: 12 accounts provisioned; rerun preserved passwords.`);

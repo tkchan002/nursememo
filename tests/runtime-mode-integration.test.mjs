@@ -4,7 +4,7 @@ import { spawnSync } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 
 const harness = fileURLToPath(new URL('./support/runtime-mode-vm.mjs', import.meta.url));
-for (const scenario of ['demo', 'missing', 'live']) {
+for (const scenario of ['demo', 'missing', 'live', 'secure']) {
   test(`real login/auth/database modules agree in ${scenario} mode`, () => {
     const result = spawnSync(process.execPath,
       ['--no-warnings', '--experimental-vm-modules', harness, scenario],

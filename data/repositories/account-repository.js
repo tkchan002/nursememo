@@ -4,15 +4,14 @@ import { demoRead, demoWrite, uid } from '../demo-state.js';
 export async function getAccounts() {
   if (DB_MODE === 'demo') {
     const state = demoRead();
-    return state.accounts.map(account => ({ ...account, wards: account.ward_id ? state.wards.find(w => w.id === account.ward_id) : null })).sort((a, b) => a.login_id.localeCompare(b.login_id));
+    return state.accounts.map(account => ({ ...account, auth_exists: true, auth_email: null, auth_last_sign_in_at: null, wards: account.ward_id ? state.wards.find(w => w.id === account.ward_id) : null })).sort((a, b) => a.login_id.localeCompare(b.login_id));
   }
-  const { data, error } = await supabase.from('user_access').select('*, wards(id,name)').order('login_id');
-  if (error) throw error;
-  return data || [];
+  return await adminAccount('list_accounts', {});
 }
 
 export async function adminAccount(action, payload) {
   if (DB_MODE === 'demo') {
+    if (action === 'list_accounts') return getAccounts();
     const state = demoRead();
     if (action === 'create') {
       if (state.accounts.some(a => a.login_id.toLowerCase() === payload.login_id.toLowerCase())) throw new Error('Account already exists.');

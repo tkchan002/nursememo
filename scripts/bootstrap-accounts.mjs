@@ -2,13 +2,19 @@
  * Run from a trusted Codespace with SUPABASE_URL and SUPABASE_SECRET_KEY (or
  * legacy SUPABASE_SERVICE_ROLE_KEY) configured as Codespaces environment secrets.
  * Do not use a publishable key. Never put either credential in GitHub files.
- * Passwords are random per account and are written ONLY to ignored local disk.
+ * Strong random passwords are used unless test-only predictable login is
+ * explicitly opted into. Login credentials are written to ignored local disk.
  */
 import { randomBytes } from 'node:crypto';
 import { mkdir, open, readFile, writeFile } from 'node:fs/promises';
 import { createClient } from '@supabase/supabase-js';
-import { normalizeLoginId, loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
+import { normalizeLoginId, loginIdToEmail, expandedTestPassword } from '../supabase/functions/_shared/login-identity.mjs';
+import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
 
+// Require an explicit operator acknowledgement before creating predictable Auth passwords.
+if (INSECURE_TEST_PASSWORDS && process.env.NIGHT_MEMO_DEMO_PASSWORDS !== 'yes') {
+  throw new Error('INSECURE TEST passwords enabled. Run with NIGHT_MEMO_DEMO_PASSWORDS=yes on a synthetic-data project only.');
+}
 const url = process.env.SUPABASE_URL?.trim();
 const secret = (process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)?.trim();
 if (!url || !/^https:\/\/[a-z0-9-]+\.supabase\.co$/i.test(url)) {
@@ -125,7 +131,8 @@ try {
       console.log(`Already provisioned ${account.loginId}; password preserved`);
       continue;
     }
-    const password = randomBytes(24).toString('base64url');
+    const typedPassword = INSECURE_TEST_PASSWORDS ? account.loginId.toLowerCase() : randomBytes(24).toString('base64url');
+    const password = INSECURE_TEST_PASSWORDS ? expandedTestPassword(account.loginId) : typedPassword;
     const email = loginIdToEmail(account.loginId);
     const { data: created, error: authError } = await client.auth.admin.createUser({
       email, password, email_confirm: true,
@@ -145,7 +152,7 @@ try {
       const { error: rollbackError } = await client.auth.admin.deleteUser(created.user.id);
       throw new Error(`Creating role for ${account.loginId} failed: ${accessError.message}. Auth rollback ${rollbackError ? 'FAILED; inspect Supabase Auth' : 'succeeded'}.`);
     }
-    await output.appendFile(`${account.loginId},${account.role},${password}\n`);
+    await output.appendFile(`${account.loginId},${account.role},${typedPassword}\n`);
     await output.sync();
     console.log(`Created ${account.loginId} (${account.role})`);
   }

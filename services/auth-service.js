@@ -1,7 +1,8 @@
 import { DB_MODE, supabase } from '../data/client.js';
 import { ensureDemoState } from '../data/demo-state.js';
 import { getCurrentAccess } from '../data/repositories/access-repository.js';
-import { loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
+import { loginIdToEmail, passwordForSupabase } from '../supabase/functions/_shared/login-identity.mjs';
+import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
 
 const LOGIN_PAGE = './index.html';
 
@@ -56,7 +57,7 @@ export async function signIn(account, password, expectedRole = null) {
   // Conversion is deterministic and does not expose a username lookup endpoint.
   const { data, error } = await supabase.auth.signInWithPassword({
     email: loginIdToEmail(account),
-    password,
+    password: passwordForSupabase(account, password, INSECURE_TEST_PASSWORDS),
   });
   if (error) throw error;
   if (!data?.user || !data?.session) {

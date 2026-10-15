@@ -20,3 +20,24 @@ export function normalizeLoginId(value) {
 export function loginIdToEmail(value) {
   return `${normalizeLoginId(value).toLowerCase()}@${ACCOUNT_EMAIL_DOMAIN}`;
 }
+
+/**
+ * INSECURE TEST ACCOUNTS ONLY. Supabase Auth usually requires at least six
+ * characters. For the synthetic-data test installation we let people enter
+ * the same short ID in both boxes but submit a longer, predictable password.
+ * This is convenience, NOT security. Never enable for real records/users.
+ */
+export function expandedTestPassword(loginId) {
+  const id = normalizeLoginId(loginId).toLowerCase();
+  // Include all common Auth password character classes; no need to weaken
+  // Supabase's project-wide password policy for this disposable test data.
+  return `NM-DEMO-${id}-Aa1!`;
+}
+
+export function passwordForSupabase(loginId, enteredPassword, easyTestPasswords = false) {
+  if (easyTestPasswords === true && typeof enteredPassword === 'string' &&
+      enteredPassword.toLowerCase() === normalizeLoginId(loginId).toLowerCase()) {
+    return expandedTestPassword(loginId);
+  }
+  return enteredPassword;
+}

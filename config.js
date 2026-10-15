@@ -4,7 +4,7 @@ export const CONFIG = {
   SUPABASE_PUBLISHABLE_KEY: 'YOUR_SUPABASE_PUBLISHABLE_KEY',
 
   // Fail closed by default. Use true ONLY for deliberate, browser-local demo testing.
-  FORCE_DEMO_MODE: false,
+  FORCE_DEMO_MODE: true,
 
   APP_NAME: 'Night Memo',
   RECENT_HISTORY_LIMIT: 30,

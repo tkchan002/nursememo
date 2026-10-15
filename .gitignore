@@ -1,0 +1,9 @@
+node_modules/
+dist/
+.vite/
+.DS_Store
+
+# Private local credentials must never be committed.
+.env
+.env.*
+!.env.example

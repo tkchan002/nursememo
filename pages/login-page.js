@@ -1,4 +1,4 @@
-import { isSupabaseConfigured } from '../config.js';
+import { CONFIG } from '../config.js';
 import { qs, qsa } from '../core/dom.js';
 import { flash } from '../core/ui.js';
 import { modeBadge } from '../components/app-shell.js';

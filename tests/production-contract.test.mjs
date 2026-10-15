@@ -49,7 +49,8 @@ test('account administration has explicit user-auth and Maintenance-role boundar
 });
 
 test('original project and domain cannot be implicitly reused', () => {
-  assert.match(read('config.js'), /FORCE_DEMO_MODE: false/);
+  assert.match(read('config.js'), /FORCE_DEMO_MODE:\s*(?:true|false)/);
+  assert.match(read('data/client.js'), /DB_MODE === 'supabase' && !isSupabaseConfigured\(\)/);
   assert.match(read('config.js'), /YOUR-PROJECT/);
   assert.doesNotMatch(read('config.js'), /night-memo\.eu\.cc/);
   assert.equal(existsSync(new URL('../CNAME', import.meta.url)), false);

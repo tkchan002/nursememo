@@ -1,0 +1,19 @@
+{
+  "name": "night-memo-supabase",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "check": "node ./scripts/check.mjs",
+    "test": "node --test ./tests/*.test.mjs",
+    "verify": "npm run check && npm run imports && npm test",
+    "build": "vite build",
+    "imports": "node ./scripts/check-imports.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.117.2"
+  },
+  "devDependencies": {
+    "vite": "8.3.1"
+  }
+}

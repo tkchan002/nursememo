@@ -2,6 +2,7 @@ import { requireRole, signOut } from '../services/auth-service.js';
 import { qs, qsa, esc } from '../core/dom.js';
 import { formatDateTime, toDisplayDate } from '../core/dates.js';
 import { setAppHeader } from '../components/app-shell.js';
+import { CONFIG } from '../config.js';
 import { initManagerTabs } from '../components/manager-tabs.js';
 import {
   DB_MODE,
@@ -88,8 +89,8 @@ async function bootstrap() {
   if (!state.access) return;
 
   setAppHeader({
-    title: 'Patrol Night',
-    subtitle: 'Night operations and Night Memo workspace',
+    title: CONFIG.APP_NAME,
+    subtitle: 'Patrol Night · Night operations and memo workspace',
     access: state.access,
     mode: DB_MODE,
   });

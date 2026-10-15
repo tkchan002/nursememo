@@ -1,4 +1,4 @@
-# Night Memo — Demo account reference
+# Nurse Memo — Demo account reference
 
 > **TEST ENVIRONMENT ONLY.** These credentials are intentionally predictable and must never be used with real patient data. Do not enable short demo passwords in a production deployment.
 >
@@ -23,7 +23,7 @@
 
 ## How conversion works
 
-The user enters a short Account ID and matching password on the Night Memo login page. The test-only login adapter maps the Account ID to an internal email address and maps the short password to the longer Supabase Auth password.
+The user enters a short Account ID and matching password on the Nurse Memo login page. The test-only login adapter maps the Account ID to an internal email address and maps the short password to the longer Supabase Auth password.
 
 **Example — C10:**
 

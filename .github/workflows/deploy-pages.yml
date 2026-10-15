@@ -1,9 +1,10 @@
-name: Build and Deploy Night Memo
+name: Build and Deploy Nurse Memo
 
 on:
   push:
     branches:
       - main
+      - rebrand-test
 
   # Also gives you a Run workflow button in GitHub.
   workflow_dispatch:

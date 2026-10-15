@@ -87,7 +87,7 @@ function renderMissingJob() {
   document.body.innerHTML = `
     <main class="print-view-message error" role="alert">
       <strong>Printable document unavailable</strong>
-      <span>The temporary print job is missing or has expired. Return to Night Memo and open Print again.</span>
+      <span>The temporary print job is missing or has expired. Return to Nurse Memo and open Print again.</span>
       <button type="button" class="print-view-button primary" id="printFallbackBack">Back</button>
     </main>
   `;

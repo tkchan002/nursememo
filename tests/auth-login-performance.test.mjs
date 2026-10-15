@@ -37,7 +37,7 @@ test('destination requireRole performs one authoritative access lookup using the
 });
 
 test('login keeps heavy auth loading off first paint and warms it before submit', () => {
-  assert.match(login, /import \{ APP_RUNTIME \} from '\.\.\/config\.js'/);
+  assert.match(login, /import \{ APP_RUNTIME, CONFIG \} from '\.\.\/config\.js'/);
   assert.match(login, /const DB_MODE = APP_RUNTIME\.mode;/);
   assert.doesNotMatch(login, /from '\.\.\/data\/index\.js'/);
   assert.match(login, /import\('\.\.\/services\/auth-service\.js'\)/);

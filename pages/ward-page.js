@@ -96,7 +96,7 @@ async function init() {
   state.ward = state.access.wards || await getWardById(state.access.ward_id);
   $('#wardFrom').textContent = state.ward.name;
   $('#wardContact').innerHTML = `Ext ${esc(state.ward.phone || '—')} &nbsp;&nbsp;&nbsp;<b>Fax:</b> Ext ${esc(state.ward.fax || '—')}`;
-  $('#liveIndicator').textContent = DB_MODE === 'demo' ? 'Local demo mode' : 'Supabase live';
+  $('#liveIndicator').textContent = `${CONFIG.APP_NAME} · ${DB_MODE === 'demo' ? 'Local demo mode' : 'Supabase live'}`;
   state.memoType = defaultMemoType();
   $('#memoType').value = state.memoType;
   $('#memoType').addEventListener('change', handleMemoTypeChange);
@@ -691,7 +691,7 @@ async function openPdfSettings() { const mod = await getPrintModule(); pdfSettin
 function closePdfSettings() { clearTimeout(pdfDebounceTimer); $('#pdfSettingsModal').classList.remove('show'); }
 function updatePdfPreviewDebounced() { clearTimeout(pdfDebounceTimer); pdfDebounceTimer = setTimeout(updatePdfPreview, 250); }
 async function updatePdfPreview() { const mod = await getPrintModule(); pdfSettings = mod.saveWardPrintSettings(readPrintControls()); await previewCurrentMemo(); }
-async function resetPdfSettings() { if (!confirm('Reset all font sizes to the original Night Memo defaults?')) return; const mod = await getPrintModule(); pdfSettings = mod.resetWardPrintSettings(); loadPrintControls(); await previewCurrentMemo(); }
+async function resetPdfSettings() { if (!confirm('Reset all font sizes to the default Ward memo settings?')) return; const mod = await getPrintModule(); pdfSettings = mod.resetWardPrintSettings(); loadPrintControls(); await previewCurrentMemo(); }
 async function printPdf() { const mod = await getPrintModule(); openPrintView({ html: mod.renderWardMemoHtml(printContext({ report_type: state.memoType, report_date: $('#memoDate').value, payload: collectPayload() }, state.items, state.capacity)), title: MEMO_LABELS[state.memoType], kind: 'ward-memo' }); }
 async function applyPdfSettings() { const mod = await getPrintModule(); pdfSettings = mod.saveWardPrintSettings(readPrintControls()); showStatus('loading', 'Choose “Save as PDF” in the print dialog.'); printPdf(); }
 

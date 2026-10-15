@@ -77,7 +77,7 @@ test('runtime/build source contains no login.html route', () => {
 test('role selection and successful authentication routes remain explicit', () => {
   assert.match(loginPage, /ward:\s*'Ward Login'/);
   assert.match(loginPage, /manager:\s*'Patrol Night Login'/);
-  assert.match(loginPage, /maintenance:\s*'Night Memo Maintenance'/);
+  assert.match(loginPage, /maintenance:\s*`\$\{CONFIG\.APP_NAME\} Maintenance`/);
   assert.match(loginPage, /await signIn\(qs\('#loginId'\)\.value, qs\('#password'\)\.value, role\)/);
   assert.match(loginPage, /'\.\/ward\.html'/);
   assert.match(loginPage, /'\.\/manager\.html'/);

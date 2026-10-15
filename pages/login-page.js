@@ -1,4 +1,4 @@
-import { APP_RUNTIME } from '../config.js';
+import { APP_RUNTIME, CONFIG } from '../config.js';
 import { qs, qsa } from '../core/dom.js';
 import { flash } from '../core/ui.js';
 import { modeBadge } from '../components/app-shell.js';
@@ -7,7 +7,7 @@ const DB_MODE = APP_RUNTIME.mode;
 const titles = {
   ward: 'Ward Login',
   manager: 'Patrol Night Login',
-  maintenance: 'Night Memo Maintenance',
+  maintenance: `${CONFIG.APP_NAME} Maintenance`,
 };
 const defaults = {
   ward: 'C10',

@@ -89,11 +89,36 @@ async function load(filepath) {
   if (cache.has(filepath)) return cache.get(filepath);
   let source = await readFile(filepath, 'utf8');
   if (filepath === resolve(root, 'config.js')) {
-    if (scenario !== 'demo') source = source.replace('FORCE_DEMO_MODE: true', 'FORCE_DEMO_MODE: false');
-    if (scenario === 'live' || scenario === 'secure') source = source.replace('https://YOUR-PROJECT.supabase.co', 'https://example.supabase.co').replace('YOUR_SUPABASE_PUBLISHABLE_KEY', 'sb_publishable_example123');
+    // Test scenarios must not depend on the settings committed for deployment.
+    // In particular, 'missing' must remove live credentials, and 'demo' must
+    // enable demo even when the deployed site uses real Supabase.
+    const live = scenario === 'live' || scenario === 'secure';
+    const settings = {
+      FORCE_DEMO_MODE: scenario === 'demo',
+      SUPABASE_URL: live ? 'https://example.supabase.co' : 'https://YOUR-PROJECT.supabase.co',
+      SUPABASE_PUBLISHABLE_KEY: live ? 'sb_publishable_example123' : 'YOUR_SUPABASE_PUBLISHABLE_KEY',
+    };
+    for (const [field, value] of Object.entries(settings)) {
+      const pattern = new RegExp(`^(\\s*${field}\\s*:\\s*)(?:true|false|'[^'\\n]*'|"[^"\\n]*")(\\s*,?\\s*)$`, 'gm');
+      let matches = 0;
+      source = source.replace(pattern, (_whole, prefix, suffix) => {
+        matches += 1;
+        return `${prefix}${JSON.stringify(value)}${suffix}`;
+      });
+      assert.equal(matches, 1, `Expected exactly one CONFIG.${field} initializer`);
+    }
   }
-  if (scenario === 'secure' && filepath.endsWith('core/test-password-mode.js')) {
-    source = source.replace('INSECURE_TEST_PASSWORDS = true', 'INSECURE_TEST_PASSWORDS = false');
+  if (filepath === resolve(root, 'core/test-password-mode.js')) {
+    // Also isolate the insecure test-password setting from the deployed value.
+    // The 'secure' scenario must test disabled mapping; the remaining scenarios
+    // intentionally exercise enabled mapping even if the site has disabled it.
+    const pattern = /^(export const INSECURE_TEST_PASSWORDS\s*=\s*)(?:true|false)(\s*;?\s*)$/gm;
+    let matches = 0;
+    source = source.replace(pattern, (_whole, prefix, suffix) => {
+      matches += 1;
+      return `${prefix}${scenario === 'secure' ? 'false' : 'true'}${suffix}`;
+    });
+    assert.equal(matches, 1, 'Expected one INSECURE_TEST_PASSWORDS setting');
   }
   const mod = new vm.SourceTextModule(source, {
     context: ctx,

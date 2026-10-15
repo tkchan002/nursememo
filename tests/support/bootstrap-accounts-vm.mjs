@@ -87,8 +87,16 @@ async function run() {
     const filepath = resolve(dirname(parent.identifier), specifier);
     if (cache.has(filepath)) return cache.get(filepath);
     let source = await readFile(filepath,'utf8');
-    if (scenario === 'secure' && filepath.endsWith('core/test-password-mode.js')) {
-      source = source.replace('INSECURE_TEST_PASSWORDS = true', 'INSECURE_TEST_PASSWORDS = false');
+    if (filepath.endsWith('core/test-password-mode.js')) {
+      // The bootstrap scenario, not the currently deployed test setting,
+      // determines whether passwords are predictable or randomly generated.
+      const pattern = /^(export const INSECURE_TEST_PASSWORDS\s*=\s*)(?:true|false)(\s*;?\s*)$/gm;
+      let matches = 0;
+      source = source.replace(pattern, (_whole, prefix, suffix) => {
+        matches += 1;
+        return `${prefix}${easy ? 'true' : 'false'}${suffix}`;
+      });
+      assert.equal(matches, 1, 'Expected one INSECURE_TEST_PASSWORDS setting');
     }
     const mod = new vm.SourceTextModule(source,{context:ctx,identifier:filepath});
     cache.set(filepath,mod);

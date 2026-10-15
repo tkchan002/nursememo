@@ -1,10 +1,10 @@
 /** Public browser configuration. Only publishable Supabase credentials belong here. */
 export const CONFIG = Object.freeze({
-  SUPABASE_URL: 'https://YOUR-PROJECT.supabase.co',
-  SUPABASE_PUBLISHABLE_KEY: 'YOUR_SUPABASE_PUBLISHABLE_KEY',
+  SUPABASE_URL: 'https://fdayxcfhjjamipmgkkpr.supabase.co',
+  SUPABASE_PUBLISHABLE_KEY: 'sb_publishable_cARGDldBHLvA2FtXuQgq4g_FyWVeLaZ',
 
   // Explicit local-only demonstration environment; never inferred from missing keys.
-  FORCE_DEMO_MODE: true,
+  FORCE_DEMO_MODE: false,
 
   APP_NAME: 'Night Memo',
   RECENT_HISTORY_LIMIT: 30,

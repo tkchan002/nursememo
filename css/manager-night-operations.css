@@ -1,0 +1,20 @@
+/* Night Staffing is a first-class Manager tab. Source markup lives in manager.html. */
+.night-operations-panel{background:transparent}
+.night-operations-actions{display:flex;gap:7px;flex-wrap:wrap;align-items:center}
+.night-operations-date{font-size:.8rem;color:var(--legacy-muted)}
+.night-operations-summary{display:grid;grid-template-columns:repeat(3,minmax(130px,1fr));gap:8px;margin-bottom:12px}
+.night-ops-stat{border:1px solid #aaa79e;background:var(--legacy-panel-alt);padding:10px;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:68px}
+.night-ops-stat strong{font-size:1.4rem;color:var(--legacy-blue)}
+.night-ops-stat span{font-size:.76rem;color:#60656a;margin-top:2px}
+.night-staffing-section{border:1px solid #aaa79e;background:#fff;margin-top:10px}
+.night-staffing-title{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:7px 9px;border-bottom:1px solid #aaa79e;background:linear-gradient(to bottom,#f3f2ec,#dfded6)}
+.night-staffing-title h2{font-size:.92rem;margin:0;color:#222}
+.night-staffing-title span{font-size:.76rem;color:#62676c}
+.night-table-wrap{overflow:auto;max-height:420px}
+.night-staffing-table{width:100%;border-collapse:collapse;font-size:.84rem}
+.night-staffing-table th,.night-staffing-table td{border:1px solid #c3c1b9;padding:6px 8px;text-align:left;vertical-align:top}
+.night-staffing-table th{position:sticky;top:0;z-index:1;background:linear-gradient(to bottom,#fff,#ddd);font-weight:800}
+.night-staffing-table tbody tr:nth-child(even){background:#faf9f3}
+.night-staffing-empty-ward td{background:#f3f1eb;color:#777}
+.runner-yes{display:inline-block;font-weight:800;color:#205f2b;border:1px solid #7da285;background:#edf7ef;padding:1px 6px}
+@media(max-width:800px){.night-operations-summary{grid-template-columns:1fr}.night-staffing-title{align-items:flex-start;flex-direction:column}}

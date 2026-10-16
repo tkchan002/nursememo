@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - docx
+      - docx-editor-test
   workflow_dispatch:
 
 permissions:
@@ -44,13 +44,15 @@ jobs:
       - name: Build Nurse Memo
         run: npm run build
 
-      # Upstream is not vendored into the tiny Nurse Memo source ZIP.
+      # Version-pinned editor: the standalone office build at this revision
+      # was tested successfully. GitHub Actions publishes it with Nurse Memo.
+      # Upstream is not vendored into the Nurse Memo source ZIP.
       # GitHub Actions downloads and compiles it with its own lockfile.
       - name: Checkout ranuts/document source
         uses: actions/checkout@v4
         with:
           repository: ranuts/document
-          ref: ${{ vars.RANUTS_REF || 'main' }}
+          ref: ${{ vars.RANUTS_REF || 'beb7e2fd6c2eada4c4ff21e94ac37d5c39a79fc0' }}
           path: .upstream/ranuts-document
           persist-credentials: false
 
@@ -72,11 +74,11 @@ jobs:
         working-directory: .upstream/ranuts-document
         run: pnpm run build
 
-      - name: Prepare editor for GitHub Pages project path
+      - name: Prepare corrected self-hosted editor for GitHub Pages
         env:
           RANUTS_REVISION: ${{ steps.ranuts-version.outputs.commit }}
-          # For a GitHub Pages custom domain (site at /), set Actions variable
-          # PAGES_BASE_PATH to /; normally leave empty for /repository/.
+          # For nursememo.app (custom-domain root), set the Actions variable
+          # PAGES_BASE_PATH=/; leave empty only for tkchan002.github.io/nursememo/.
           PAGES_BASE_PATH: ${{ vars.PAGES_BASE_PATH }}
         run: node scripts/prepare-editor-site.mjs
 

@@ -25,7 +25,7 @@ test('auto-generated wards are HTML escaped before display', () => {
 test('manager works with editable A4 print rendered from canonical html only', () => {
   const print=renderManagerMemoPrintHtml({version:4,html:'<b>A&amp;B</b>'});
   assert.match(print, /manager-memo-document/);
-  assert.match(print, /@page\{size:A4 portrait/);
+  assert.match(print, /@page\{size:A4 landscape/);
   assert.doesNotMatch(print, /manager-print-title">Night Memo/);
   assert.match(print, /A&amp;amp;B/); // DOM-free Node fail-closed escaping, browser uses DOM sanitizer.
 });
@@ -43,7 +43,7 @@ test('Jodit is lazy-loaded, replacing segmented contenteditable document section
  assert.match(html,/<textarea id="memoEditor"/);
  assert.doesNotMatch(html,/id="memoFromName"|id="memoMainRows"|id="memoEarlyBird"/);
  assert.match(adapter,/import\('jodit'\)/);
- assert.match(adapter,/['"]font['"],['"]fontsize['"]/);
+ assert.match(adapter,/['"]font['"],\s*['"]fontsize['"]/);
  assert.match(adapter,/['"]table['"]/);
  assert.match(page,/memoEditorInstance\.getValue\(\)/);
  assert.match(page,/Regenerate this Night Memo/);

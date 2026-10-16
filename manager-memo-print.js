@@ -7,6 +7,7 @@ export function renderManagerMemoPrintHtml(memo = {}, { printedAt = new Date() }
   return renderManagerPrintDocument({
     title: 'Night Memo',
     hideTitle: true,
+    memoLandscape: true,
     body: `<div class="manager-memo-document">${html}</div>`,
     footerLabel: 'Patrol Night · Night Memo',
     printedAt,

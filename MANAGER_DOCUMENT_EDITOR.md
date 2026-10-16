@@ -7,7 +7,14 @@
 - Editing: entire HTML surface including tables, headings, lists and footer. Jodit creates the editable surface from `<textarea id="memoEditor">`.
 - Save: `serializeDocument()` sanitizes before saving through the existing recovery/revision RPC. History and preview share `manager-memo-print.js`.
 - Regeneration: explicit confirmation; previous working document checkpointed, entire document replaced with freshly generated ward data.
-- Printing: `manager-memo-print.js` uses that same saved HTML; separate A4/print styles in `manager-document-print-css.js`.
+- Printing: `manager-memo-print.js` uses that same saved HTML in A4 landscape; roster lists remain A4 portrait. Separate print styles in `manager-document-print-css.js`.
 - Security: `sanitizeManagerMemoHtml` uses browser DOM parsing and an allowlist to remove handlers, scripts, risky markup and unapproved attributes. No image/file URLs or uploads. Content is re-sanitized before rendering print/History.
 - Tests: `npm run verify` checks domain generation and integration. Local build and interactive Jodit checks require npm network access; verify after GitHub Actions installs dependencies.
-- Limitations: not DOCX; soft continuous A4 sheet not automatic Word-style page pagination; images/uploads disabled. No database migration needed.
+- Limitations: not DOCX; soft continuous A4 landscape sheet not automatic Word-style page pagination; images/uploads disabled. No database migration needed.
+
+## Editor layout refinement
+- Use one browser vertical scroll; Jodit uses `height: 'auto'` and no forced 770px nested workspace.
+- The printable Night Memo is A4 landscape (297 × 210mm); wide tables use natural column sizing, 9pt text and word-boundary wrapping in headings.
+- Compact familiar toolbar uses Jodit's icon controls; table operations are in the table context menu.
+- On narrow screens, the paper scrolls horizontally rather than shrinking clinical text. This is a visual adaptation, not automatic Word pagination.
+- No other document printing format, including Ward List and Night Runner List, is changed.

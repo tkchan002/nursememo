@@ -33,6 +33,7 @@ test('all Manager printouts use the shared Manager print system and official mem
   for (const html of [memoHtml, staffHtml, runnerHtml]) {
     assert.match(html, /data-print-system="manager-v2"/);
     assert.match(html, /class="manager-print-page(?: roster-print-document)?"/);
-    assert.match(html, /@page\{size:A4 portrait/);
+    if (html === memoHtml) assert.match(html, /@page\{size:A4 landscape/);
+    else { assert.match(html, /@page\{size:A4 portrait/); assert.doesNotMatch(html, /@page\{size:A4 landscape/); }
   }
 });

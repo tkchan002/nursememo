@@ -42,8 +42,8 @@ test('autosave uses recovery path rather than history revision path', () => {
 test('print renderer has no second app-level Print button', () => {
   const js = read('manager-memo-print.js');
   assert.doesNotMatch(js, /onclick="window\.print\(\)"/);
-  assert.match(js, /N\.O\.\/APN,/);
-  assert.match(js, /DOM\/Medical \(QEH\)/);
+  assert.match(js, /memo\.html/);
+  assert.match(js, /sanitizeManagerMemoHtml/);
 });
 
 test('migration creates immutable revision table and history RPCs', () => {

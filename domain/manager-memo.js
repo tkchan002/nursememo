@@ -1,3 +1,4 @@
+import { renderEditableManagerMemoHtml } from './manager-memo-html.js';
 import { addDaysISO, todayISO, toDisplayDate } from '../core/dates.js';
 import { deviceCount, normalizeDevice, normalizeReportPayload } from './report-model.js';
 import { reportSubmittedAt } from './report-session.js';
@@ -121,7 +122,7 @@ export const MANAGER_MEMO_FROM_PREFIX = 'N.O./APN,';
 export const MANAGER_MEMO_TO = 'DOM/Medical (QEH)';
 
 export function buildManagerMemoDocument({ bundle = [], items = [], reportingDate = reportingNightDate() } = {}) {
-  return {
+  const template = {
     version: 3,
     title: 'Night Memo',
     header: {
@@ -148,15 +149,11 @@ export function buildManagerMemoDocument({ bundle = [], items = [], reportingDat
       designation: 'N.O./APN',
     },
   };
+  return { version: 4, html: renderEditableManagerMemoHtml(template) };
 }
 
-export function regenerateWardDerivedSections(document, { bundle = [], items = [] } = {}) {
-  const generated = buildManagerMemoDocument({ bundle, items, reportingDate: '' });
-  return {
-    ...document,
-    mainTableRows: generated.mainTableRows,
-    infectionRows: generated.infectionRows,
-    earlyBirdHtml: generated.earlyBirdHtml,
-    emptyBedHtml: generated.emptyBedHtml,
-  };
+export function regenerateWardDerivedSections(_document, { bundle = [], items = [], reportingDate = reportingNightDate() } = {}) {
+  // Regeneration is an explicitly confirmed full replacement. The previous document
+  // is checkpointed before this function is called; no hidden merging of edited cells.
+  return buildManagerMemoDocument({ bundle, items, reportingDate });
 }

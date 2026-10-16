@@ -38,3 +38,14 @@ See [UI_STYLE_GUIDE.md](UI_STYLE_GUIDE.md) for the neutral stylesheet layout.
 ## October 2026 readability and Manager printing update
 
 The shared screen font sizes have been increased, Manager Ward List and Runner List have an in-page print preview, and Maintenance shows the generated Auth email when editing an account. The disposable demo Manager login now accepts `patrol` without requiring immediate Supabase account recreation. See [RELEASE_NOTES_2026-10-16.md](RELEASE_NOTES_2026-10-16.md) for the test-only login fallback and deployment caveats.
+
+
+## Night Memo whole-document editor (October 2026)
+
+The Manager Night Memo uses Jodit 4.13.9 (MIT licensed) with a Nurse Memo-authored compact clinical toolbar. To install dependencies locally, run `npm install`, then `npm run verify` and `npm run build`. GitHub Actions installs dependencies automatically.
+
+The entire generated Night Memo—heading, tables, notes, CT summary and signature—is edited as one document. Saving, History, recovery and printing use a single `{ "version": 4, "html": "..." }` document JSON value. Ward source snapshots remain separate. **Old version 3 demo Night Memos are not readable by the new editor**; use Start New on the current reporting night to generate a fresh document. No Supabase schema migration is needed because memo documents are already stored as JSONB.
+
+Regenerate from Ward Data replaces the entire document **only after confirmation and a safety checkpoint**. Manual edits are not silently merged or overwritten. Rich formatting, tables, merged cells, lists, colour, paragraph alignment and text styles are supported. Direct image/file uploads are intentionally disabled in this demo; no file storage backend is configured. Actual DOCX import/export and exact Microsoft Word pagination are not provided.
+
+The original eHR/CKEditor scripts, icons, CSS and assets are not used; the toolbar arrangement is recreated with Jodit's MIT-licensed components and Nurse Memo styling. Preserve third-party license notices when distributing.

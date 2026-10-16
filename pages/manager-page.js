@@ -28,13 +28,13 @@ import {
 } from '../domain/manager-memo.js';
 import { loadManagerCurrent } from '../services/report-service.js';
 import { renderManagerMemoPrintHtml } from '../manager-memo-print.js';
+import { sanitizeManagerMemoHtml } from '../domain/manager-memo-html.js';
+import { createManagerDocumentEditor } from '../editor/manager-jodit.js';
 import { buildManagerWardInformation } from '../domain/manager-ward-information.js';
 import { openPrintView } from '../services/print-job-service.js';
 
 const $ = qs;
 const $$ = qsa;
-const MAIN_KEYS = ['ward','admissionEC','admissionCC','transferIn','discharge','transferOut','death','totalPatient','emptyBed','ventilator','bipap','hfnc','staff'];
-const INF_KEYS = ['ward','covid','cre','vre','mdra','cd','influenza','hdCapd','remarks'];
 
 const state = {
   access: null,
@@ -75,6 +75,8 @@ const state = {
 let persistenceTail = Promise.resolve();
 let managerTabs = null;
 let wardPrintModulePromise = null;
+let memoEditorInstance = null;
+let memoEditorLoading = null;
 
 bootstrap().catch(showFatal);
 
@@ -151,17 +153,6 @@ function bindStaticControls() {
       const el = document.getElementById(button.dataset.closeModal);
       if (el) el.hidden = true;
     });
-  });
-
-  $$('.formatting-tools [data-format]').forEach(button => {
-    button.addEventListener('click', () => {
-      document.execCommand(button.dataset.format, false, null);
-      markDirty();
-    });
-  });
-
-  $('#memoEditor').addEventListener('input', () => {
-    if (!state.rendering) markDirty();
   });
 
   window.addEventListener('beforeunload', event => {
@@ -298,12 +289,12 @@ function renderWorkspace() {
   $('#startNewBtn').textContent = recovery ? 'Start New' : 'Start Night Memo';
 }
 
-function openExistingDraft() {
+async function openExistingDraft() {
   if (!state.memo) return;
   state.editorOpen = true;
   $('#memoWorkspacePanel').hidden = true;
   $('#editorArea').hidden = false;
-  renderEditor();
+  await renderEditor();
   renderMemoState();
 }
 
@@ -342,7 +333,7 @@ async function startNewDraft() {
 
   $('#memoWorkspacePanel').hidden = true;
   $('#editorArea').hidden = false;
-  renderEditor({ keepDirty: true });
+  await renderEditor({ keepDirty: true });
   await saveRecoveryNow({ force: true });
   renderSubmissionMonitor();
   renderMemoState();
@@ -358,105 +349,49 @@ async function backToWorkspace() {
   await refreshHistory();
   renderWorkspace();
 }
-function managerFromName(header = {}) { return String(header.fromName || ''); }
+async function ensureMemoEditor() {
+  if (memoEditorInstance) return memoEditorInstance;
+  if (!memoEditorLoading) memoEditorLoading = createManagerDocumentEditor('#memoEditor', () => {
+    if (!state.rendering && state.editorOpen) markDirty();
+  });
+  try {
+    memoEditorInstance = await memoEditorLoading;
+    return memoEditorInstance;
+  } catch (error) {
+    memoEditorLoading = null;
+    throw error;
+  }
+}
 
-function renderEditor({ keepDirty = false } = {}) {
+async function renderEditor({ keepDirty = false } = {}) {
   if (!state.memo) return;
   state.rendering = true;
   const previousDirty = state.dirty;
   try {
-    const doc = state.memo.document || {};
-    $('#memoTitle').textContent = doc.title || 'Night Memo';
-    $('#memoFromName').value = managerFromName(doc.header);
-    $('#memoDectPhone').value = doc.header?.dectPhone || '';
-    $('#memoDateText').value = doc.header?.date || '';
-    $('#memoCallTeam').value = doc.header?.callTeam || '';
-    renderEditableRows($('#memoMainRows'), doc.mainTableRows || [], MAIN_KEYS);
-    renderEditableRows($('#memoInfectionRows'), doc.infectionRows || [], INF_KEYS);
-    $('#memoEarlyBird').innerHTML = sanitizeRichHtml(doc.earlyBirdHtml || '<div><br></div>');
-    $('#memoEmptyBed').innerHTML = sanitizeRichHtml(doc.emptyBedHtml || '<div><br></div>');
-    $('#memoAdditionalReport').innerHTML = sanitizeRichHtml(doc.additionalReportHtml || '<div><br></div>');
-    $('#ctTotal').value = doc.ct?.total || '';
-    $('#ctMaleGeneral').value = doc.ct?.maleGeneral || '';
-    $('#ctMaleCohort').value = doc.ct?.maleCohort || '';
-    $('#ctFemaleGeneral').value = doc.ct?.femaleGeneral || '';
-    $('#ctFemaleCohort').value = doc.ct?.femaleCohort || '';
-    $('#signatureLabel').textContent = doc.signature?.label || 'Signature';
-    $('#signatureName').value = doc.signature?.name || '';
-    $('#signatureDesignation').value = doc.signature?.designation || 'N.O./APN';
+    const instance = await ensureMemoEditor();
+    // Old demo memo formats are intentionally unsupported: user opted out of migration.
+    const current = state.memo.document;
+    if (current?.version !== 4 || typeof current.html !== 'string') {
+      throw new Error('This is an old demo memo format. Select Start New to create an editable document.');
+    }
+    instance.setValue(current.html);
     setEditingEnabled(!state.conflicted && !state.boundaryExpired && !state.officialSaving && !state.historyMode);
     state.dirty = keepDirty ? previousDirty : false;
-    if (!keepDirty) {
-      state.editGeneration = 0;
-      state.savedGeneration = 0;
-    }
+    if (!keepDirty) { state.editGeneration = 0; state.savedGeneration = 0; }
     updateSaveState();
+  } catch (error) {
+    setStatus(`Unable to open Night Memo editor: ${error.message || error}`, 'error');
+    $('#saveMemoBtn').disabled = true;
+    $('#printMemoBtn').disabled = true;
+    throw error;
   } finally {
     state.rendering = false;
   }
 }
 
-function renderEditableRows(host, rows, keys) {
-  host.innerHTML = rows.map((row, index) => `<tr data-row-index="${index}">${keys.map(key => `<td contenteditable="true" data-key="${key}">${esc(row?.[key] ?? '')}</td>`).join('')}</tr>`).join('');
-}
-
-function readRows(host, existingRows, keys) {
-  return $$('tr[data-row-index]', host).map((tr, index) => {
-    const base = { ...(existingRows?.[index] || {}) };
-    for (const key of keys) base[key] = tr.querySelector(`[data-key="${key}"]`)?.textContent?.trim() || '';
-    return base;
-  });
-}
-
 function serializeDocument() {
-  const current = state.memo?.document || {};
-  const official = current;
-  return {
-    ...official,
-    version: 3,
-    title: $('#memoTitle').textContent.trim() || 'Night Memo',
-    header: {
-      fromName: $('#memoFromName').value,
-      dectPhone: $('#memoDectPhone').value,
-      date: $('#memoDateText').value,
-      callTeam: $('#memoCallTeam').value,
-    },
-    mainTableRows: readRows($('#memoMainRows'), current.mainTableRows, MAIN_KEYS),
-    infectionRows: readRows($('#memoInfectionRows'), current.infectionRows, INF_KEYS),
-    earlyBirdHtml: sanitizeRichHtml($('#memoEarlyBird').innerHTML),
-    emptyBedHtml: sanitizeRichHtml($('#memoEmptyBed').innerHTML),
-    additionalReportHtml: sanitizeRichHtml($('#memoAdditionalReport').innerHTML),
-    ct: {
-      total: $('#ctTotal').value,
-      maleGeneral: $('#ctMaleGeneral').value,
-      maleCohort: $('#ctMaleCohort').value,
-      femaleGeneral: $('#ctFemaleGeneral').value,
-      femaleCohort: $('#ctFemaleCohort').value,
-    },
-    signature: {
-      label: $('#signatureLabel').textContent.trim() || 'Signature',
-      name: $('#signatureName').value,
-      designation: $('#signatureDesignation').value,
-    },
-  };
-}
-
-function sanitizeRichHtml(html) {
-  const template = document.createElement('template');
-  template.innerHTML = String(html || '');
-  const allowed = new Set(['DIV','P','BR','B','STRONG','I','EM','U','UL','OL','LI']);
-  const walk = node => {
-    for (const child of [...node.children]) {
-      if (!allowed.has(child.tagName)) {
-        child.replaceWith(document.createTextNode(child.textContent || ''));
-        continue;
-      }
-      [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
-      walk(child);
-    }
-  };
-  walk(template.content);
-  return template.innerHTML;
+  if (!memoEditorInstance) throw new Error('The Night Memo editor is not ready.');
+  return { version: 4, html: sanitizeManagerMemoHtml(memoEditorInstance.getValue()) };
 }
 
 function ensureReportingNightCurrent() {
@@ -672,21 +607,20 @@ function showPrintDocument(document, { title = 'Night Memo Preview', autoPrint =
 async function regenerateFromWardData() {
   if (!state.memo || !state.editorOpen || state.conflicted || state.boundaryExpired || state.historyMode) return;
   if (!ensureReportingNightCurrent()) return;
-  const ok = confirm('Replace the ward-derived tables and generated notes with the latest submitted ward data? Header, Additional Report, CT/06:00 values and signature will be preserved. A safety checkpoint will be kept first.');
+  const ok = confirm('Regenerate this Night Memo from Ward submissions? This replaces ALL currently edited document content, including manual changes to headings, tables, and notes. A safety checkpoint will be saved first. Continue?');
   if (!ok) return;
   try {
     await flushRecovery();
     await checkpointCurrentWorkingCopy('before_regenerate_ward_sections');
   } catch (_) { return; }
 
-  const currentDoc = serializeDocument();
-  state.memo.document = regenerateWardDerivedSections(currentDoc, { bundle: state.bundle, items: state.items });
+  state.memo.document = regenerateWardDerivedSections(serializeDocument(), { bundle: state.bundle, items: state.items, reportingDate: state.reportingDate });
   state.memo.source_snapshot = sourceSnapshotFromBundle(state.bundle);
   markDirty({ schedule: false });
-  renderEditor({ keepDirty: true });
+  await renderEditor({ keepDirty: true });
   await saveRecoveryNow({ force: true });
   renderSubmissionMonitor();
-  setStatus('Ward-derived sections regenerated. The previous working copy is available as a safety checkpoint. Press Save or Print to create official History.', 'info');
+  setStatus('Document regenerated from Ward data. The previous edited copy is stored as a safety checkpoint. Press Save or Print to create official History.', 'info');
   setTimeout(clearStatus, 3600);
 }
 function renderMemoState() {
@@ -705,11 +639,8 @@ function renderMemoState() {
 }
 
 function setEditingEnabled(enabled) {
-  const editor = $('#memoEditor');
-  editor.setAttribute('aria-disabled', enabled ? 'false' : 'true');
-  $$('input', editor).forEach(input => { input.disabled = !enabled; });
-  $$('[contenteditable]', editor).forEach(el => { el.contentEditable = enabled ? 'true' : 'false'; });
-  $$('.formatting-tools button').forEach(button => { button.disabled = !enabled; });
+  if (memoEditorInstance) memoEditorInstance.setReadOnly(!enabled);
+  $('#memoEditor').setAttribute('aria-disabled', enabled ? 'false' : 'true');
 }
 
 function cloneJson(value) {
@@ -960,7 +891,7 @@ async function replaceCurrentDraftFromHistory(document, sourceSnapshot, label, c
   exitHistoryMode();
   $('#memoWorkspacePanel').hidden = true;
   $('#editorArea').hidden = false;
-  renderEditor({ keepDirty: true });
+  await renderEditor({ keepDirty: true });
   await saveRecoveryNow({ force: true });
   renderSubmissionMonitor();
   setStatus(`Historical ${label} loaded into the working draft. Press Save to create a new Draft version.`, 'info');

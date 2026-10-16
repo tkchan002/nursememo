@@ -32,12 +32,13 @@ test('official Manager document contains only official memo fields', () => {
   }];
   bundle[0].report = bundle[0].nightReport;
   const doc = buildManagerMemoDocument({ bundle, items: [], reportingDate: '2026-09-29' });
-  assert.equal(doc.version, 3);
-  assert.equal(doc.header.date, '29/09/2026');
-  assert.equal(doc.mainTableRows[0].ward, 'C10');
-  assert.equal(doc.mainTableRows[0].emptyBed, '2 (1M (TB), 1M (HZ))');
+  assert.equal(doc.version, 4);
+  assert.match(doc.html, /29\/09\/2026/);
+  assert.match(doc.html, /<td>C10<\/td>/);
+  assert.match(doc.html, /2 \(1M \(TB\), 1M \(HZ\)\)/);
   assert.equal(Object.hasOwn(doc, 'clinicalNotesHtml'), false);
   assert.equal(Object.hasOwn(doc, 'additionalItemsHtml'), false);
+  assert.deepEqual(Object.keys(doc).sort(), ['html', 'version']);
   assert.equal(sourceSnapshotFromBundle(bundle)[0].report_id, 'r1');
 });
 

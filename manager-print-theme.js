@@ -1,3 +1,4 @@
+import { MANAGER_MEMO_DOCUMENT_CSS } from './manager-document-print-css.js';
 export const MANAGER_PRINT_CSS = `
 @page{size:A4 portrait;margin:10mm 10mm 11mm}
 *{box-sizing:border-box}
@@ -76,11 +77,11 @@ export function renderManagerPrintFooter({ label, printedAt = new Date() } = {})
   return `<footer class="manager-print-footer"><span>${safeLabel}</span><span>Printed ${escapePrintHtml(printedStamp(printedAt))} HKT</span></footer>`;
 }
 
-export function renderManagerPrintDocument({ title, subtitle = '', body = '', footerLabel = title, printedAt = new Date(), logoUrl = '', rosterFontSize = null } = {}) {
+export function renderManagerPrintDocument({ title, subtitle = '', body = '', footerLabel = title, printedAt = new Date(), logoUrl = '', rosterFontSize = null, hideTitle = false } = {}) {
   const safeTitle = escapePrintHtml(title || 'Patrol Night');
   const fontSize = rosterFontSize === null ? null : Math.max(8, Math.min(14, Number(rosterFontSize) || 10));
   const rosterClass = fontSize === null ? '' : ' roster-print-document';
   const rosterStyle = fontSize === null ? '' : ` style="--roster-font-size:${fontSize}pt"`;
   const logo = logoUrl ? `<img class="manager-print-logo" src="${escapePrintHtml(logoUrl)}" alt="Nurse Memo heart logo">` : '';
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${MANAGER_PRINT_CSS}</style></head><body data-print-system="manager-v2"><article class="manager-print-page${rosterClass}"${rosterStyle}>${logo}<h1 class="manager-print-title">${safeTitle}</h1>${subtitle ? `<div class="manager-print-subtitle">${escapePrintHtml(subtitle)}</div>` : ''}${body}${renderManagerPrintFooter({ label: footerLabel, printedAt })}</article></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${MANAGER_PRINT_CSS}${MANAGER_MEMO_DOCUMENT_CSS}</style></head><body data-print-system="manager-v2"><article class="manager-print-page${rosterClass}"${rosterStyle}>${logo}${hideTitle ? '' : `<h1 class="manager-print-title">${safeTitle}</h1>`}${subtitle ? `<div class="manager-print-subtitle">${escapePrintHtml(subtitle)}</div>` : ''}${body}${renderManagerPrintFooter({ label: footerLabel, printedAt })}</article></body></html>`;
 }

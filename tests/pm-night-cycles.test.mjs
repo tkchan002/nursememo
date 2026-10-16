@@ -34,19 +34,19 @@ test('reporting-night identity is the same at 9PM and following 4AM in Hong Kong
 });
 
 test('non-overlapping PM and Night movements are added, never latest-only', () => {
-  const row = buildManagerMemoDocument({ bundle, reportingDate: '2026-10-12' }).mainTableRows[0];
-  assert.equal(row.admissionEC, '5');
-  assert.equal(row.admissionCC, '1');
-  assert.equal(row.transferIn, '1');
-  assert.equal(row.discharge, '3');
-  assert.equal(row.transferOut, '1');
-  assert.equal(row.death, '0');
+  const row = buildManagerMemoDocument({ bundle, reportingDate: '2026-10-12' }).html;
+  assert.match(row, /<td>5<\/td>/);
+  assert.match(row, /<td>1<\/td>/);
+  assert.match(row, /<td>1<\/td>/);
+  assert.match(row, /<td>3<\/td>/);
+  assert.match(row, /<td>1<\/td>/);
+  assert.match(row, /<td>0<\/td>/);
 });
 
 test('4AM census is latest and not the sum of PM + Night', () => {
-  const row = buildManagerMemoDocument({ bundle }).mainTableRows[0];
-  assert.equal(row.totalPatient, '27');
-  assert.match(row.emptyBed, /^3 \(1ISO \(TB\)\)$/);
+  const row = buildManagerMemoDocument({ bundle }).html;
+  assert.match(row, /<td>27<\/td>/);
+  assert.match(row, /3 \(1ISO \(TB\)\)/);
   assert.equal(selectLatestCensus(pm, night), night);
 });
 
@@ -56,8 +56,8 @@ test('missing memo is visible to callers rather than treated as completed zero',
   assert.deepEqual(missingMemoTypes(null, null), ['pm', 'night']);
   assert.equal(combinedMovementValue(null, null, 'admissionEC'), '');
   const partial = buildManagerMemoDocument({ bundle: [{ ward, capacity: 30, pmReport: pm, nightReport: null, report: pm }] });
-  assert.equal(partial.mainTableRows[0].admissionEC, '3');
-  assert.equal(partial.mainTableRows[0].totalPatient, '26');
+  assert.match(partial.html, /<td>3<\/td>/);
+  assert.match(partial.html, /<td>26<\/td>/);
 });
 
 test('manager source snapshot records both original source report IDs and their type', () => {
@@ -67,14 +67,16 @@ test('manager source snapshot records both original source report IDs and their 
   assert.notEqual(sourceSnapshotSignature(snapshot), sourceSnapshotSignature(snapshot.slice(0, 1)));
 });
 
-test('Manager free-text Additional Report survives Ward data regeneration and is printable', () => {
+test('manual edits are preserved until explicitly confirmed regeneration replaces them', () => {
   const initial = buildManagerMemoDocument({ bundle });
-  initial.additionalReportHtml = '<div>Urgent follow-up in AM</div>';
+  initial.html += '<p>Urgent follow-up in AM</p>';
+  assert.match(initial.html, /Urgent follow-up in AM/);
   const updated = regenerateWardDerivedSections(initial, { bundle: [{ ward, capacity: 30, pmReport: null, nightReport: night, report: night }] });
-  assert.equal(updated.additionalReportHtml, initial.additionalReportHtml);
+  assert.equal(updated.version, 4);
+  assert.doesNotMatch(updated.html, /Urgent follow-up in AM/);
+  assert.match(updated.html, /Additional Report/);
   const print = renderManagerMemoPrintHtml(updated);
   assert.match(print, /Additional Report/);
-  assert.match(print, /Urgent follow-up in AM/);
 });
 
 test('current report default includes explicit M/F categories',()=>{

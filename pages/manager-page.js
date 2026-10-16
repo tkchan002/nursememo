@@ -105,6 +105,11 @@ async function bootstrap() {
   renderWardInformation();
   renderWorkspace();
   clearStatus();
+  // Prewarm the SAME editor iframe, after Patrol Night is interactive.
+  // Do not preload on the login page, and do not create a second iframe.
+  // A failed background attempt is deliberately silent; opening Night Memo
+  // will display the error and allow an explicit retry.
+  scheduleMemoEditorPreload();
 }
 
 function bindStaticControls() {
@@ -114,10 +119,11 @@ function bindStaticControls() {
   $('#refreshWardInformationBtn').addEventListener('click', () => refreshWardStatus());
   $('#regenerateBtn').addEventListener('click', regenerateFromWardData);
 
-  $('#continueDraftBtn').addEventListener('click', openExistingDraft);
-  $('#startNewBtn').addEventListener('click', startNewDraft);
+  $('#continueDraftBtn').addEventListener('click', () => { void openExistingDraft().catch(() => {}); });
+  $('#startNewBtn').addEventListener('click', () => { void startNewDraft().catch(() => {}); });
   $('#workspaceHistoryBtn').addEventListener('click', enterHistoryMode);
   $('#backWorkspaceBtn').addEventListener('click', backToWorkspace);
+  $('#retryMemoEditorBtn').addEventListener('click', () => { void renderEditor({keepDirty:true}).catch(() => {}); });
 
   $('#saveMemoBtn').addEventListener('click', saveDraftVersion);
   $('#historyBtn').addEventListener('click', enterHistoryMode);
@@ -375,6 +381,31 @@ async function generateNewDocx(model) {
   return buildManagerDocxBytes(model);
 }
 
+function scheduleMemoEditorPreload() {
+  const start = () => { void ensureMemoEditor().catch(() => {}); };
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(start, { timeout: 1200 });
+  } else {
+    window.setTimeout(start, 80);
+  }
+}
+
+function setMemoOpeningState(stage, { error = false } = {}) {
+  const overlay = $('#memoEditorLoading');
+  if (!overlay) return;
+  overlay.hidden = false;
+  overlay.classList.toggle('memo-editor-load-error', error);
+  const text = $('#memoEditorLoadingText');
+  if (text) text.textContent = stage;
+  const retry = $('#retryMemoEditorBtn');
+  if (retry) retry.hidden = !error;
+}
+
+function clearMemoOpeningState() {
+  const overlay = $('#memoEditorLoading');
+  if (overlay) overlay.hidden = true;
+}
+
 async function ensureMemoEditor() {
   if (memoEditorInstance) return memoEditorInstance;
   if (!memoEditorLoading) {
@@ -399,16 +430,28 @@ async function renderEditor({keepDirty=false}={}) {
   if(!state.memo)return;
   state.rendering=true;
   const previousDirty=state.dirty;
+  setMemoOpeningState('Preparing document editor…');
   try{
-    const editor=await ensureMemoEditor();
-    const bytes=state.pendingDocxBytes || await getManagerDocxBytes(state.memo.document);
+    // Both operations run concurrently. Opening reuses the preloaded iframe.
+    const [editor, bytes] = await Promise.all([
+      ensureMemoEditor(),
+      state.pendingDocxBytes ? Promise.resolve(state.pendingDocxBytes) : getManagerDocxBytes(state.memo.document),
+    ]);
+    setMemoOpeningState('Opening Night Memo…');
     await editor.open(bytes,{readonly:state.conflicted||state.boundaryExpired||state.officialSaving||state.historyMode});
     setEditingEnabled(!state.conflicted&&!state.boundaryExpired&&!state.officialSaving&&!state.historyMode);
     state.dirty=keepDirty?previousDirty:false;
     if(!keepDirty){state.editGeneration=0;state.savedGeneration=0;}
     updateSaveState();
-  }catch(error){setStatus(`Unable to open Night Memo DOCX: ${error.message||error}`,'error');$('#saveMemoBtn').disabled=true;$('#printMemoBtn').disabled=true;throw error;}
-  finally{state.rendering=false;}
+    clearMemoOpeningState();
+  }catch(error){
+    setMemoOpeningState(`Unable to open Night Memo: ${error.message||error}`,{error:true});
+    setStatus(`Unable to open Night Memo DOCX: ${error.message||error}`,'error');
+    $('#saveMemoBtn').disabled=true;
+    $('#printMemoBtn').disabled=true;
+    // Abort Start New/recovery when document opening did not succeed.
+    throw error;
+  }finally{state.rendering=false;}
 }
 
 async function serializeDocument() {

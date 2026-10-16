@@ -123,6 +123,12 @@
                 <div id="memoEditorStatus" class="memo-editor-status" role="status" aria-live="polite" hidden></div>
                 <section class="memo-canvas-wrap">
                   <iframe id="memoEditor" title="Editable Night Memo DOCX document" allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                  <div id="memoEditorLoading" class="memo-editor-loading" role="status" aria-live="polite" hidden>
+                    <div class="memo-loading-spinner" aria-hidden="true"></div>
+                    <strong>Opening Night Memo</strong>
+                    <p id="memoEditorLoadingText">Preparing document editor…</p>
+                    <button id="retryMemoEditorBtn" type="button" class="pill primary-pill" hidden>Retry opening</button>
+                  </div>
                 </section>
               </section>
             </section>

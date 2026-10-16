@@ -36,6 +36,7 @@
 .manager-page #editorArea .editor-toolbar .toolbar-actions {margin-left:auto;}
 .manager-page #editorArea .save-state {min-width:0;white-space:nowrap;}
 .manager-page #editorArea .memo-canvas-wrap {
+  position:relative;
   display:flex;
   flex:1 1 auto;
   min-width:0;
@@ -81,3 +82,29 @@
   .manager-page #editorArea .save-state{white-space:normal;}
   .manager-page .docx-pdf-actions{flex-wrap:wrap;}
 }
+
+/* Visible only while a user is actually opening a Night Memo. The prewarm is silent. */
+.manager-page #editorArea .memo-editor-loading {
+  position:absolute;
+  inset:0;
+  z-index:3;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:12px;
+  padding:24px;
+  text-align:center;
+  color:#263747;
+  background:#f4f6f8;
+  box-sizing:border-box;
+}
+.manager-page #editorArea .memo-editor-loading[hidden] {display:none!important;}
+.manager-page #editorArea .memo-editor-loading p {margin:0;max-width:580px;line-height:1.5;}
+.manager-page #editorArea .memo-loading-spinner {
+  width:34px;height:34px;border:3px solid #c4cdd5;
+  border-top-color:#275882;border-radius:50%;animation:memo-spin 0.85s linear infinite;
+}
+.manager-page #editorArea .memo-editor-load-error .memo-loading-spinner {display:none;}
+@keyframes memo-spin {to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce) {.manager-page #editorArea .memo-loading-spinner {animation:none;}}

@@ -1,3 +1,5 @@
+> **Historical note:** This document describes an earlier external-editor build. For the current self-hosted test branch, use [SELF_HOSTED_DOCUMENT_SETUP.md](SELF_HOSTED_DOCUMENT_SETUP.md) instead.
+
 # Nurse Memo experimental DOCX Manager branch
 
 This complete source ZIP is based on `Nurse_Memo_Complete_Landscape_Editor_Repository.zip`. It is **not a production release**. It replaces the Manager's Jodit editor with the `ranuts/document` browser word processor and stores DOCX bytes in the existing Supabase PostgreSQL database (`bytea`, not Supabase Storage).

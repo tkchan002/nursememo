@@ -1,6 +1,6 @@
-/** Public ranuts/document embed protocol. This branch uses ONLY fictional demo data. */
+/** Self-hosted ranuts/document embed protocol. Only fictional demo data is permitted. */
 import { assertDocxBytes } from '../documents/docx-bytes.js';
-export const EDITOR_URL='https://edit.chaxus.com/editor';
+export const EDITOR_URL = new URL('../office/editor.html', import.meta.url).href;
 export const EDITOR_ORIGIN=new URL(EDITOR_URL).origin;
 const TIMEOUT_MS=120000;
 const zipBuffer=bytes=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
@@ -10,7 +10,7 @@ export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=
   let ready=false, destroyed=false, current=null, count=0, readOnly=readonly;
   let readyResolve,readyReject;
   const readyPromise=new Promise((res,rej)=>{readyResolve=res;readyReject=rej;});
-  const readyTimer=setTimeout(()=>readyReject(new Error('Word processor did not signal ready. Check edit.chaxus.com availability.')),45000);
+  const readyTimer=setTimeout(()=>readyReject(new Error('Word processor did not signal ready. Check the self-hosted editor deployment.')),45000);
   function fail(error) {
     if(current){const request=current;current=null;clearTimeout(request.timer);request.reject(error instanceof Error?error:new Error(String(error)));}
   }

@@ -28,7 +28,7 @@ html,body{margin:0;min-height:100%;background:#d9d9d5}
     @media(max-width:520px){.print-view-title-wrap span{display:none!important}.print-view-button{min-height:44px!important;padding:8px 11px!important;font-size:13px!important}}
     @media print{.print-view-toolbar{display:none!important}.print-view-body{padding-top:0!important}.print-view-viewport{padding:0!important;overflow:visible!important}.print-view-stage{height:auto!important;display:block!important}.print-document-host{transform:none!important;display:block!important}}
 
-/* PAF-inspired print/preview toolbar command variants */
+/* clinical print/preview toolbar command variants */
 .print-view-toolbar .print-view-button,.print-view-message .print-view-button{border:1px solid #888!important;border-radius:15px!important;background:linear-gradient(#fafafa 0%,#fafafa 62%,#aaa 100%)!important;color:#1a1a1a!important;box-shadow:none!important;font:700 14px/18px Arial,sans-serif!important;min-height:32px!important;padding:5px 15px!important}
 .print-view-toolbar .print-view-button:hover:not(:disabled),.print-view-message .print-view-button:hover:not(:disabled){background:linear-gradient(#fafafa 0%,#fafafa 62%,#b8edfc 100%)!important}
 .print-view-toolbar .print-view-button:focus-visible,.print-view-message .print-view-button:focus-visible{outline:2px solid #1d63bb!important;outline-offset:2px!important}

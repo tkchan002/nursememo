@@ -157,3 +157,14 @@ body.login-page{
   border-radius:6px;
 }
 .login-role-card:disabled{opacity:.55;cursor:not-allowed;box-shadow:none}
+
+/* Page-specific clinical interface styling. */
+@media screen {
+  .login-page .legacy-window-title {border-bottom: 1px solid #a0a09a}
+  .login-page .login-main-panel {border: 1px solid #d0d0d0; background: var(--ui-paper)}
+  .login-page .login-intro-copy h1, .login-page .login-form-heading h1 {color:var(--ui-title);font-size:18px}
+  .login-page .login-role-card {border-radius: 2px; border-color:var(--ui-border); box-shadow:inset 1px 1px #fff; background:linear-gradient(#fff,#e6e6e6)}
+  .login-page .login-role-card:hover {border-color:#7b98bc;background:linear-gradient(#fff,#dceff8)}
+  .login-page .password-visibility-button {border:1px solid #9d9f9d; border-radius:1px; background:linear-gradient(#fff,#dedede)}
+  .login-page .password-visibility-button:hover {background:linear-gradient(#fff,#b8edfc)}
+}

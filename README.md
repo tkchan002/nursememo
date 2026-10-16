@@ -19,7 +19,7 @@ These technical names are safe to retain even though the application is called N
 
 ## Deploy
 
-Upload the changed files while preserving their folder paths. Delete the old `NIGHT_MEMO_DEMO_ACCOUNTS.md` because it is replaced by `NURSE_MEMO_DEMO_ACCOUNTS.md`. No other file deletions are required. No actions in Supabase are required by this rename.
+Upload the changed files while preserving their folder paths. This repository retains the previous account and database contracts. For the UI naming update, remove the obsolete visual-adapter CSS and test files listed in the accompanying replacement-package instructions; simply uploading renamed files does not delete their predecessors on GitHub. No Supabase actions are required.
 
 Run `npm run verify` to run code checks, imports, and tests. Run `npm install` then `npm run build` to generate `dist/` for hosting if dependencies are available.
 
@@ -27,8 +27,10 @@ The GitHub Pages URL depends on the GitHub repository name. Changing the app tit
 
 See `NURSE_MEMO_DEMO_ACCOUNTS.md` for expected test credentials (not an export of real passwords).
 
-## PAF UI consolidation
+## UI consolidation
 
-The Ward, Manager, Maintenance, Login and print-preview chrome use a consolidated, independently authored PAF-inspired visual system. Common tab and button styling is owned by `css/paf-design-system.css`; each page has only its necessary specialised layout rules. Old inline Ward styles/event attributes and redundant visual rules have been removed.
+The Ward, Manager, Maintenance, Login and print-preview chrome use a consolidated, independently authored clinical visual system. Common tab and button styling is owned by `css/theme.css`; Ward, Manager, Maintenance and Login keep their page-specific layouts in their respective CSS files. Old inline Ward styles/event attributes and redundant visual rules have been removed.
 
 See [`UI_CONSOLIDATION_REPORT.md`](UI_CONSOLIDATION_REPORT.md) for the complete change inventory, supported exceptions, verification results and limitations.
+
+See [UI_STYLE_GUIDE.md](UI_STYLE_GUIDE.md) for the neutral stylesheet layout.

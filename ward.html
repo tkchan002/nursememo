@@ -7,24 +7,23 @@
   <link rel="stylesheet" href="./css/legacy-shell.css">
   <link rel="stylesheet" href="./css/ward.css">
   <link rel="stylesheet" href="./css/ward-draft-submit.css">
-  <link rel="stylesheet" href="./css/paf-design-system.css">
-  <link rel="stylesheet" href="./css/paf-ward.css">
+  <link rel="stylesheet" href="./css/theme.css">
 </head>
 <body class="legacy-page ward-page">
 <div id="statusBox"></div>
-<!-- Legacy-style Get Data confirmation modal -->
-<div id="gdOverlay">
-  <div id="gdModal" role="dialog" aria-modal="true" aria-labelledby="gdTitleText">
-    <div id="gdTitleBar"><span id="gdTitleText">Data Summary</span><button id="gdCloseBtn" data-ward-action="gdClose" title="Close">&#x2715;</button></div>
+<!-- Get Data confirmation dialog: shared shared controls and Ward-specific data layout. -->
+<div id="gdOverlay" class="ui-dialog-overlay">
+  <div id="gdModal" class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="gdTitleText" aria-describedby="gdFooterMsg" tabindex="-1">
+    <div id="gdTitleBar" class="ui-dialog__titlebar"><span id="gdTitleText">Data Summary</span><button type="button" id="gdCloseBtn" class="ui-dialog__close" data-ward-action="gdClose" title="Close" aria-label="Close data summary">&#x2715;</button></div>
     <div class="gd-section-hdr" id="gdSectionHdr"></div>
-    <div id="gdBody">
+    <div id="gdBody" class="ui-dialog__body">
       <div id="gdNoHistory">No previous submitted memo found.<br>Use <b>Submit</b> to create a memo that can be reused with Get Data.</div>
       <table id="gdTable"><thead><tr><th>Form Label</th><th>Value from last submitted memo</th></tr></thead><tbody id="gdTbody"></tbody></table>
     </div>
-    <div id="gdFooter">
+    <div id="gdFooter" class="ui-dialog__footer">
       <div id="gdFooterMsg">The above data will be retrieved from the most recent submitted memo and applied to this tab.</div>
-      <button class="gd-btn confirm" id="gdConfirmBtn" data-ward-action="gdConfirm">Confirm</button>
-      <button class="gd-btn" data-ward-action="gdClose">Cancel</button>
+      <button type="button" class="gd-btn confirm" id="gdConfirmBtn" data-ward-action="gdConfirm">Confirm</button>
+      <button type="button" class="gd-btn" data-ward-action="gdClose">Cancel</button>
     </div>
   </div>
 </div>

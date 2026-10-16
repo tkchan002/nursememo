@@ -1,5 +1,5 @@
 /*
- * Nurse Memo clinical UI - independently authored from PAF visual reference.
+ * Nurse Memo clinical UI - independently authored from clinical UI reference.
  * Source of truth for shared SCREEN controls across Ward, Manager and Maintenance.
  * The application retains its original HTML IDs, JavaScript, persistence, and
  * dedicated print-document styles. No CMS stylesheets, scripts or assets used.
@@ -11,32 +11,32 @@
  */
 @media screen {
   :root {
-    --paf-page: #fafaf0;
-    --paf-paper: #fdfcec;
-    --paf-neutral: #f4f2e8;
-    --paf-border: #a5a5a0;
-    --paf-hairline: #cecec5;
-    --paf-title: #0739bc;
-    --paf-muted: #60646a;
-    --paf-focus: #1d63bb;
-    --paf-tab-off: linear-gradient(to bottom, #dcdcdc, #eaeaea);
-    --paf-tab-on: linear-gradient(to bottom, #fff, #eaeaea);
-    --paf-button: linear-gradient(to bottom, #fafafa 0%, #fafafa 62%, #aaa 100%);
-    --paf-button-hover: linear-gradient(to bottom, #fafafa 0%, #fafafa 62%, #b8edfc 100%);
-    --legacy-workspace: var(--paf-page);
-    --legacy-panel: var(--paf-paper);
-    --legacy-panel-alt: var(--paf-neutral);
-    --legacy-blue: var(--paf-title);
-    --legacy-muted: var(--paf-muted);
+    --ui-page: #fafaf0;
+    --ui-paper: #fdfcec;
+    --ui-neutral: #f4f2e8;
+    --ui-border: #a5a5a0;
+    --ui-hairline: #cecec5;
+    --ui-title: #0739bc;
+    --ui-muted: #60646a;
+    --ui-focus: #1d63bb;
+    --ui-tab-off: linear-gradient(to bottom, #dcdcdc, #eaeaea);
+    --ui-tab-on: linear-gradient(to bottom, #fff, #eaeaea);
+    --ui-button: linear-gradient(to bottom, #fafafa 0%, #fafafa 62%, #aaa 100%);
+    --ui-button-hover: linear-gradient(to bottom, #fafafa 0%, #fafafa 62%, #b8edfc 100%);
+    --legacy-workspace: var(--ui-page);
+    --legacy-panel: var(--ui-paper);
+    --legacy-panel-alt: var(--ui-neutral);
+    --legacy-blue: var(--ui-title);
+    --legacy-muted: var(--ui-muted);
     --legacy-highlight: #d0d0d0;
-    --title-blue: var(--paf-title);
-    --workspace: var(--paf-page);
-    --panel-bg2: var(--paf-paper);
+    --title-blue: var(--ui-title);
+    --workspace: var(--ui-page);
+    --panel-bg2: var(--ui-paper);
   }
   body.legacy-page.ward-page,
   body.legacy-page.manager-page,
   body.legacy-page.maintenance-page {
-    background: var(--paf-page);
+    background: var(--ui-page);
     color: #232323;
     font: 13px/1.38 Tahoma, Verdana, Arial, sans-serif;
   }
@@ -58,7 +58,7 @@
     background: #f9f9f6; border-color: #babbb5;
   }
 
-  /* PAF/Ext-grey visual language. All navigation tabs share one component. */
+  /* Compact grey clinical interface. All navigation tabs share one component. */
   :is(.tab-strip, .legacy-tabs, .hd-tab-strip, .manager-primary-tabs) {
     display: flex;
     flex-wrap: nowrap;
@@ -89,7 +89,7 @@
     border: 1px solid #b9b9b9;
     border-bottom: 0;
     border-radius: 4px 4px 0 0;
-    background: var(--paf-tab-off);
+    background: var(--ui-tab-off);
     box-shadow: none;
     color: #6f6f6f;
     font: 700 11px/15px Tahoma, Arial, Verdana, sans-serif;
@@ -109,7 +109,7 @@
     bottom: -1px;
     top: auto;
     z-index: 3;
-    background: var(--paf-tab-on);
+    background: var(--ui-tab-on);
     color: #333;
     font-weight: 700;
     border-color: #a9a9a9;
@@ -117,7 +117,7 @@
     box-shadow: none;
   }
   :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab):focus-visible {
-    outline: 2px solid var(--paf-focus);
+    outline: 2px solid var(--ui-focus);
     outline-offset: -2px;
   }
   :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab):disabled {
@@ -125,7 +125,7 @@
   }
 
   /* CUI-small-inspired button, drawn entirely in Nurse Memo CSS. */
-  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn) {
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close) {
     appearance: none;
     display: inline-flex;
     align-items: center;
@@ -139,7 +139,7 @@
     padding: 2px 12px 3px;
     border: 1px solid #888;
     border-radius: 15px;
-    background: var(--paf-button);
+    background: var(--ui-button);
     box-shadow: none;
     color: #1a1a1a;
     text-shadow: none;
@@ -149,28 +149,28 @@
     cursor: pointer;
     transform: none;
   }
-  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn):hover:not(:disabled) {
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close):hover:not(:disabled) {
     border-color: #888;
-    background: var(--paf-button-hover);
+    background: var(--ui-button-hover);
     color: #1a1a1a;
   }
-  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn):active:not(:disabled) {
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close):active:not(:disabled) {
     border-color: #666;
     background: #acacac;
     box-shadow: none;
     transform: none;
   }
-  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn):focus-visible,
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close):focus-visible,
   .formatting-tools button:focus-visible {
-    outline: 2px solid var(--paf-focus); outline-offset: 2px;
+    outline: 2px solid var(--ui-focus); outline-offset: 2px;
   }
-  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn):disabled {
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close):disabled {
     opacity: .45; cursor: not-allowed; pointer-events: none;
   }
   :is(.legacy-btn.small, .btn.small) {min-height: 25px; padding: 2px 9px; font-size: 14px; line-height: 18px}
   :is(.legacy-btn.danger, .btn.danger, .legacy-btn.secondary, .btn.secondary, .btn.ghost,
        .primary-pill, #submitBtn, .submit-pill, .gd-btn.confirm) {
-    background: var(--paf-button);
+    background: var(--ui-button);
     color: #1a1a1a;
     border-color: #888;
     box-shadow: none;
@@ -178,12 +178,12 @@
   }
   :is(.legacy-btn.danger, .btn.danger, .legacy-btn.secondary, .btn.secondary, .btn.ghost,
        .primary-pill, #submitBtn, .submit-pill, .gd-btn.confirm):hover:not(:disabled) {
-    background: var(--paf-button-hover); border-color: #888;
+    background: var(--ui-button-hover); border-color: #888;
   }
-  /* The PAF's larger command buttons, rather than an arbitrary new colour. */
+  /* The Shared larger command buttons, rather than an arbitrary new colour. */
   :is(.btn-bar, .legacy-button-bar) {
-    background: var(--paf-page);
-    border-top: 1px solid var(--paf-hairline);
+    background: var(--ui-page);
+    border-top: 1px solid var(--ui-hairline);
     padding: 12px 9px;
     gap: 12px;
     box-shadow: none;
@@ -199,14 +199,14 @@
 
   /* Clinical surfaces / table headers: no coloured yellow outline. */
   :is(.main-panel, .legacy-panel, .manager-tab-panel) {
-    background: var(--paf-paper);
+    background: var(--ui-paper);
     border: 1px solid #d0d0d0;
     box-shadow: none;
   }
   .manager-tab-panel {padding: 12px}
   :is(.legacy-panel-body, .legacy-page-view) {padding: 13px 16px}
   :is(.legacy-section-title, .section-title, .sec-title) {
-    color: var(--paf-title);
+    color: var(--ui-title);
     font-size: 17px;
     line-height: 1.25;
     font-weight: 700;
@@ -265,17 +265,84 @@
   }
 
   /* Modal surfaces without introducing alternate UI frameworks. */
-  :is(.modal-card, .manager-modal-card, #gdModal) {
-    background: var(--paf-paper);
+  :is(.modal-card, .manager-modal-card) {
+    background: var(--ui-paper);
     border: 2px solid #6d819e;
     border-radius: 2px;
     box-shadow: 4px 6px 20px rgba(0,0,0,.25);
   }
-  :is(.modal-head, #gdTitleBar) {
+  .modal-head {
     background: linear-gradient(#e4ecf7, #bfcfdf);
     border-bottom: 1px solid #8e9db0;
   }
-  :is(.modal-foot, #gdFooter) {background: #e9e8df; border-top: 1px solid #c9c9bf}
+  .modal-foot {background: #e9e8df; border-top: 1px solid #c9c9bf}
+
+  /* Shared clinical dialog frame; the page stylesheet owns only its contents. */
+  .ui-dialog-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    padding: 12px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .38);
+  }
+  .ui-dialog-overlay.show {display: flex}
+  .ui-dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(680px, 100%);
+    min-width: 0;
+    max-height: min(88vh, 850px);
+    overflow: hidden;
+    background: var(--ui-paper);
+    border: 1px solid #999;
+    border-radius: 2px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .27);
+    color: #222;
+    font: 13px/1.4 Tahoma, Verdana, Arial, sans-serif;
+  }
+  .ui-dialog__titlebar {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 35px;
+    padding: 5px 10px;
+    background: linear-gradient(#eeedeb, #d7d7d5);
+    border-bottom: 1px solid #a8a8a6;
+  }
+  .ui-dialog__titlebar > span {
+    color: #282828;
+    font: 700 13px/18px Tahoma, Verdana, Arial, sans-serif;
+  }
+  .ui-dialog__close {
+    flex: 0 0 auto;
+    min-width: 26px;
+    width: 26px;
+    min-height: 26px;
+    height: 26px;
+    padding: 0;
+    font-size: 13px;
+  }
+  .ui-dialog__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    background: #fff;
+  }
+  .ui-dialog__footer {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    padding: 9px 12px;
+    background: #e9e9e5;
+    border-top: 1px solid #bcbcb8;
+  }
 
   /* Focus visibility independent of hover, with real touch sizes on phones. */
   @media (max-width: 900px) {
@@ -284,7 +351,7 @@
     .legacy-panel-body {padding: 11px}
   }
   @media (max-width: 540px) {
-    :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn) {
+    :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close) {
       min-height: 40px;
     }
     body.legacy-page :is(input[type=text], input[type=email], input[type=password],
@@ -293,6 +360,10 @@
       min-height: 40px;
     }
     :is(.btn-bar, .legacy-button-bar) .pill {min-height: 42px}
+    .ui-dialog-overlay {padding: 8px}
+    .ui-dialog {max-height: calc(100dvh - 16px)}
+    .ui-dialog__footer {flex-wrap: wrap}
+    .ui-dialog__footer .gd-btn {flex: 1 1 80px}
     .legacy-user-badge, .mode-badge {white-space: normal}
   }
 }

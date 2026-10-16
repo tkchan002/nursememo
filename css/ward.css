@@ -197,110 +197,6 @@
         hr.sep{border:none;height:1px;background:linear-gradient(to right,var(--bevel-dark),var(--bevel-lo),var(--bevel-dark));margin:10px 0}
         #printFrame{position:fixed;left:-9999px;top:-9999px;width:1px;height:1px;border:none;visibility:hidden}
 
-        /* ══════════════════════════════════════
-           DATA SUMMARY MODAL
-        ══════════════════════════════════════ */
-        #gdOverlay{
-            display:none;position:fixed;inset:0;
-            background:rgba(0,0,0,0.45);
-            z-index:9000;
-            align-items:center;justify-content:center;
-        }
-        #gdOverlay.show{display:flex;}
-
-        #gdModal{
-            background:#F0EFF8;
-            border:2px solid #6A7FAF;
-            border-radius:4px;
-            box-shadow:4px 4px 16px rgba(0,0,0,0.5);
-            width:680px;max-width:96vw;
-            display:flex;flex-direction:column;
-            max-height:88vh;
-            font-family:var(--font);
-            font-size:13px;
-        }
-
-        /* Title bar */
-        #gdTitleBar{
-            display:flex;align-items:center;justify-content:space-between;
-            padding:5px 8px 5px 10px;
-            background:linear-gradient(to bottom,#D8DCF0,#BCC4E4);
-            border-bottom:1px solid #8898CC;
-            flex-shrink:0;
-        }
-        #gdTitleBar span{
-            font-weight:700;font-size:13px;color:#1a1a4a;
-        }
-        #gdCloseBtn{
-            width:20px;height:20px;border-radius:3px;
-            border:1px solid #8090B8;
-            background:linear-gradient(to bottom,#fff,#dde);
-            color:#444;font-size:13px;font-weight:700;
-            cursor:pointer;display:flex;align-items:center;justify-content:center;
-            padding:0;line-height:1;flex-shrink:0;
-        }
-        #gdCloseBtn:hover{background:#fee;border-color:#800;color:#800;}
-
-        /* Section header (blue bar like in screenshot) */
-        .gd-section-hdr{
-            background:linear-gradient(to bottom,#C0CCE8,#A8BAE0);
-            color:#111;font-weight:700;font-size:13px;
-            padding:5px 10px;
-            border-bottom:1px solid #8898CC;
-        }
-
-        /* Scrollable body */
-        #gdBody{
-            flex:1;overflow-y:auto;
-            background:#fff;
-        }
-
-        /* Table inside modal */
-        #gdTable{
-            width:100%;border-collapse:collapse;
-        }
-        
-        #gdTable tbody tr{background:#fff;}
-        #gdTable tbody tr:nth-child(even){background:#F6F6FC;}
-        #gdTable tbody tr:hover{background:#EAF0FF;}
-        
-        #gdTable tbody td:first-child{width:45%;font-weight:normal;}
-        #gdTable tbody td.gd-nil{color:#999;font-style:italic;}
-
-        /* Footer */
-        #gdFooter{
-            display:flex;align-items:center;justify-content:space-between;
-            padding:8px 12px;
-            background:#F0EEE0;
-            border-top:1px solid #C8C4A8;
-            flex-shrink:0;
-            gap:10px;
-        }
-        #gdFooterMsg{
-            flex:1;font-size:11px;color:#444;font-style:italic;
-            line-height:1.4;
-        }
-        .gd-btn{
-            height:26px;padding:0 18px;
-            border-radius:3px;
-            font-family:var(--font);font-size:12px;font-weight:700;
-            cursor:pointer;border:1px solid #8a8f96;color:#111;
-            background:linear-gradient(to bottom,#fff 0%,#ededed 45%,#bfc3c9 100%);
-            box-shadow:inset 1px 1px 0 #fff;outline:none;
-            white-space:nowrap;flex-shrink:0;
-        }
-        .gd-btn:hover{background:linear-gradient(to bottom,#fff 0%,#f3f3f3 45%,#c9cdd3 100%);}
-        .gd-btn:active{background:linear-gradient(to bottom,#b6bac1 0%,#d7d9dd 55%,#f2f2f2 100%);transform:translateY(1px);}
-        .gd-btn.confirm{background:linear-gradient(to bottom,#fff 0%,#ddeeff 45%,#aaccee 100%);border-color:#5588BB;}
-        .gd-btn.confirm:hover{background:linear-gradient(to bottom,#fff 0%,#eef4ff 45%,#bbddff 100%);}
-
-        /* No history notice inside modal */
-        #gdNoHistory{
-            padding:30px 20px;text-align:center;color:#888;font-size:13px;
-            display:none;
-        }
-        #gdNoHistory.show{display:block;}
-
         /* jsCalendar */
         .calendar{position:relative;display:none;border-top:2px solid #fff;border-right:2px solid #000;border-bottom:2px solid #000;border-left:2px solid #fff;font-size:11px;color:#000;cursor:default;background:#d4d0c8;font-family:tahoma,verdana,sans-serif;z-index:9999;}
         .calendar table{border-top:1px solid #000;border-right:1px solid #fff;border-bottom:1px solid #fff;border-left:1px solid #000;font-size:11px;color:#000;cursor:default;background:#d4d0c8;font-family:tahoma,verdana,sans-serif;}
@@ -339,7 +235,7 @@
         .calendar td.time span.active{border-color:#f00;background-color:#000;color:#0f0;}
 
         @media(max-width:900px){#appWrapper{flex-direction:column;}#histSidebar{width:100%;max-width:100%;border-right:2px solid #A0A09A;border-bottom:none;}#histEntryList{display:flex;flex-direction:row;flex-wrap:nowrap;overflow-x:auto;overflow-y:hidden;padding:4px;}.hist-entry{min-width:160px;border-bottom:none;border-right:1px solid #CCCBC4;}}
-        @media(max-width:600px){.tab-strip{padding-left:6px;padding-right:6px;}.tp{padding:10px;}.fl{min-width:auto;width:100%;}.fc{width:100%;}.w280{width:100%;}.fr{flex-direction:column;align-items:flex-start;min-height:auto;gap:2px;}.nr{flex-wrap:wrap;gap:4px;}.btn-get-corner{position:static;margin-bottom:10px;}#gdModal{width:98vw;}}
+        @media(max-width:600px){.tab-strip{padding-left:6px;padding-right:6px;}.tp{padding:10px;}.fl{min-width:auto;width:100%;}.fc{width:100%;}.w280{width:100%;}.fr{flex-direction:column;align-items:flex-start;min-height:auto;gap:2px;}.nr{flex-wrap:wrap;gap:4px;}.btn-get-corner{position:static;margin-bottom:10px;}}
         
         
     /* PDF Settings Modal */
@@ -486,4 +382,157 @@
   .empty-detail-row .empty-remarks{grid-column:1 / -1;grid-row:2;}
   .empty-mobile-label{display:block;font-size:.8rem;font-weight:700;}
   .empty-detail-row{padding:8px 0;border-bottom:1px solid #dddcd3;}
+}
+
+/* Page-specific clinical interface styling. */
+@media screen {
+  .ward-page .app {max-width: 1400px}
+  .ward-page .ward-window-title {margin: 0}
+  .ward-page .tab-strip {border-bottom: 1px solid #b8b8b8}
+  .ward-page .main-panel {min-height: 50vh}
+  .ward-page .tp {padding: 16px 18px 20px}
+  .ward-page .sec-title {font-size: 17px; margin-bottom: 11px}
+  .ward-page .fr {min-height: 34px; margin-bottom: 2px; gap: 5px}
+  .ward-page .fl {min-width: 175px; font-size: 13px; font-weight: 400; padding: 3px 8px 3px 0}
+  .ward-page .fc {font-size: 13px; gap: 5px 10px}
+  .ward-page .fc label {font-size: 13px}
+  .ward-page .w55 {width: 62px}
+  .ward-page .w130 {width: 145px}
+  .ward-page .w280 {width: 290px}
+  .ward-page #memoDate {width: 145px; background-color: #f0f0f0}
+  .ward-page .btn-get-corner {top: 11px; right: 14px; min-height: 25px; padding: 2px 9px}
+  .ward-page .btn-bar #normalBar,
+  .ward-page .btn-bar #histBar,
+  .ward-page .btn-bar #staffBar {gap: 12px}
+  .ward-page .dt {margin: 6px 0; width: 100%}
+  .ward-page .dt th {height: 30px}
+  .ward-page .dt td {height: 30px}
+  .ward-page .dt td > :is(input, select) {border: 0; box-shadow: none; min-height: 27px; padding: 3px 5px}
+  .ward-page .bed-b {height: 29px; min-height: 29px; border-radius: 1px; font-size: 13px}
+  .ward-page .dev-tog-btn {border-radius: 2px}
+  .ward-page .nr {border-radius: 1px; min-height: 34px; padding: 4px 7px}
+  .ward-page .ro-fr {min-height: 29px}
+  .ward-page .ro-fl {font-size: 12px}
+  .ward-page .ro-fc {font-size: 12px; border-radius: 1px}
+  .ward-page #submissionBanner {border-radius: 1px; padding: 7px 12px; font-size: 12px; min-height: 34px}
+  .ward-page #submissionBanner strong {font-size: 12px}
+  .ward-page #submissionBanner span {font-size: 11px}
+  .ward-page .gd-btn {min-height: 27px}
+  .ward-page #histSidebar {background: #f4f2e8; border: 1px solid #b8b8aa; border-right: 0}
+  .ward-page #histSidebarTitle {background: linear-gradient(#ededeb,#d8d8d5)}
+  .ward-page .hist-entry {background: #f4f2e8}
+  .ward-page .hist-entry:hover {background: #eaeaea}
+  .ward-page .hist-entry.selected {background: #316ac5; color: #fff}
+  .ward-page .he-date {font-size: 12px}
+  .ward-page .he-sub {font-size: 11px}
+  /* Print preview is an application modal; its contained iframe owns print styles. */
+  .ward-page #pdfSettingsModal .pill {white-space: nowrap}
+  @media (max-width: 900px) {
+    /* #appWrapper becomes a column in the original Ward CSS: explicitly
+       constrain its flex child to prevent mobile min-content widening. */
+    .ward-page .app {width: 100%; max-width: 100%}
+    .ward-page .tp {padding: 12px 10px; overflow-x: auto}
+    .ward-page .fl {min-width: 140px}
+    .ward-page #histSidebar {min-width: 150px; width: 180px}
+  }
+  @media (max-width: 540px) {
+    .ward-page .fr {align-items: flex-start}
+    .ward-page .fl {min-width: 0; width: 100%; padding: 2px 0}
+    .ward-page .fc {width: 100%; flex: 1 1 100%}
+    .ward-page .btn-get-corner {position: static; margin: 0 0 8px; float: right}
+    .ward-page .btn-get-corner + .sec-title {clear: both}
+    .ward-page .dt {min-width: 520px}
+    .ward-page .tp .dt {display: table}
+    .ward-page #histSidebar.open {max-width: 100%; width: 100%}
+    .ward-page .ward-window-title .legacy-subtitle {font-size: 10px}
+  }
+  /* Consolidated Ward presentation: no inline HTML/row-builder styles. */
+  .ward-page .ward-identity {font-size:1.1rem;font-weight:600}
+  .ward-page .ward-contact {font-size:1.1rem}
+  .ward-page .memo-type-label {margin-left:10px;font-weight:700}
+  .ward-page .ward-section-spaced {font-size:1.15rem;margin-top:10px}
+  .ward-page .ward-section-short-gap {font-size:1.15rem;margin-top:8px}
+  .ward-page .ward-section-emphasis {font-size:1.15rem}
+  .ward-page .bed-formula-note {color:var(--ui-muted);margin-left:6px}
+  .ward-page .empty-remarks-heading {font-weight:700;margin-bottom:6px}
+  .ward-page .section-inline-help {font-weight:400;font-size:.85rem;color:var(--ui-muted)}
+  .ward-page .clinical-nil-label {color:var(--ui-title);font-size:1.1rem}
+  .ward-page .clinical-hint {color:var(--ui-muted)}
+  .ward-page .clinical-column-help {font-weight:400;font-size:.75rem;color:var(--ui-muted);font-style:italic}
+  .ward-page .clinical-col-70 {width:70px}
+  .ward-page .clinical-col-180 {width:180px}
+  .ward-page .clinical-col-action {width:36px}
+  .ward-page .clinical-col-45 {width:45px}
+  .ward-page .clinical-col-80 {width:80px}
+  .ward-page .clinical-col-120 {width:120px}
+  .ward-page .clinical-col-220 {width:220px}
+  .ward-page .clinical-col-150 {width:150px}
+  .ward-page .staff-management-heading, .ward-page .ward-history-heading {
+    background:linear-gradient(#ededeb,#d8d8d5);color:#222;
+    font-weight:700;border-bottom:1px solid var(--ui-border);
+  }
+  .ward-page .staff-management-heading {padding:10px 16px;font-size:1.1rem}
+  .ward-page .staff-management-body {padding:16px}
+  .ward-page .staff-management-explanation {color:var(--ui-muted);font-size:.9rem;margin-bottom:16px}
+  .ward-page .ward-history-heading {padding:7px 16px;font-size:.95rem;display:flex;align-items:center;gap:12px}
+  .ward-page .gd-section-hdr {
+    padding: 7px 11px;
+    color: #303030;
+    background: linear-gradient(#f4f4f3, #dededc);
+    border-bottom: 1px solid var(--ui-border);
+    font: 700 12px/16px Tahoma, Verdana, Arial, sans-serif;
+  }
+  .ward-page #gdFooterMsg {
+    flex: 1 1 190px;
+    color: #505050;
+    font: 12px/1.4 Tahoma, Verdana, Arial, sans-serif;
+  }
+  .ward-page #gdNoHistory {
+    display: none;
+    padding: 24px 14px;
+    text-align: center;
+    color: var(--ui-muted);
+    font-size: 12px;
+  }
+  .ward-page #gdNoHistory.show {display: block}
+  .ward-page #gdTable tbody td:first-child {width: 45%}
+  .ward-page #gdTable tbody td.gd-nil {color: #777; font-style: italic}
+  .ward-page #gdTable tbody tr:nth-child(even) td {background: #f8f8f8}
+  .ward-page .pdf-settings-content {border:1px solid var(--ui-border);border-radius:2px;background:var(--ui-paper)}
+  .ward-page .pdf-settings-header {background:linear-gradient(#ededeb,#d8d8d5);border-bottom:1px solid var(--ui-border)}
+  .ward-page .ward-history-saved-time {font-weight:400;font-size:.85rem;opacity:.85}
+  .ward-page .pdf-preview-title {margin:0;font-size:1.1rem;color:#333}
+  .ward-page .pdf-preview-header-actions {display:flex;gap:8px}
+  .ward-page .pdf-reset-controls {margin-top:auto;padding-top:10px;border-top:1px solid #ddd}
+  .ward-page .pdf-reset-button {width:100%}
+  .ward-page .bed-selector-chevron {font-size:10px;color:#888}
+  .ward-page .device-count-unit {font-size:.9rem;color:#555}
+  .ward-page .early-bird-row {margin-bottom:4px}
+  .ward-page .early-bird-row .eB {width:70px}
+  .ward-page .early-bird-row .eD {width:150px}
+  .ward-page .early-bird-arrow {padding:0 8px;font-size:1rem;font-weight:700}
+  .ward-page .nr .nR {width:120px}
+  .ward-page .nr .nN {width:220px}
+  .ward-page .nr .nA {width:90px}
+  .ward-page .ward-history-nurse-row {font-size:.92rem;margin-bottom:4px;padding:3px 0;border-bottom:1px solid var(--ui-hairline);color:#333}
+  .ward-page .ward-history-empty {color:#777}
+  .ward-page .ro-tbl, .ward-page #gdTable {width:100%;border-collapse:collapse;font-size:12px;background:#fff}
+  .ward-page :is(.ro-tbl,#gdTable) th {background:linear-gradient(#f7f7f7,#d7d7d7);color:#242424;border:1px solid #acacac;padding:6px 8px}
+  .ward-page :is(.ro-tbl,#gdTable) td {border:1px solid #c2c2c2;padding:5px 7px;background:#fff}
+  .ward-page :is(.ro-tbl,#gdTable) tbody tr:hover td {background:#edf4ff}
+  .ward-page .dev-tog-btn {background:var(--ui-button);border:1px solid #888;border-radius:12px;color:#333;font:700 11px/16px Tahoma,Arial,sans-serif;padding:3px 9px;cursor:pointer}
+  .ward-page .dev-tog-btn:hover {background:var(--ui-button-hover);color:#222}
+  .ward-page .dev-tog-btn.active {background:var(--ui-tab-on);border-color:#777;color:#222;box-shadow:inset 0 0 0 1px #fff}
+  .ward-page .dev-tog-btn:focus-visible,.ward-page .btn-x:focus-visible {outline:2px solid var(--ui-focus);outline-offset:2px}
+  .ward-page .btn-x {border:1px solid #999;border-radius:15px;background:var(--ui-button);color:#742525;font:700 14px/16px Arial,sans-serif;box-shadow:none}
+  .ward-page .btn-x:hover {background:var(--ui-button-hover);border-color:#888;color:#722}
+  .ward-page [hidden] {display:none!important}
+  .ward-page #normalBar[hidden] {display:none!important}
+  .ward-page #gdTable[hidden] {display:none!important}
+  .ward-page #statusBox:not(.is-visible) {display:none!important}
+  @media (max-width: 540px) {
+    .ward-page #gdFooterMsg {flex: 1 1 100%}
+    .ward-page #gdFooter .gd-btn {flex: 1 1 0}
+  }
+
 }

@@ -36,22 +36,23 @@ test('Other screens use registered event listeners instead of overwriting event 
 test('Dynamic Ward rows and maintenance accounts use named presentation classes', () => {
   const ward = read('pages/ward-page.js');
   const maintenance = read('pages/maintenance-page.js');
-  const wardStyles = read('css/paf-ward.css');
+  const wardStyles = read('css/ward.css');
   assert.match(ward, /row\.className = 'fr early-bird-row'/);
   assert.match(ward, /class="ward-history-nurse-row"/);
   assert.match(ward, /data-dev-count-wrap hidden/);
   assert.match(ward, /data-dev-count-wrap.*hidden/s);
   assert.match(maintenance, /class="muted account-auth-email"/);
   for (const variant of ['.dev-tog-btn.active', '.btn-x', '.ro-tbl', '#gdTable', '.ward-history-heading']) {
-    assert.ok(wardStyles.includes(variant), `${variant} needs shared PAF ownership`);
+    assert.ok(wardStyles.includes(variant), `${variant} needs shared clinical ownership`);
   }
 });
 
-test('PAF design controls login and print chrome without modifying report formatting', () => {
-  assert.match(read('index.html'), /css\/paf-login\.css/);
-  assert.match(read('css/paf-login.css'), /login-role-card/);
+test('shared UI design controls login and print chrome without modifying report formatting', () => {
+  assert.match(read('index.html'), /css\/login\.css/);
+  assert.match(read('index.html'), /css\/theme\.css/);
+  assert.match(read('css/login.css'), /login-role-card/);
   assert.match(read('css/print-view.css'), /\.print-view-toolbar \.print-view-button:hover/);
   assert.doesNotMatch(read('print.js'), /installShellOverrides|style\.textContent/);
-  assert.match(read('css/paf-manager.css'), /\.formatting-tools button:active/);
-  assert.match(read('css/paf-design-system.css'), /font:\s*700 11px\/15px Tahoma/);
+  assert.match(read('css/manager.css'), /\.formatting-tools button:active/);
+  assert.match(read('css/theme.css'), /font:\s*700 11px\/15px Tahoma/);
 });

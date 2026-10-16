@@ -86,7 +86,6 @@ function selectRole(nextRole) {
   qs('#loginRolePrompt').textContent = `Sign in to ${titles[nextRole]}.`;
   qs('#loginId').type = 'text';
   qs('#loginId').value = DB_MODE === 'demo' ? defaults[nextRole] : '';
-  qs('#loginId').placeholder = 'e.g. C10';
   qs('#password').value = DB_MODE === 'demo' ? 'demo' : '';
   setPasswordVisibility(false);
   setLoginBusy(false);

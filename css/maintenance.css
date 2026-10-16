@@ -59,3 +59,21 @@
 .ward-move-controls,.ward-row-actions{display:flex;gap:5px;align-items:center;flex-wrap:nowrap}
 .ward-move-controls .btn,.ward-row-actions .btn{white-space:nowrap}
 .ward-move-controls .btn[disabled],.data-table .btn[disabled]{opacity:.45;cursor:default}
+
+/* Page-specific clinical interface styling. */
+@media screen {
+  .maintenance-page .legacy-shell {max-width: 1500px; width: calc(100% - 24px); margin: 12px auto}
+  .maintenance-page .maintenance-tabs .tab {min-width: 0}
+  .maintenance-page .legacy-panel-body {padding: 13px 16px}
+  .maintenance-page .legacy-section-title {font-size: 17px}
+  .maintenance-page .test-data-card,
+  .maintenance-page .demo-summary-item {background: var(--ui-paper); border-color: var(--ui-hairline)}
+  .maintenance-page .maintenance-description {font-size: 12px}
+  .maintenance-page .field label {font-size: 12px}
+  @media (max-width: 900px) {
+    .maintenance-page .legacy-shell {width: calc(100% - 12px); margin: 6px auto}
+  }
+  .maintenance-page .maintenance-inline-checkbox {display:inline-flex;gap:8px;align-items:center}
+  .maintenance-page .account-auth-email {font-size:.8em}
+
+}

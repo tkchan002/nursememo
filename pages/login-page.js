@@ -11,7 +11,7 @@ const titles = {
 };
 const defaults = {
   ward: 'C10',
-  manager: 'PatrolNight',
+  manager: 'patrol',
   maintenance: 'NightMaintenance',
 };
 const destinations = {
@@ -55,13 +55,13 @@ if (APP_RUNTIME.ready && DB_MODE === 'supabase') {
 }
 
 qsa('.login-option').forEach(button => {
-  button.onclick = () => selectRole(button.dataset.role);
+  button.addEventListener('click', () => selectRole(button.dataset.role));
 });
-qs('#backBtn').onclick = returnToRoleChooser;
-qs('#togglePassword').onclick = () => {
+qs('#backBtn').addEventListener('click', returnToRoleChooser);
+qs('#togglePassword').addEventListener('click', () => {
   setPasswordVisibility(qs('#password').type === 'password');
-};
-qs('#loginForm').onsubmit = async event => {
+});
+qs('#loginForm').addEventListener('submit', async event => {
   event.preventDefault();
   if (!role || !APP_RUNTIME.ready) return;
 
@@ -77,7 +77,7 @@ qs('#loginForm').onsubmit = async event => {
   } finally {
     if (!navigating) setLoginBusy(false);
   }
-};
+});
 
 function selectRole(nextRole) {
   if (!APP_RUNTIME.ready) return;
@@ -86,7 +86,6 @@ function selectRole(nextRole) {
   qs('#loginRolePrompt').textContent = `Sign in to ${titles[nextRole]}.`;
   qs('#loginId').type = 'text';
   qs('#loginId').value = DB_MODE === 'demo' ? defaults[nextRole] : '';
-  qs('#loginId').placeholder = 'e.g. C10';
   qs('#password').value = DB_MODE === 'demo' ? 'demo' : '';
   setPasswordVisibility(false);
   setLoginBusy(false);

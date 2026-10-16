@@ -39,6 +39,16 @@ class FakeElement {
     };
   }
   setAttribute(name, value) { this[name] = value; }
+  addEventListener(type, listener) {
+    this.listeners ??= new Map();
+    const listeners = this.listeners.get(type) ?? [];
+    listeners.push(listener);
+    this.listeners.set(type, listeners);
+  }
+  async fire(type, event = {}) {
+    const listeners = this.listeners?.get(type) ?? [];
+    for (const listener of listeners) await listener({ target: this, ...event });
+  }
   focus() { this.focused = true; }
 }
 const nodes = new Map();
@@ -152,7 +162,7 @@ if (scenario === 'missing') {
   assert.equal(el('#loginBtn').disabled, true);
   assert.equal(introError.classList.contains('hidden'), false);
   assert.match(introError.textContent, /Supabase is not configured/);
-  wardButton.onclick();
+  await wardButton.fire('click');
   assert.equal(loginId.value, '');
   assert.equal(password.value, '');
   assert.match(el('#modeBadge').innerHTML, /Setup required/);
@@ -161,13 +171,13 @@ if (scenario === 'missing') {
 } else if (scenario === 'demo') {
   assert.equal(wardButton.disabled, false);
   assert.equal(introError.classList.contains('hidden'), true);
-  wardButton.onclick();
+  await wardButton.fire('click');
   assert.equal(loginId.type, 'text');
   assert.equal(loginId.value, 'C10');
   assert.equal(password.value, 'demo');
   assert.match(el('#modeBadge').innerHTML, /Local demo mode/);
   let prevented = false;
-  await el('#loginForm').onsubmit({ preventDefault: () => { prevented = true; } });
+  await el('#loginForm').fire('submit', { preventDefault: () => { prevented = true; } });
   assert.equal(prevented, true);
   assert.equal(ctx.location.target, './ward.html', 'successful form login must navigate to the Ward page');
   const auth = await entry('services/auth-service.js');
@@ -178,7 +188,7 @@ if (scenario === 'missing') {
 } else {
   assert.equal(wardButton.disabled, false);
   assert.equal(introError.classList.contains('hidden'), true);
-  wardButton.onclick();
+  await wardButton.fire('click');
   assert.equal(loginId.type, 'text');
   assert.equal(loginId.value, '');
   assert.equal(password.value, '');
@@ -187,7 +197,7 @@ if (scenario === 'missing') {
   assert.equal(createClientCalls, 1);
   loginId.value = 'c10';
   password.value = 'example-test-password';
-  await el('#loginForm').onsubmit({ preventDefault: () => {} });
+  await el('#loginForm').fire('submit', { preventDefault: () => {} });
   assert.equal(capturedLogin?.email, 'c10@accounts.nightmemo.example.com');
   assert.equal(capturedLogin?.password, 'example-test-password');
   // Real login module converts a short test password only on explicit opt-in.

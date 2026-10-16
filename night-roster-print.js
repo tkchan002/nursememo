@@ -4,7 +4,7 @@ import {
   renderManagerPrintDocument,
 } from './manager-print-theme.js';
 
-export function renderNightStaffPrintHtml({ reportingDate, wardRosters = [], printedAt = new Date() } = {}) {
+export function renderNightStaffPrintHtml({ reportingDate, wardRosters = [], printedAt = new Date(), logoUrl = '', fontSize = 10 } = {}) {
   const content = wardRosters.map(row => {
     const nurses = row.nurses || [];
     const wardName = row.ward?.name || '';
@@ -22,10 +22,11 @@ export function renderNightStaffPrintHtml({ reportingDate, wardRosters = [], pri
     body: content,
     footerLabel: 'Patrol Night · Night Staff List',
     printedAt,
+    logoUrl, rosterFontSize: fontSize,
   });
 }
 
-export function renderNightRunnerPrintHtml({ reportingDate, runners = [], printedAt = new Date() } = {}) {
+export function renderNightRunnerPrintHtml({ reportingDate, runners = [], printedAt = new Date(), logoUrl = '', fontSize = 10 } = {}) {
   const content = runners.length
     ? `<table class="manager-print-table compact"><thead><tr><th style="width:16%">Ward</th><th style="width:20%">Rank</th><th>Name</th><th style="width:29%">Appointment Date</th></tr></thead><tbody>${runners.map(nurse => `<tr><td><strong>${esc(nurse.ward?.name || '')}</strong></td><td>${esc(nurse.role)}</td><td>${esc(nurse.name)}</td><td>${esc(nurse.appointmentDate)}</td></tr>`).join('')}</tbody></table>`
     : '<div class="manager-print-empty">No Night Runner recorded for this reporting night.</div>';
@@ -36,5 +37,6 @@ export function renderNightRunnerPrintHtml({ reportingDate, runners = [], printe
     body: content,
     footerLabel: 'Patrol Night · Night Runner List',
     printedAt,
+    logoUrl, rosterFontSize: fontSize,
   });
 }

@@ -20,7 +20,7 @@ test('demo login defaults match real demo account names and accept non-email IDs
   const accounts = await import('../demo-data.js');
   for (const id of ['C10', 'PatrolNight', 'NightMaintenance']) {
     assert.ok(accounts.DEMO_ACCOUNTS.some(a => a.login_id === id), id);
-    assert.ok(login.includes(`'${id}'`), `${id} must be selectable`);
+    assert.ok(login.includes(`'${id === 'PatrolNight' ? 'patrol' : id}'`), `${id} must be selectable through its current login name`);
   }
   assert.match(login, /qs\('#loginId'\)\.type = 'text'/);
 });

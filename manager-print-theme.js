@@ -4,7 +4,11 @@ export const MANAGER_PRINT_CSS = `
 html,body{margin:0;padding:0}
 body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#d8d8d8;font-size:10pt;line-height:1.28}
 .manager-print-page{width:210mm;min-height:297mm;margin:10px auto;background:#fff;padding:10mm 10mm 9mm;box-shadow:0 2px 10px rgba(0,0,0,.22)}
+.manager-print-logo{display:block;object-fit:contain;width:19mm;height:19mm;margin:0 auto 2mm}
 .manager-print-title{text-align:center;font-size:17pt;font-weight:700;line-height:1.15;margin:0 0 2mm}
+.roster-print-document{font-size:var(--roster-font-size,10pt)}
+.roster-print-document .manager-print-table{font-size:inherit}
+.roster-print-document .manager-print-ward-head{font-size:1.05em}
 .manager-print-subtitle{text-align:center;font-size:9pt;margin:0 0 5mm;color:#333}
 .manager-print-meta{display:grid;grid-template-columns:1fr 1fr;gap:1.5mm 9mm;margin:0 0 4mm}
 .manager-print-meta-row{display:grid;grid-template-columns:27mm 1fr;gap:1.5mm;align-items:baseline}
@@ -34,6 +38,15 @@ body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#d8d8d8;font-s
 .manager-memo-print .manager-print-two-col{margin-top:2.5mm}
 .manager-print-footer{margin-top:6mm;padding-top:2mm;border-top:1px solid #777;font-size:8pt;color:#444;display:flex;justify-content:space-between;gap:8mm}
 .manager-print-footer span:last-child{text-align:right}
+/* Fit the on-screen iframe on phones; physical A4 printing remains unchanged. */
+@media screen and (max-width:820px){
+  .manager-print-page.roster-print-document{width:100%;min-height:0;margin:0;padding:4mm 2.5mm;box-shadow:none}
+  .roster-print-document .manager-print-table{table-layout:auto}
+  .roster-print-document .manager-print-table th,.roster-print-document .manager-print-table td{overflow-wrap:anywhere}
+  .roster-print-document .manager-print-table td:last-child{white-space:nowrap;font-size:.85em}
+  .roster-print-document .manager-print-logo{width:15mm;height:15mm}
+  .roster-print-document .manager-print-title{font-size:15pt}
+}
 @media print{
   body{background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
   .manager-print-page{width:auto;min-height:0;margin:0;padding:0;box-shadow:none}
@@ -63,7 +76,11 @@ export function renderManagerPrintFooter({ label, printedAt = new Date() } = {})
   return `<footer class="manager-print-footer"><span>${safeLabel}</span><span>Printed ${escapePrintHtml(printedStamp(printedAt))} HKT</span></footer>`;
 }
 
-export function renderManagerPrintDocument({ title, subtitle = '', body = '', footerLabel = title, printedAt = new Date() } = {}) {
+export function renderManagerPrintDocument({ title, subtitle = '', body = '', footerLabel = title, printedAt = new Date(), logoUrl = '', rosterFontSize = null } = {}) {
   const safeTitle = escapePrintHtml(title || 'Patrol Night');
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${MANAGER_PRINT_CSS}</style></head><body data-print-system="manager-v2"><article class="manager-print-page"><h1 class="manager-print-title">${safeTitle}</h1>${subtitle ? `<div class="manager-print-subtitle">${escapePrintHtml(subtitle)}</div>` : ''}${body}${renderManagerPrintFooter({ label: footerLabel, printedAt })}</article></body></html>`;
+  const fontSize = rosterFontSize === null ? null : Math.max(8, Math.min(14, Number(rosterFontSize) || 10));
+  const rosterClass = fontSize === null ? '' : ' roster-print-document';
+  const rosterStyle = fontSize === null ? '' : ` style="--roster-font-size:${fontSize}pt"`;
+  const logo = logoUrl ? `<img class="manager-print-logo" src="${escapePrintHtml(logoUrl)}" alt="Nurse Memo heart logo">` : '';
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${MANAGER_PRINT_CSS}</style></head><body data-print-system="manager-v2"><article class="manager-print-page${rosterClass}"${rosterStyle}>${logo}<h1 class="manager-print-title">${safeTitle}</h1>${subtitle ? `<div class="manager-print-subtitle">${escapePrintHtml(subtitle)}</div>` : ''}${body}${renderManagerPrintFooter({ label: footerLabel, printedAt })}</article></body></html>`;
 }

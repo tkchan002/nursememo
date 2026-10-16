@@ -32,7 +32,7 @@ test('all Manager printouts use the shared Manager print system and official mem
   const runnerHtml = roster.renderNightRunnerPrintHtml({ reportingDate: '2026-09-29', runners: [], printedAt });
   for (const html of [memoHtml, staffHtml, runnerHtml]) {
     assert.match(html, /data-print-system="manager-v2"/);
-    assert.match(html, /class="manager-print-page"/);
+    assert.match(html, /class="manager-print-page(?: roster-print-document)?"/);
     assert.match(html, /@page\{size:A4 portrait/);
   }
 });

@@ -1,0 +1,403 @@
+/*
+ * Nurse Memo clinical UI - independently authored from clinical UI reference.
+ * Source of truth for shared SCREEN controls across Ward, Manager and Maintenance.
+ * The application retains its original HTML IDs, JavaScript, persistence, and
+ * dedicated print-document styles. No CMS stylesheets, scripts or assets used.
+ *
+ * The shared screen controls have one visual owner here. Legacy stylesheets
+ * retain page structure, specialised workflows and print-related exceptions;
+ * duplicated legacy definitions for tabs, buttons and table colours were
+ * removed during consolidation.
+ */
+@media screen {
+  :root {
+    --ui-page: #fafaf0;
+    --ui-paper: #fdfcec;
+    --ui-neutral: #f4f2e8;
+    --ui-border: #a5a5a0;
+    --ui-hairline: #cecec5;
+    --ui-title: #0739bc;
+    --ui-muted: #60646a;
+    --ui-focus: #1d63bb;
+    --ui-tab-off: linear-gradient(to bottom, #dcdcdc, #eaeaea);
+    --ui-tab-on: linear-gradient(to bottom, #fff, #eaeaea);
+    --ui-button: linear-gradient(to bottom, #fafafa 0%, #fafafa 62%, #aaa 100%);
+    --ui-button-hover: linear-gradient(to bottom, #fafafa 0%, #fafafa 62%, #b8edfc 100%);
+    --legacy-workspace: var(--ui-page);
+    --legacy-panel: var(--ui-paper);
+    --legacy-panel-alt: var(--ui-neutral);
+    --legacy-blue: var(--ui-title);
+    --legacy-muted: var(--ui-muted);
+    --legacy-highlight: #d0d0d0;
+    --title-blue: var(--ui-title);
+    --workspace: var(--ui-page);
+    --panel-bg2: var(--ui-paper);
+  }
+  body.legacy-page.ward-page,
+  body.legacy-page.manager-page,
+  body.legacy-page.maintenance-page {
+    background: var(--ui-page);
+    color: #232323;
+    font: 13px/1.38 Tahoma, Verdana, Arial, sans-serif;
+  }
+
+  /* Shared clinical title bar; Ward adds the same component used by Manager. */
+  .legacy-window-title {
+    min-height: 44px;
+    padding: 5px 11px;
+    background: linear-gradient(#f0efec, #d8d8d2);
+    border: 1px solid #9ea09c;
+    border-bottom: 0;
+    box-shadow: inset 1px 1px #fff;
+    gap: 10px;
+  }
+  .legacy-window-title .legacy-title-text {font-size: 14px; line-height: 1.15}
+  .legacy-window-title .legacy-subtitle {font-size: 11px; margin-top: 2px}
+  .legacy-user-badge, .user-badge, .mode-badge {
+    font-size: 11px; padding: 3px 7px;
+    background: #f9f9f6; border-color: #babbb5;
+  }
+
+  /* Compact grey clinical interface. All navigation tabs share one component. */
+  :is(.tab-strip, .legacy-tabs, .hd-tab-strip, .manager-primary-tabs) {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    gap: 2px;
+    height: 27px;
+    min-height: 27px;
+    padding: 2px 5px 0;
+    background: #eaeaea;
+    border: 1px solid #d0d0d0;
+    border-bottom: 1px solid #b8b8b8;
+    overflow-x: auto;
+    overflow-y: hidden;
+    white-space: nowrap;
+    scrollbar-width: thin;
+    position: relative;
+  }
+  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab) {
+    appearance: none;
+    box-sizing: border-box;
+    flex: 0 0 auto;
+    min-width: 0;
+    width: auto;
+    height: 24px;
+    min-height: 24px;
+    margin: 0;
+    padding: 3px 9px;
+    border: 1px solid #b9b9b9;
+    border-bottom: 0;
+    border-radius: 4px 4px 0 0;
+    background: var(--ui-tab-off);
+    box-shadow: none;
+    color: #6f6f6f;
+    font: 700 11px/15px Tahoma, Arial, Verdana, sans-serif;
+    text-align: center;
+    text-shadow: none;
+    cursor: pointer;
+    position: relative;
+    bottom: -1px;
+    top: auto;
+    white-space: nowrap;
+  }
+  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab):hover:not(.active):not(:disabled) {
+    background: linear-gradient(to bottom, #fff, #f0f0f0);
+    color: #333;
+  }
+  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab).active {
+    bottom: -1px;
+    top: auto;
+    z-index: 3;
+    background: var(--ui-tab-on);
+    color: #333;
+    font-weight: 700;
+    border-color: #a9a9a9;
+    border-bottom: 1px solid #eaeaea;
+    box-shadow: none;
+  }
+  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab):focus-visible {
+    outline: 2px solid var(--ui-focus);
+    outline-offset: -2px;
+  }
+  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab):disabled {
+    opacity: .45; cursor: default;
+  }
+
+  /* CUI-small-inspired button, drawn entirely in Nurse Memo CSS. */
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close) {
+    appearance: none;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    box-sizing: border-box;
+    width: auto;
+    min-width: 0;
+    min-height: 27px;
+    height: auto;
+    padding: 2px 12px 3px;
+    border: 1px solid #888;
+    border-radius: 15px;
+    background: var(--ui-button);
+    box-shadow: none;
+    color: #1a1a1a;
+    text-shadow: none;
+    font: 700 14px/18px Arial, sans-serif;
+    text-decoration: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transform: none;
+  }
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close):hover:not(:disabled) {
+    border-color: #888;
+    background: var(--ui-button-hover);
+    color: #1a1a1a;
+  }
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close):active:not(:disabled) {
+    border-color: #666;
+    background: #acacac;
+    box-shadow: none;
+    transform: none;
+  }
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close):focus-visible,
+  .formatting-tools button:focus-visible {
+    outline: 2px solid var(--ui-focus); outline-offset: 2px;
+  }
+  :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close):disabled {
+    opacity: .45; cursor: not-allowed; pointer-events: none;
+  }
+  :is(.legacy-btn.small, .btn.small) {min-height: 25px; padding: 2px 9px; font-size: 14px; line-height: 18px}
+  :is(.legacy-btn.danger, .btn.danger, .legacy-btn.secondary, .btn.secondary, .btn.ghost,
+       .primary-pill, #submitBtn, .submit-pill, .gd-btn.confirm) {
+    background: var(--ui-button);
+    color: #1a1a1a;
+    border-color: #888;
+    box-shadow: none;
+    text-shadow: none;
+  }
+  :is(.legacy-btn.danger, .btn.danger, .legacy-btn.secondary, .btn.secondary, .btn.ghost,
+       .primary-pill, #submitBtn, .submit-pill, .gd-btn.confirm):hover:not(:disabled) {
+    background: var(--ui-button-hover); border-color: #888;
+  }
+  /* The Shared larger command buttons, rather than an arbitrary new colour. */
+  :is(.btn-bar, .legacy-button-bar) {
+    background: var(--ui-page);
+    border-top: 1px solid var(--ui-hairline);
+    padding: 12px 9px;
+    gap: 12px;
+    box-shadow: none;
+  }
+  :is(.btn-bar, .legacy-button-bar) .pill {
+    min-width: 90px;
+    min-height: 36px;
+    padding: 4px 17px 5px;
+    border-radius: 20px;
+    font-size: 16px;
+    line-height: 21px;
+  }
+
+  /* Clinical surfaces / table headers: no coloured yellow outline. */
+  :is(.main-panel, .legacy-panel, .manager-tab-panel) {
+    background: var(--ui-paper);
+    border: 1px solid #d0d0d0;
+    box-shadow: none;
+  }
+  .manager-tab-panel {padding: 12px}
+  :is(.legacy-panel-body, .legacy-page-view) {padding: 13px 16px}
+  :is(.legacy-section-title, .section-title, .sec-title) {
+    color: var(--ui-title);
+    font-size: 17px;
+    line-height: 1.25;
+    font-weight: 700;
+    margin: 0 0 11px;
+  }
+  :is(.legacy-section-subtitle, .ro-sec-title) {color: #173c85; font-size: 14px}
+  :is(.data-table, .legacy-table, .report-table, .dt, .submission-table,
+      .ward-source-table, .night-staffing-table, .ward-list-table) {font-size: 12px}
+  :is(.data-table, .legacy-table, .report-table, .dt, .submission-table,
+      .ward-source-table, .night-staffing-table, .ward-list-table) th {
+    background: linear-gradient(#f7f7f7, #d7d7d7);
+    color: #242424;
+    border: 1px solid #acacac;
+    padding: 6px 8px;
+    font-weight: 700;
+    font-size: 12px;
+  }
+  :is(.data-table, .legacy-table, .report-table, .dt, .submission-table,
+      .ward-source-table, .night-staffing-table, .ward-list-table) td {
+    border-color: #c2c2c2;
+    padding: 5px 7px;
+    vertical-align: middle;
+  }
+  :is(.data-table, .legacy-table, .dt, .submission-table, .ward-source-table,
+      .night-staffing-table, .ward-list-table) tbody tr:hover td {background: #edf4ff}
+
+  /* Form controls: compact inset-grey CUI input treatment. */
+  body.legacy-page :is(input[type=text], input[type=email], input[type=password],
+      input[type=number], input[type=date], select, textarea) {
+    box-sizing: border-box;
+    min-height: 28px;
+    height: auto;
+    padding: 4px 7px;
+    background: #fff;
+    border: 1px solid #9d9f9d;
+    border-right-color: #c5c5c5;
+    border-bottom-color: #c5c5c5;
+    border-radius: 1px;
+    box-shadow: inset 1px 1px #e5e5e5;
+    font: 13px/1.38 Tahoma, Verdana, Arial, sans-serif;
+    color: #222;
+    outline: none;
+    max-width: 100%;
+  }
+  body.legacy-page textarea {height: auto; min-height: 68px; resize: vertical}
+  body.legacy-page :is(input, textarea, select):focus-visible {
+    border-color: #3577b7;
+    outline: 1px solid #75a9d6;
+    outline-offset: 0;
+  }
+  body.legacy-page :is(input, textarea, select):disabled {
+    background: #eae8db; color: #777;
+  }
+  body.legacy-page :is(input[type=checkbox], input[type=radio]) {
+    width: 15px; height: 15px; accent-color: #315b99;
+  }
+
+  /* Modal surfaces without introducing alternate UI frameworks. */
+  :is(.modal-card, .manager-modal-card) {
+    background: var(--ui-paper);
+    border: 2px solid #6d819e;
+    border-radius: 2px;
+    box-shadow: 4px 6px 20px rgba(0,0,0,.25);
+  }
+  .modal-head {
+    background: linear-gradient(#e4ecf7, #bfcfdf);
+    border-bottom: 1px solid #8e9db0;
+  }
+  .modal-foot {background: #e9e8df; border-top: 1px solid #c9c9bf}
+
+  /* Shared clinical dialog frame; the page stylesheet owns only its contents. */
+  .ui-dialog-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    z-index: 9000;
+    padding: 12px;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, .38);
+  }
+  .ui-dialog-overlay.show {display: flex}
+  .ui-dialog {
+    display: flex;
+    flex-direction: column;
+    width: min(680px, 100%);
+    min-width: 0;
+    max-height: min(88vh, 850px);
+    overflow: hidden;
+    background: var(--ui-paper);
+    border: 1px solid #999;
+    border-radius: 2px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, .27);
+    color: #222;
+    font: 13px/1.4 Tahoma, Verdana, Arial, sans-serif;
+  }
+  .ui-dialog__titlebar {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 35px;
+    padding: 5px 10px;
+    background: linear-gradient(#eeedeb, #d7d7d5);
+    border-bottom: 1px solid #a8a8a6;
+  }
+  .ui-dialog__titlebar > span {
+    color: #282828;
+    font: 700 13px/18px Tahoma, Verdana, Arial, sans-serif;
+  }
+  .ui-dialog__close {
+    flex: 0 0 auto;
+    min-width: 26px;
+    width: 26px;
+    min-height: 26px;
+    height: 26px;
+    padding: 0;
+    font-size: 13px;
+  }
+  .ui-dialog__body {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow: auto;
+    background: #fff;
+  }
+  .ui-dialog__footer {
+    display: flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 9px;
+    padding: 9px 12px;
+    background: #e9e9e5;
+    border-top: 1px solid #bcbcb8;
+  }
+
+  /* Focus visibility independent of hover, with real touch sizes on phones. */
+  @media (max-width: 900px) {
+    .legacy-shell, #appWrapper {width: calc(100% - 12px); margin: 6px auto}
+    .legacy-window-title {flex-wrap: wrap; gap: 7px}
+    .legacy-panel-body {padding: 11px}
+  }
+  @media (max-width: 540px) {
+    :is(.pill, .legacy-btn, .btn, .btn-s, .btn-get-corner, .gd-btn, .ui-dialog__close) {
+      min-height: 40px;
+    }
+    body.legacy-page :is(input[type=text], input[type=email], input[type=password],
+      input[type=number], input[type=date], select, textarea) {
+      font-size: 16px;
+      min-height: 40px;
+    }
+    :is(.btn-bar, .legacy-button-bar) .pill {min-height: 42px}
+    .ui-dialog-overlay {padding: 8px}
+    .ui-dialog {max-height: calc(100dvh - 16px)}
+    .ui-dialog__footer {flex-wrap: wrap}
+    .ui-dialog__footer .gd-btn {flex: 1 1 80px}
+    .legacy-user-badge, .mode-badge {white-space: normal}
+  }
+}
+
+
+/* Readable screen typography: preserve print-document and Night Memo sheet sizes. */
+@media screen {
+  body.legacy-page.ward-page, body.legacy-page.manager-page,
+  body.legacy-page.maintenance-page { font-size:14px; line-height:1.43; }
+  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab) {
+    font-size:13px; line-height:18px; min-height:28px; height:28px;
+    padding:4px 10px;
+  }
+  :is(.tab-strip, .legacy-tabs, .hd-tab-strip, .manager-primary-tabs) {
+    height:31px; min-height:31px;
+  }
+  :is(.data-table, .legacy-table, .report-table, .dt, .submission-table,
+      .ward-source-table, .night-staffing-table, .ward-list-table) {font-size:14px}
+  :is(.data-table, .legacy-table, .report-table, .dt, .submission-table,
+      .ward-source-table, .night-staffing-table, .ward-list-table) th {font-size:13px}
+  body.legacy-page :is(input[type=text], input[type=email], input[type=password],
+      input[type=number], input[type=date], select, textarea) {
+    font-size:14px; line-height:1.4; min-height:30px;
+  }
+  .ward-page .fl, .ward-page .fc, .ward-page .fc label,
+  .ward-page .ro-fl, .ward-page .ro-fc,
+  .maintenance-page .field label, .maintenance-page .maintenance-description,
+  .manager-page .manager-archive-meta, .manager-page .manager-history-night-meta {font-size:14px}
+  .ward-page .ro-tbl, .ward-page #gdTable {font-size:14px}
+  .ward-page #gdTable th, .ward-page .ro-tbl th {font-size:13px}
+  .legacy-window-title .legacy-subtitle,
+  .legacy-user-badge, .user-badge, .mode-badge {font-size:12px}
+  .ward-page .ward-window-title .legacy-subtitle {font-size:12px}
+  .maintenance-page .account-auth-email {font-size:12px}
+  /* Intentionally no global font overrides of .memo-sheet, .manager-print-page,
+     .pdf-preview, iframe content, or @media print. */
+}

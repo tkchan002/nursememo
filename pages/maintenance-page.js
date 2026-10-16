@@ -15,6 +15,7 @@ import { moveOrderedItem, sortByOrder } from '../domain/ordering.js';
 import { emptyBedGenderLabel, validateWardName } from '../domain/ward.js';
 import { editableCapacity, capacityNumber } from '../domain/capacity-history.js';
 import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
+import { loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
 import { validateMaintenancePassword, toStoredMaintenancePassword } from '../domain/maintenance-accounts.js';
 
 const $ = qs;
@@ -49,25 +50,26 @@ async function init() {
 }
 
 function bind() {
-  $('#logoutBtn').onclick = signOut;
-  qsa('[data-maint]').forEach(b => { b.onclick = () => showPage(b.dataset.maint); });
-  qsa('[data-close]').forEach(b => { b.onclick = () => closeModal(b.dataset.close); });
-  $('#addWardBtn').onclick = () => openWardModal();
-  $('#wardFormModal').onsubmit = saveWardFromModal;
-  $('#addAccountBtn').onclick = () => openAccountModal();
-  $('#refreshAccountsBtn').onclick = () => ensureAccountsLoaded(true);
-  $('#accountForm').onsubmit = saveAccount;
-  $('#passwordForm').onsubmit = savePassword;
-  $('#showNewPassword').onchange = () => {
+  $('#logoutBtn').addEventListener('click', signOut);
+  qsa('[data-maint]').forEach(b => { b.addEventListener('click', () => showPage(b.dataset.maint)); });
+  qsa('[data-close]').forEach(b => { b.addEventListener('click', () => closeModal(b.dataset.close)); });
+  $('#addWardBtn').addEventListener('click', () => openWardModal());
+  $('#wardFormModal').addEventListener('submit', saveWardFromModal);
+  $('#addAccountBtn').addEventListener('click', () => openAccountModal());
+  $('#refreshAccountsBtn').addEventListener('click', () => ensureAccountsLoaded(true));
+  $('#accountForm').addEventListener('submit', saveAccount);
+  $('#accountLogin').addEventListener('input', updateAccountEmailPreview);
+  $('#passwordForm').addEventListener('submit', savePassword);
+  $('#showNewPassword').addEventListener('change', () => {
     const type = $('#showNewPassword').checked ? 'text' : 'password';
     $('#newPassword').type = type;
     $('#confirmNewPassword').type = type;
-  };
-  $('#staffWard').onchange = renderMaintStaff;
-  $('#maintAddStaff').onclick = () => appendMaintStaffEditor();
-  $('#addItemBtn').onclick = () => openItemModal();
-  $('#itemForm').onsubmit = saveItem;
-  $('#refreshAudit').onclick = renderAudit;
+  });
+  $('#staffWard').addEventListener('change', renderMaintStaff);
+  $('#maintAddStaff').addEventListener('click', () => appendMaintStaffEditor());
+  $('#addItemBtn').addEventListener('click', () => openItemModal());
+  $('#itemForm').addEventListener('submit', saveItem);
+  $('#refreshAudit').addEventListener('click', renderAudit);
 }
 
 async function showPage(name) {
@@ -180,10 +182,10 @@ function renderWardList() {
     </tr>`;
   }).join('');
 
-  qsa('[data-move-ward]').forEach(b => { b.onclick = () => moveWard(b.dataset.moveWard, Number(b.dataset.moveDelta)); });
-  qsa('[data-edit-ward]').forEach(b => { b.onclick = () => openWardModal(state.wards.find(w => w.id === b.dataset.editWard)); });
-  qsa('[data-close-ward]').forEach(b => { b.onclick = () => closeWard(b.dataset.closeWard); });
-  qsa('[data-reopen-ward]').forEach(b => { b.onclick = () => reopenWard(b.dataset.reopenWard); });
+  qsa('[data-move-ward]').forEach(b => { b.addEventListener('click', () => moveWard(b.dataset.moveWard, Number(b.dataset.moveDelta))); });
+  qsa('[data-edit-ward]').forEach(b => { b.addEventListener('click', () => openWardModal(state.wards.find(w => w.id === b.dataset.editWard))); });
+  qsa('[data-close-ward]').forEach(b => { b.addEventListener('click', () => closeWard(b.dataset.closeWard)); });
+  qsa('[data-reopen-ward]').forEach(b => { b.addEventListener('click', () => reopenWard(b.dataset.reopenWard)); });
 }
 
 async function moveWard(wardId, delta) {
@@ -332,13 +334,13 @@ function renderAccounts() {
         : '<span class="tag">Confirmed</span>';
     const lastLogin = a.auth_last_sign_in_at ? esc(formatDateTime(a.auth_last_sign_in_at)) : '—';
     const disabled = exists ? '' : ' disabled title="No Supabase Authentication account"';
-    return `<tr><td>${esc(a.login_id)}${a.auth_email ? `<div class="muted" style="font-size:0.8em">${esc(a.auth_email)}</div>` : ''}</td><td>${esc(a.role)}</td><td>${esc(a.wards?.name || '—')}</td><td>${a.active ? '<span class="tag">Active</span>' : '<span class="tag subtle">Disabled</span>'}</td><td>${authStatus}</td><td>${lastLogin}</td><td><div class="inline-actions"><button class="btn secondary small" data-edit-account="${esc(a.auth_user_id)}"${disabled}>Edit</button><button class="btn secondary small" data-password="${esc(a.auth_user_id)}"${disabled}>Set Password</button></div></td></tr>`;
+    return `<tr><td>${esc(a.login_id)}${a.auth_email ? `<div class="muted account-auth-email">${esc(a.auth_email)}</div>` : ''}</td><td>${esc(a.role)}</td><td>${esc(a.wards?.name || '—')}</td><td>${a.active ? '<span class="tag">Active</span>' : '<span class="tag subtle">Disabled</span>'}</td><td>${authStatus}</td><td>${lastLogin}</td><td><div class="inline-actions"><button class="btn secondary small" data-edit-account="${esc(a.auth_user_id)}"${disabled}>Edit</button><button class="btn secondary small" data-password="${esc(a.auth_user_id)}"${disabled}>Set Password</button></div></td></tr>`;
   }).join('') : '<tr><td colspan="7" class="muted">No accounts. Create accounts using Maintenance or run the account bootstrap.</td></tr>';
   qsa('[data-edit-account]').forEach(b => {
-    b.onclick = () => openAccountModal(accounts.find(a => a.auth_user_id === b.dataset.editAccount));
+    b.addEventListener('click', () => openAccountModal(accounts.find(a => a.auth_user_id === b.dataset.editAccount)));
   });
   qsa('[data-password]').forEach(b => {
-    b.onclick = () => openPasswordModal(accounts.find(a => a.auth_user_id === b.dataset.password));
+    b.addEventListener('click', () => openPasswordModal(accounts.find(a => a.auth_user_id === b.dataset.password)));
   });
 }
 function openAccountModal(a = null) {
@@ -353,7 +355,21 @@ function openAccountModal(a = null) {
   $('#accountPassword').value = '';
   $('#accountPasswordWrap').classList.toggle('hidden', !!a);
   $('#accountPassword').required = !a;
+  updateAccountEmailPreview();
   openModal('#accountModal');
+}
+function updateAccountEmailPreview() {
+  const entered = $('#accountLogin').value.trim();
+  const output = $('#accountAuthEmailPreview');
+  try {
+    output.textContent = loginIdToEmail(entered);
+    output.classList.remove('invalid');
+  } catch {
+    output.textContent = 'Enter a valid Login ID (2–32 characters, starting with a letter).';
+    output.classList.add('invalid');
+  }
+  $('#accountRenameHelp').hidden = !state.editingAccount
+    || entered.toLowerCase() === state.editingAccount.login_id.toLowerCase();
 }
 async function saveAccount(event) {
   event.preventDefault();
@@ -417,8 +433,8 @@ function appendMaintStaffEditor(s = { role: 'RN', name: '', appointment_date: ''
   const tr = document.createElement('tr'); tr.dataset.id = s.id || '';
   tr.innerHTML = `<td><select class="control" data-role><option>RN</option><option>EN</option><option>APN</option><option>Student Nurse</option></select></td><td><input class="control" data-name value="${esc(s.name || '')}"></td><td><input class="control" type="date" data-appt value="${esc(s.appointment_date || '')}"></td><td>${s.active === false ? 'Inactive' : 'Active'}</td><td><div class="inline-actions"><button class="btn secondary small" data-save>Save</button>${s.id ? `<button class="btn danger small" data-toggle>${s.active === false ? 'Activate' : 'Deactivate'}</button>` : ''}</div></td>`;
   qs('[data-role]', tr).value = s.role || 'RN';
-  qs('[data-save]', tr).onclick = async () => { await saveWardStaff({ id: tr.dataset.id || undefined, ward_id: wardId, role: qs('[data-role]', tr).value, name: qs('[data-name]', tr).value.trim(), appointment_date: qs('[data-appt]', tr).value || null, active: s.active !== false, display_order: 0 }); flash('Staff saved.', 'success'); await renderMaintStaff(); };
-  const toggle = qs('[data-toggle]', tr); if (toggle) toggle.onclick = async () => { await setStaffActive(s.id, s.active === false); await renderMaintStaff(); };
+  qs('[data-save]', tr).addEventListener('click', async () => { await saveWardStaff({ id: tr.dataset.id || undefined, ward_id: wardId, role: qs('[data-role]', tr).value, name: qs('[data-name]', tr).value.trim(), appointment_date: qs('[data-appt]', tr).value || null, active: s.active !== false, display_order: 0 }); flash('Staff saved.', 'success'); await renderMaintStaff(); });
+  const toggle = qs('[data-toggle]', tr); if (toggle) toggle.addEventListener('click', async () => { await setStaffActive(s.id, s.active === false); await renderMaintStaff(); });
   qs('#maintStaffRows').append(tr);
 }
 function renderItems() {
@@ -436,8 +452,8 @@ function renderItems() {
       <button class="btn secondary small" data-edit-item="${esc(i.id)}">Edit</button>
     </div></td>
   </tr>`).join('');
-  qsa('[data-edit-item]').forEach(b => { b.onclick = () => openItemModal(state.items.find(i => i.id === b.dataset.editItem)); });
-  qsa('[data-move-item]').forEach(b => { b.onclick = () => moveReportItem(b.dataset.moveItem, Number(b.dataset.moveDelta)); });
+  qsa('[data-edit-item]').forEach(b => { b.addEventListener('click', () => openItemModal(state.items.find(i => i.id === b.dataset.editItem))); });
+  qsa('[data-move-item]').forEach(b => { b.addEventListener('click', () => moveReportItem(b.dataset.moveItem, Number(b.dataset.moveDelta))); });
 }
 
 async function moveReportItem(itemId, delta) {

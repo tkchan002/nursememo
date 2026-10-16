@@ -105,25 +105,25 @@ async function bootstrap() {
 }
 
 function bindStaticControls() {
-  $('#logoutBtn').onclick = signOut;
-  $('#managerGlobalHistoryBtn').onclick = enterHistoryMode;
-  $('#refreshStatusBtn').onclick = () => refreshWardStatus();
-  $('#refreshWardInformationBtn').onclick = () => refreshWardStatus();
-  $('#regenerateBtn').onclick = regenerateFromWardData;
+  $('#logoutBtn').addEventListener('click', signOut);
+  $('#managerGlobalHistoryBtn').addEventListener('click', enterHistoryMode);
+  $('#refreshStatusBtn').addEventListener('click', () => refreshWardStatus());
+  $('#refreshWardInformationBtn').addEventListener('click', () => refreshWardStatus());
+  $('#regenerateBtn').addEventListener('click', regenerateFromWardData);
 
-  $('#continueDraftBtn').onclick = openExistingDraft;
-  $('#startNewBtn').onclick = startNewDraft;
-  $('#workspaceHistoryBtn').onclick = enterHistoryMode;
-  $('#backWorkspaceBtn').onclick = backToWorkspace;
+  $('#continueDraftBtn').addEventListener('click', openExistingDraft);
+  $('#startNewBtn').addEventListener('click', startNewDraft);
+  $('#workspaceHistoryBtn').addEventListener('click', enterHistoryMode);
+  $('#backWorkspaceBtn').addEventListener('click', backToWorkspace);
 
-  $('#saveMemoBtn').onclick = saveDraftVersion;
-  $('#historyBtn').onclick = enterHistoryMode;
-  $('#previewMemoBtn').onclick = previewCurrentMemo;
-  $('#printMemoBtn').onclick = printFinalVersion;
+  $('#saveMemoBtn').addEventListener('click', saveDraftVersion);
+  $('#historyBtn').addEventListener('click', enterHistoryMode);
+  $('#previewMemoBtn').addEventListener('click', previewCurrentMemo);
+  $('#printMemoBtn').addEventListener('click', printFinalVersion);
 
-  $('#closeManagerHistoryBtn').onclick = exitHistoryMode;
-  $('#archiveUseAsDraftBtn').onclick = restoreSelectedArchiveAsDraft;
-  $('#printWardMemoBtn').onclick = printOpenWardMemo;
+  $('#closeManagerHistoryBtn').addEventListener('click', exitHistoryMode);
+  $('#archiveUseAsDraftBtn').addEventListener('click', restoreSelectedArchiveAsDraft);
+  $('#printWardMemoBtn').addEventListener('click', printOpenWardMemo);
 
   $('#managerHistoryNightList').addEventListener('click', async event => {
     const button = event.target.closest('[data-archive-date]');
@@ -147,17 +147,17 @@ function bindStaticControls() {
   });
 
   $$('[data-close-modal]').forEach(button => {
-    button.onclick = () => {
+    button.addEventListener('click', () => {
       const el = document.getElementById(button.dataset.closeModal);
       if (el) el.hidden = true;
-    };
+    });
   });
 
   $$('.formatting-tools [data-format]').forEach(button => {
-    button.onclick = () => {
+    button.addEventListener('click', () => {
       document.execCommand(button.dataset.format, false, null);
       markDirty();
-    };
+    });
   });
 
   $('#memoEditor').addEventListener('input', () => {
@@ -250,7 +250,7 @@ function renderSubmissionMonitor() {
     </tr>`;
   }).join('') || '<tr><td colspan="6">No active wards found.</td></tr>';
   $$('.ward-memo-view-btn', body).forEach(button => {
-    button.onclick = () => openWardMemoPreview(button.dataset.wardId, button.dataset.memoType);
+    button.addEventListener('click', () => openWardMemoPreview(button.dataset.wardId, button.dataset.memoType));
   });
 }
 
@@ -1043,7 +1043,7 @@ function renderWardInformation() {
   }).join('');
 
   $$('.ward-info-view-memo', host).forEach(button => {
-    button.onclick = () => openWardMemoPreview(button.dataset.wardId, state.bundle.find(e => e.ward?.id === button.dataset.wardId)?.nightReport ? 'night' : 'pm');
+    button.addEventListener('click', () => openWardMemoPreview(button.dataset.wardId, state.bundle.find(e => e.ward?.id === button.dataset.wardId)?.nightReport ? 'night' : 'pm'));
   });
 }
 

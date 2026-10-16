@@ -32,9 +32,16 @@ export async function signIn(account, password, expectedRole = null) {
 
   if (DB_MODE === 'demo') {
     const demoState = ensureDemoState(false);
-    const demoAccount = demoState.accounts.find(
+    // Prefer a genuine account named patrol; older demo fixtures still use
+    // PatrolNight. Never substitute across roles or for other account IDs.
+    let demoAccount = demoState.accounts.find(
       row => row.login_id.toLowerCase() === account.toLowerCase(),
     );
+    if (!demoAccount && expectedRole === 'manager' && account.toLowerCase() === 'patrol') {
+      demoAccount = demoState.accounts.find(
+        row => row.login_id.toLowerCase() === 'patrolnight' && row.role === 'manager',
+      );
+    }
     const expectedPassword = demoAccount?.demo_password || 'demo';
     if (!demoAccount || password !== expectedPassword) {
       throw new Error('Invalid account or password.');
@@ -48,17 +55,32 @@ export async function signIn(account, password, expectedRole = null) {
 
     sessionStorage.setItem(
       'nightMemoDemoSession',
-      JSON.stringify({ login_id: account }),
+      JSON.stringify({ login_id: demoAccount.login_id }),
     );
     return demoAccount;
   }
 
   // Users enter their short Night Memo ID. Supabase Auth still expects email.
   // Conversion is deterministic and does not expose a username lookup endpoint.
-  const { data, error } = await supabase.auth.signInWithPassword({
+  let { data, error } = await supabase.auth.signInWithPassword({
     email: loginIdToEmail(account),
     password: passwordForSupabase(account, password, INSECURE_TEST_PASSWORDS),
   });
+  // Transitional alias for the disposable demo's original PatrolNight account.
+  // Try the real account first, so Maintenance can rename it to patrol without
+  // leaving a permanent alias. This fallback is disabled for clinical accounts.
+  const oldDemoPatrol = INSECURE_TEST_PASSWORDS && expectedRole === 'manager'
+    && account.toLowerCase() === 'patrol' && error
+    && /invalid login credentials/i.test(String(error.message || ''));
+  if (oldDemoPatrol) {
+    const legacyPassword = password.toLowerCase() === 'patrol'
+      ? passwordForSupabase('PatrolNight', 'patrolnight', true)
+      : passwordForSupabase('PatrolNight', password, true);
+    ({ data, error } = await supabase.auth.signInWithPassword({
+      email: loginIdToEmail('PatrolNight'),
+      password: legacyPassword,
+    }));
+  }
   if (error) throw error;
   if (!data?.user || !data?.session) {
     throw new Error('Login succeeded but no session was returned.');

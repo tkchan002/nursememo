@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="./css/legacy-shell.css">
   <link rel="stylesheet" href="./css/manager.css">
   <link rel="stylesheet" href="./css/manager-night-operations.css">
+  <link rel="stylesheet" href="./css/theme.css">
 </head>
 <body class="legacy-page manager-page">
   <div class="legacy-shell manager-workspace">
@@ -260,6 +261,27 @@
         <div class="modal-actions"><button type="button" class="pill" id="printWardMemoBtn">Print Ward Memo</button><button type="button" class="pill" data-close-modal="wardMemoPreviewModal">Close</button></div>
       </div>
       <iframe id="wardMemoPreviewFrame" title="Ward Night Memo paper preview"></iframe>
+    </div>
+  </div>
+
+  <div class="manager-modal no-print" id="rosterPreviewModal" hidden role="presentation">
+    <div class="manager-modal-card roster-preview-card" role="dialog" aria-modal="true" aria-labelledby="rosterPreviewTitle" tabindex="-1">
+      <div class="modal-head roster-preview-head">
+        <strong id="rosterPreviewTitle">Night Staff List Preview</strong>
+        <div class="roster-preview-actions">
+          <button type="button" class="pill" id="rosterPreviewPrintBtn">Print / PDF</button>
+          <button type="button" class="pill" id="rosterPreviewCloseBtn">Close</button>
+        </div>
+      </div>
+      <div class="roster-preview-body">
+        <aside class="roster-preview-controls">
+          <label for="rosterPreviewFontSize">Document font size (pt)</label>
+          <input type="number" id="rosterPreviewFontSize" min="8" max="14" step="1" value="10">
+          <p>Changes affect this list only. Review the A4 preview before printing.</p>
+          <button type="button" class="pill" id="rosterPreviewResetBtn">Reset to Defaults</button>
+        </aside>
+        <div class="roster-preview-frame-wrap"><iframe id="rosterPreviewFrame" title="Night staffing A4 print preview"></iframe></div>
+      </div>
     </div>
   </div>
 

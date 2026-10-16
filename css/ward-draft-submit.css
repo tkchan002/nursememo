@@ -29,13 +29,6 @@
   border-color: #a9a9a9;
   color: #555;
 }
-#submitBtn {
-  background: linear-gradient(to bottom,#eaffec 0%,#c8efcc 45%,#8fca96 100%);
-  border-color: #5b9563;
-}
-#submitBtn:hover {
-  background: linear-gradient(to bottom,#f1fff2 0%,#d5f5d9 45%,#9ed5a5 100%);
-}
 @media (max-width: 700px) {
   #submissionBanner { align-items: flex-start; flex-direction: column; gap: 2px; }
 }

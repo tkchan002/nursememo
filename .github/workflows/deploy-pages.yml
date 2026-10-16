@@ -1,11 +1,10 @@
-name: Build and Deploy Nurse Memo
+name: Build and Deploy Nurse Memo (Self-Hosted Document)
 
 on:
   push:
     branches:
       - main
-
-  # Also gives you a Run workflow button in GitHub.
+      - docx-editor-test
   workflow_dispatch:
 
 permissions:
@@ -20,37 +19,80 @@ concurrency:
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-
+    timeout-minutes: 65
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v7
+      - name: Checkout Nurse Memo
+        uses: actions/checkout@v4
 
       - name: Set up Node.js
-        uses: actions/setup-node@v7
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version: '24'
 
-      - name: Install dependencies
+      - name: Install Nurse Memo dependencies
         run: npm install --no-audit --no-fund
 
-      - name: Run verification
+      - name: Run Nurse Memo verification
+        env:
+          DOCX_VERIFY_GENERATION: '1'
         run: npm run verify
 
-      - name: Build production site
+      - name: Build Nurse Memo
         run: npm run build
 
-      - name: Configure GitHub Pages
-        uses: actions/configure-pages@v6
+      # Version-pinned editor: the standalone office build at this revision
+      # was tested successfully. GitHub Actions publishes it with Nurse Memo.
+      # Upstream is not vendored into the Nurse Memo source ZIP.
+      # GitHub Actions downloads and compiles it with its own lockfile.
+      - name: Checkout ranuts/document source
+        uses: actions/checkout@v4
+        with:
+          repository: ranuts/document
+          ref: ${{ vars.RANUTS_REF || 'beb7e2fd6c2eada4c4ff21e94ac37d5c39a79fc0' }}
+          path: .upstream/ranuts-document
+          persist-credentials: false
 
-      - name: Upload production site
-        uses: actions/upload-pages-artifact@v5
+      - name: Record upstream source revision
+        id: ranuts-version
+        run: echo "commit=$(git -C .upstream/ranuts-document rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      - name: Set up upstream pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 11.4.0
+          run_install: false
+
+      - name: Install upstream dependencies
+        working-directory: .upstream/ranuts-document
+        run: pnpm install --frozen-lockfile
+
+      - name: Build the actual ranuts/ONLYOFFICE editor
+        working-directory: .upstream/ranuts-document
+        run: pnpm run build
+
+      - name: Prepare corrected self-hosted editor for GitHub Pages
+        env:
+          RANUTS_REVISION: ${{ steps.ranuts-version.outputs.commit }}
+          # For nursememo.app (custom-domain root), set the Actions variable
+          # PAGES_BASE_PATH=/; leave empty only for tkchan002.github.io/nursememo/.
+          PAGES_BASE_PATH: ${{ vars.PAGES_BASE_PATH }}
+        run: node scripts/prepare-editor-site.mjs
+
+      - name: Validate self-hosted Pages artifact
+        run: node scripts/verify-pages-editor.mjs
+
+      - name: Configure GitHub Pages
+        uses: actions/configure-pages@v5
+
+      - name: Upload full application and self-hosted editor
+        uses: actions/upload-pages-artifact@v3
         with:
           path: ./dist
 
       - name: Deploy to GitHub Pages
         id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4

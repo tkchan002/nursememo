@@ -1,40 +1,38 @@
-# Nurse Memo
+# Nurse Memo — Self-hosted document editor test branch
 
-This repository is the **Nurse Memo** demo application. The product name was updated from Night Memo; **PM Memo** and **Night Memo** continue to identify the two reporting types.
+**The Manager application is called Patrol Night.** Its editable document is called **Night Memo**.
 
-## Branding and UI consolidation
+This is a complete source repository for the Nurse Memo `docx-editor-test` branch. It includes Ward, Maintenance, Night Staffing, reporting, authentication, Manager history and PostgreSQL DOCX persistence, plus a GitHub Actions workflow that builds and self-hosts ranuts/document (a browser-only ONLYOFFICE-derived editor) in the published GitHub Pages artifact.
 
-The existing Supabase project requires **no SQL migration, schema reload, Edge Function redeployment, or account recreation** for this UI update. The entire `supabase/` directory is unchanged compared with the source ZIP.
+**Start with [ONE_REPOSITORY_OFFICE_FIX.md](ONE_REPOSITORY_OFFICE_FIX.md) and [SELF_HOSTED_DOCUMENT_SETUP.md](SELF_HOSTED_DOCUMENT_SETUP.md)** for installation, hosting requirements and known risks. The source archive is deliberately small because GitHub Actions downloads/builds the upstream engine separately; the engine is not fetched by the user at runtime from `edit.chaxus.com` after a successful deployment.
 
-The old internal identifiers are intentionally retained because they are part of the existing application contract, not user-visible branding:
+## Key features
 
-- Supabase Auth emails still use `@accounts.nightmemo.example.com`.
-- The maintenance demo login ID is still `NightMaintenance`.
-- PM/Night import format: `night-memo-pm-night-v1`.
-- Audit setting: `nightmemo.audit_explicit`.
-- Existing browser storage keys use `nightMemo...` names.
-- The `legacy-*` CSS classes and variables refer to the existing UI style, and have not been renamed.
+- Patrol Night dashboard remains functional while the editor silently preloads after manager authentication.
+- Opening Night Memo shows a real loading message and animation until the DOCX is rendered; errors show a Retry button. No dashboard 'editor ready' status is shown.
+- The same iframe is reused for editing. The document editor opens in a nearly full-screen workspace.
+- A4 landscape DOCX and API PDF export retain their existing workflow. Documents are stored as PostgreSQL binary data (`bytea`) and referenced by the Manager history tables.
+- No new database migration is required **if the existing DOCX-branch migration was applied already**. First-time installation needs `supabase/patches/20261016_manager_docx_database.sql`.
+- The deployment workflow checks the Nurse Memo source, builds Nurse Memo with Vite, checks out ranuts/document, builds that upstream project, adapts it to the chosen GitHub Pages project or custom-domain root path and preserves nested ONLYOFFICE index URLs and copies the complete editor assets to `/office/`.
 
-These technical names are safe to retain even though the application is called Nurse Memo. Changing them would be a separate identity/data migration, not a branding update.
+## Build and verification
 
-## Deploy
+Run `npm run verify` in a Node.js environment to test the locally available code. The real GitHub Pages deployment additionally requires `npm install`, `npm run build`, an upstream pnpm build and `node scripts/prepare-editor-site.mjs`. This build runs automatically in GitHub Actions; you do not need npm or pnpm on your Mac.
 
-Upload the changed files while preserving their folder paths. This repository retains the previous account and database contracts. For the UI naming update, remove the obsolete visual-adapter CSS and test files listed in the accompanying replacement-package instructions; simply uploading renamed files does not delete their predecessors on GitHub. No Supabase actions are required.
+**Build warning:** Upstream now ships a very large static bundle (its own comments describe roughly 616 MB of assets). GitHub Pages normally limits published sites to 1 GB and applies usage/bandwidth policies. Since upstream no longer publishes the whole application via its own GitHub Pages workflow, and GitHub Pages cannot set the Brotli response header required by its compressed converter, this repository provides special handling that **still requires real-world deployment validation**. Source tests do not prove editor runtime compatibility.
 
-Run `npm run verify` to run code checks, imports, and tests. Run `npm install` then `npm run build` to generate `dist/` for hosting if dependencies are available.
+## Repository boundaries
 
-The GitHub Pages URL depends on the GitHub repository name. Changing the app title does not automatically change the repository URL or GitHub Pages address.
+- `pages/manager-page.js`: Patrol Night orchestration, recovery, Draft/Final, History and print lifecycle.
+- `editor/manager-ranuts.js`: origin-validated iframe bridge using same-origin `office/editor.html`.
+- `documents/`: DOCX generator and binary codec.
+- `data/`, `supabase/`: existing database and authorisation contract.
+- `scripts/prepare-editor-site.mjs`: self-hosted vendor staging, site-root asset adaptation, the nested ONLYOFFICE routing fix, page-route aliases, and converter decompression.
+- `scripts/verify-pages-editor.mjs`: presence/integrity checks of published editor assets, including the nested ONLYOFFICE document frame.
+- `.github/workflows/deploy-pages.yml`: composite deployment of Nurse Memo and the upstream editor.
 
-See `NURSE_MEMO_DEMO_ACCOUNTS.md` for expected test credentials (not an export of real passwords).
+The legacy design/change notes elsewhere in this repo describe earlier Jodit or remote ranuts trials and are retained for historical context only. They should not override this README and `SELF_HOSTED_DOCUMENT_SETUP.md`.
 
-## UI consolidation
+## Licensing and scope
 
-The Ward, Manager, Maintenance, Login and print-preview chrome use a consolidated, independently authored clinical visual system. Common tab and button styling is owned by `css/theme.css`; Ward, Manager, Maintenance and Login keep their page-specific layouts in their respective CSS files. Old inline Ward styles/event attributes and redundant visual rules have been removed.
-
-See [`UI_CONSOLIDATION_REPORT.md`](UI_CONSOLIDATION_REPORT.md) for the complete change inventory, supported exceptions, verification results and limitations.
-
-See [UI_STYLE_GUIDE.md](UI_STYLE_GUIDE.md) for the neutral stylesheet layout.
-
-## October 2026 readability and Manager printing update
-
-The shared screen font sizes have been increased, Manager Ward List and Runner List have an in-page print preview, and Maintenance shows the generated Auth email when editing an account. The disposable demo Manager login now accepts `patrol` without requiring immediate Supabase account recreation. See [RELEASE_NOTES_2026-10-16.md](RELEASE_NOTES_2026-10-16.md) for the test-only login fallback and deployment caveats.
+Nurse Memo is a fictional-data demo. `ranuts/document` is AGPL-3.0 and derived from ONLYOFFICE. The editor's `LICENSE` and `NOTICE` are kept in the published `/office/` folder; the upstream source revision is recorded in `office/nurse-memo-editor-build.json`. Follow the applicable obligations and conduct a security review before processing any actual patient information.

@@ -7,8 +7,9 @@ import { initManagerTabs } from '../components/manager-tabs.js';
 import {
   DB_MODE,
   getManagerMemo,
-  saveManagerMemoRecovery,
-  saveManagerMemoRevision,
+  getManagerDocxBytes,
+  saveManagerDocxRecovery,
+  saveManagerDocxRevision,
   listManagerMemoRevisions,
   getManagerMemoRevision,
   listManagerMemoArchive,
@@ -20,21 +21,17 @@ import { reportSubmittedAt } from '../domain/report-session.js';
 import { MEMO_LABELS } from '../domain/report-cycle.js';
 import { wardSubmissionStates } from '../domain/submission-status.js';
 import {
-  buildManagerMemoDocument,
+  buildManagerMemoData,
   isReportNewerThanSource,
-  regenerateWardDerivedSections,
   reportingNightDate,
   sourceSnapshotFromBundle,
 } from '../domain/manager-memo.js';
 import { loadManagerCurrent } from '../services/report-service.js';
-import { renderManagerMemoPrintHtml } from '../manager-memo-print.js';
+import { createManagerDocumentEditor } from '../editor/manager-ranuts.js';
 import { buildManagerWardInformation } from '../domain/manager-ward-information.js';
-import { openPrintView } from '../services/print-job-service.js';
 
 const $ = qs;
 const $$ = qsa;
-const MAIN_KEYS = ['ward','admissionEC','admissionCC','transferIn','discharge','transferOut','death','totalPatient','emptyBed','ventilator','bipap','hfnc','staff'];
-const INF_KEYS = ['ward','covid','cre','vre','mdra','cd','influenza','hdCapd','remarks'];
 
 const state = {
   access: null,
@@ -70,11 +67,17 @@ const state = {
   activeTab: 'submission',
   historyReturnTab: 'submission',
   wardPreviewContext: null,
+  pendingDocxBytes: null,
+  currentPdfUrl: null,
+  archiveLoadSequence: 0,
 };
 
 let persistenceTail = Promise.resolve();
 let managerTabs = null;
 let wardPrintModulePromise = null;
+let memoEditorInstance = null;
+let memoEditorLoading = null;
+let archiveEditorInstance = null;
 
 bootstrap().catch(showFatal);
 
@@ -102,6 +105,11 @@ async function bootstrap() {
   renderWardInformation();
   renderWorkspace();
   clearStatus();
+  // Prewarm the SAME editor iframe, after Patrol Night is interactive.
+  // Do not preload on the login page, and do not create a second iframe.
+  // A failed background attempt is deliberately silent; opening Night Memo
+  // will display the error and allow an explicit retry.
+  scheduleMemoEditorPreload();
 }
 
 function bindStaticControls() {
@@ -111,10 +119,11 @@ function bindStaticControls() {
   $('#refreshWardInformationBtn').addEventListener('click', () => refreshWardStatus());
   $('#regenerateBtn').addEventListener('click', regenerateFromWardData);
 
-  $('#continueDraftBtn').addEventListener('click', openExistingDraft);
-  $('#startNewBtn').addEventListener('click', startNewDraft);
+  $('#continueDraftBtn').addEventListener('click', () => { void openExistingDraft().catch(() => {}); });
+  $('#startNewBtn').addEventListener('click', () => { void startNewDraft().catch(() => {}); });
   $('#workspaceHistoryBtn').addEventListener('click', enterHistoryMode);
   $('#backWorkspaceBtn').addEventListener('click', backToWorkspace);
+  $('#retryMemoEditorBtn').addEventListener('click', () => { void renderEditor({keepDirty:true}).catch(() => {}); });
 
   $('#saveMemoBtn').addEventListener('click', saveDraftVersion);
   $('#historyBtn').addEventListener('click', enterHistoryMode);
@@ -134,7 +143,7 @@ function bindStaticControls() {
   $('#archiveRevisionList').addEventListener('click', async event => {
     const button = event.target.closest('[data-archive-revision-id], [data-archive-recovery]');
     if (!button) return;
-    if (button.dataset.archiveRecovery != null) selectArchiveRecovery();
+    if (button.dataset.archiveRecovery != null) await selectArchiveRecovery();
     else await selectArchiveRevision(button.dataset.archiveRevisionId);
   });
 
@@ -151,17 +160,6 @@ function bindStaticControls() {
       const el = document.getElementById(button.dataset.closeModal);
       if (el) el.hidden = true;
     });
-  });
-
-  $$('.formatting-tools [data-format]').forEach(button => {
-    button.addEventListener('click', () => {
-      document.execCommand(button.dataset.format, false, null);
-      markDirty();
-    });
-  });
-
-  $('#memoEditor').addEventListener('input', () => {
-    if (!state.rendering) markDirty();
   });
 
   window.addEventListener('beforeunload', event => {
@@ -298,12 +296,28 @@ function renderWorkspace() {
   $('#startNewBtn').textContent = recovery ? 'Start New' : 'Start Night Memo';
 }
 
-function openExistingDraft() {
+// DOCX editing is a dedicated full-viewport workspace. The surrounding Manager
+// tabs remain available once the Manager leaves the document editor.
+function setMemoEditorWorkspaceVisible(visible) {
+  $('#editorArea').hidden = !visible;
+  document.body.classList.toggle('docx-editor-active', Boolean(visible));
+  const inlineStatus = $('#memoEditorStatus');
+  const globalStatus = $('#managerStatus');
+  if (inlineStatus) {
+    inlineStatus.hidden = !visible || !globalStatus || globalStatus.hidden;
+    if (!inlineStatus.hidden) {
+      inlineStatus.textContent = globalStatus.textContent;
+      inlineStatus.className = `memo-editor-status ${globalStatus.classList.contains('error') ? 'error' : globalStatus.classList.contains('warning') ? 'warning' : 'info'}`;
+    }
+  }
+}
+
+async function openExistingDraft() {
   if (!state.memo) return;
   state.editorOpen = true;
   $('#memoWorkspacePanel').hidden = true;
-  $('#editorArea').hidden = false;
-  renderEditor();
+  setMemoEditorWorkspaceVisible(true);
+  await renderEditor();
   renderMemoState();
 }
 
@@ -318,11 +332,13 @@ async function startNewDraft() {
     } catch (_) { return; }
   }
 
-  const document = buildManagerMemoDocument({
+  const docxBytes = await generateNewDocx(buildManagerMemoData({
     bundle: state.bundle,
     items: state.items,
     reportingDate: state.reportingDate,
-  });
+  }));
+  state.pendingDocxBytes = docxBytes;
+  const document = { version:5, format:'docx', document_id:null };
   const sourceSnapshot = sourceSnapshotFromBundle(state.bundle);
 
   state.memo = {
@@ -341,8 +357,8 @@ async function startNewDraft() {
   markDirty({ schedule: false });
 
   $('#memoWorkspacePanel').hidden = true;
-  $('#editorArea').hidden = false;
-  renderEditor({ keepDirty: true });
+  setMemoEditorWorkspaceVisible(true);
+  await renderEditor({ keepDirty: true });
   await saveRecoveryNow({ force: true });
   renderSubmissionMonitor();
   renderMemoState();
@@ -353,110 +369,94 @@ async function backToWorkspace() {
     try { await flushRecovery(); } catch (_) { return; }
   }
   state.editorOpen = false;
-  $('#editorArea').hidden = true;
+  setMemoEditorWorkspaceVisible(false);
   $('#memoWorkspacePanel').hidden = false;
   await refreshHistory();
   renderWorkspace();
 }
-function managerFromName(header = {}) { return String(header.fromName || ''); }
+// Load the DOCX generator only when Start New/Regenerate is requested.
+// Failure to load the optional editor generator cannot block Submission Status or Night Staffing.
+async function generateNewDocx(model) {
+  const { buildManagerDocxBytes } = await import('../documents/manager-docx.js');
+  return buildManagerDocxBytes(model);
+}
 
-function renderEditor({ keepDirty = false } = {}) {
-  if (!state.memo) return;
-  state.rendering = true;
-  const previousDirty = state.dirty;
-  try {
-    const doc = state.memo.document || {};
-    $('#memoTitle').textContent = doc.title || 'Night Memo';
-    $('#memoFromName').value = managerFromName(doc.header);
-    $('#memoDectPhone').value = doc.header?.dectPhone || '';
-    $('#memoDateText').value = doc.header?.date || '';
-    $('#memoCallTeam').value = doc.header?.callTeam || '';
-    renderEditableRows($('#memoMainRows'), doc.mainTableRows || [], MAIN_KEYS);
-    renderEditableRows($('#memoInfectionRows'), doc.infectionRows || [], INF_KEYS);
-    $('#memoEarlyBird').innerHTML = sanitizeRichHtml(doc.earlyBirdHtml || '<div><br></div>');
-    $('#memoEmptyBed').innerHTML = sanitizeRichHtml(doc.emptyBedHtml || '<div><br></div>');
-    $('#memoAdditionalReport').innerHTML = sanitizeRichHtml(doc.additionalReportHtml || '<div><br></div>');
-    $('#ctTotal').value = doc.ct?.total || '';
-    $('#ctMaleGeneral').value = doc.ct?.maleGeneral || '';
-    $('#ctMaleCohort').value = doc.ct?.maleCohort || '';
-    $('#ctFemaleGeneral').value = doc.ct?.femaleGeneral || '';
-    $('#ctFemaleCohort').value = doc.ct?.femaleCohort || '';
-    $('#signatureLabel').textContent = doc.signature?.label || 'Signature';
-    $('#signatureName').value = doc.signature?.name || '';
-    $('#signatureDesignation').value = doc.signature?.designation || 'N.O./APN';
-    setEditingEnabled(!state.conflicted && !state.boundaryExpired && !state.officialSaving && !state.historyMode);
-    state.dirty = keepDirty ? previousDirty : false;
-    if (!keepDirty) {
-      state.editGeneration = 0;
-      state.savedGeneration = 0;
-    }
-    updateSaveState();
-  } finally {
-    state.rendering = false;
+function scheduleMemoEditorPreload() {
+  const start = () => { void ensureMemoEditor().catch(() => {}); };
+  if (typeof window.requestIdleCallback === 'function') {
+    window.requestIdleCallback(start, { timeout: 1200 });
+  } else {
+    window.setTimeout(start, 80);
   }
 }
 
-function renderEditableRows(host, rows, keys) {
-  host.innerHTML = rows.map((row, index) => `<tr data-row-index="${index}">${keys.map(key => `<td contenteditable="true" data-key="${key}">${esc(row?.[key] ?? '')}</td>`).join('')}</tr>`).join('');
+function setMemoOpeningState(stage, { error = false } = {}) {
+  const overlay = $('#memoEditorLoading');
+  if (!overlay) return;
+  overlay.hidden = false;
+  overlay.classList.toggle('memo-editor-load-error', error);
+  const text = $('#memoEditorLoadingText');
+  if (text) text.textContent = stage;
+  const retry = $('#retryMemoEditorBtn');
+  if (retry) retry.hidden = !error;
 }
 
-function readRows(host, existingRows, keys) {
-  return $$('tr[data-row-index]', host).map((tr, index) => {
-    const base = { ...(existingRows?.[index] || {}) };
-    for (const key of keys) base[key] = tr.querySelector(`[data-key="${key}"]`)?.textContent?.trim() || '';
-    return base;
-  });
+function clearMemoOpeningState() {
+  const overlay = $('#memoEditorLoading');
+  if (overlay) overlay.hidden = true;
 }
 
-function serializeDocument() {
-  const current = state.memo?.document || {};
-  const official = current;
-  return {
-    ...official,
-    version: 3,
-    title: $('#memoTitle').textContent.trim() || 'Night Memo',
-    header: {
-      fromName: $('#memoFromName').value,
-      dectPhone: $('#memoDectPhone').value,
-      date: $('#memoDateText').value,
-      callTeam: $('#memoCallTeam').value,
-    },
-    mainTableRows: readRows($('#memoMainRows'), current.mainTableRows, MAIN_KEYS),
-    infectionRows: readRows($('#memoInfectionRows'), current.infectionRows, INF_KEYS),
-    earlyBirdHtml: sanitizeRichHtml($('#memoEarlyBird').innerHTML),
-    emptyBedHtml: sanitizeRichHtml($('#memoEmptyBed').innerHTML),
-    additionalReportHtml: sanitizeRichHtml($('#memoAdditionalReport').innerHTML),
-    ct: {
-      total: $('#ctTotal').value,
-      maleGeneral: $('#ctMaleGeneral').value,
-      maleCohort: $('#ctMaleCohort').value,
-      femaleGeneral: $('#ctFemaleGeneral').value,
-      femaleCohort: $('#ctFemaleCohort').value,
-    },
-    signature: {
-      label: $('#signatureLabel').textContent.trim() || 'Signature',
-      name: $('#signatureName').value,
-      designation: $('#signatureDesignation').value,
-    },
-  };
+async function ensureMemoEditor() {
+  if (memoEditorInstance) return memoEditorInstance;
+  if (!memoEditorLoading) {
+    const candidate = createManagerDocumentEditor('#memoEditor', () => {
+      if (!state.rendering && state.editorOpen) markDirty();
+    });
+    memoEditorLoading = candidate.ready().then(() => {
+      memoEditorInstance = candidate;
+      return candidate;
+    }).catch(error => {
+      // A failed editor initialisation must not leave behind a cached,
+      // permanently unusable iframe for subsequent open attempts.
+      candidate.destroy();
+      throw error;
+    });
+  }
+  try { return await memoEditorLoading; }
+  catch (error) { memoEditorLoading = null; memoEditorInstance = null; throw error; }
 }
 
-function sanitizeRichHtml(html) {
-  const template = document.createElement('template');
-  template.innerHTML = String(html || '');
-  const allowed = new Set(['DIV','P','BR','B','STRONG','I','EM','U','UL','OL','LI']);
-  const walk = node => {
-    for (const child of [...node.children]) {
-      if (!allowed.has(child.tagName)) {
-        child.replaceWith(document.createTextNode(child.textContent || ''));
-        continue;
-      }
-      [...child.attributes].forEach(attr => child.removeAttribute(attr.name));
-      walk(child);
-    }
-  };
-  walk(template.content);
-  return template.innerHTML;
+async function renderEditor({keepDirty=false}={}) {
+  if(!state.memo)return;
+  state.rendering=true;
+  const previousDirty=state.dirty;
+  setMemoOpeningState('Preparing document editor…');
+  try{
+    // Both operations run concurrently. Opening reuses the preloaded iframe.
+    const [editor, bytes] = await Promise.all([
+      ensureMemoEditor(),
+      state.pendingDocxBytes ? Promise.resolve(state.pendingDocxBytes) : getManagerDocxBytes(state.memo.document),
+    ]);
+    setMemoOpeningState('Opening Night Memo…');
+    await editor.open(bytes,{readonly:state.conflicted||state.boundaryExpired||state.officialSaving||state.historyMode});
+    setEditingEnabled(!state.conflicted&&!state.boundaryExpired&&!state.officialSaving&&!state.historyMode);
+    state.dirty=keepDirty?previousDirty:false;
+    if(!keepDirty){state.editGeneration=0;state.savedGeneration=0;}
+    updateSaveState();
+    clearMemoOpeningState();
+  }catch(error){
+    setMemoOpeningState(`Unable to open Night Memo: ${error.message||error}`,{error:true});
+    setStatus(`Unable to open Night Memo DOCX: ${error.message||error}`,'error');
+    $('#saveMemoBtn').disabled=true;
+    $('#printMemoBtn').disabled=true;
+    // Abort Start New/recovery when document opening did not succeed.
+    throw error;
+  }finally{state.rendering=false;}
+}
+
+async function serializeDocument() {
+  const editor=await ensureMemoEditor();
+  return editor.export('DOCX');
 }
 
 function ensureReportingNightCurrent() {
@@ -485,7 +485,7 @@ function markDirty({ schedule = true } = {}) {
   renderMemoState();
   updateSaveState();
   clearTimeout(state.saveTimer);
-  if (schedule) state.saveTimer = setTimeout(() => saveRecoveryNow().catch(() => {}), 1800);
+  if (schedule) state.saveTimer = setTimeout(() => saveRecoveryNow().catch(() => {}), 9000);
 }
 
 function updateSaveState(message = '') {
@@ -516,17 +516,18 @@ async function saveRecoveryNow({ force = false } = {}) {
     if (!ensureReportingNightCurrent()) throw new Error('REPORTING_NIGHT_CHANGED');
 
     const generation = state.editGeneration;
-    const document = state.editorOpen ? serializeDocument() : state.memo.document;
+    const bytes = state.editorOpen ? await serializeDocument() : state.pendingDocxBytes || await getManagerDocxBytes(state.memo.document);
     state.recoverySaving = true;
     updateSaveState();
     try {
-      const saved = await saveManagerMemoRecovery({
+      const saved = await saveManagerDocxRecovery({
         reportingDate: state.reportingDate,
-        document,
+        bytes,
         sourceSnapshot: state.memo.source_snapshot || [],
         expectedRevision: state.memo.revision || 0,
       });
       state.memo = saved;
+      state.pendingDocxBytes = bytes;
       state.savedGeneration = Math.max(state.savedGeneration, generation);
       state.dirty = state.editGeneration > state.savedGeneration;
       renderWorkspace();
@@ -585,10 +586,12 @@ async function saveOfficialRevision(revisionType, reason) {
   try {
     await flushRecovery();
     const generation = state.editGeneration;
-    const document = serializeDocument();
-    const result = await enqueuePersistence(() => saveManagerMemoRevision({
+    const bytes = await serializeDocument();
+    // A failed PDF export must never create a misleading Final revision.
+    const finalPdf = revisionType==='final' ? await memoEditorInstance.export('PDF') : null;
+    const result = await enqueuePersistence(() => saveManagerDocxRevision({
       reportingDate: state.reportingDate,
-      document,
+      bytes,
       sourceSnapshot: state.memo.source_snapshot || [],
       expectedRevision: state.memo.revision || 0,
       revisionType,
@@ -596,6 +599,7 @@ async function saveOfficialRevision(revisionType, reason) {
       actorLabel: actorLabel(),
     }));
     state.memo = result.memo;
+    state.pendingDocxBytes = bytes;
     state.savedGeneration = Math.max(state.savedGeneration, generation);
     state.dirty = state.editGeneration > state.savedGeneration;
     state.lastOfficialType = revisionType;
@@ -603,7 +607,7 @@ async function saveOfficialRevision(revisionType, reason) {
     renderMemoState();
     renderWorkspace();
     updateSaveState();
-    return result;
+    return {...result,finalPdf};
   } catch (error) {
     handleSaveError(error, revisionType);
     throw error;
@@ -636,57 +640,50 @@ async function saveDraftVersion() {
 }
 
 async function printFinalVersion() {
-  const result = await saveOfficialRevision('final', 'print');
-  if (!result) return;
-  setStatus(`Final #${result.revision.revision_number} saved. Opening print dialog…`, 'info');
-  await showPrintDocument(result.revision.document, {
-    title: `Final #${result.revision.revision_number} · Night Memo`,
-    autoPrint: true,
-  });
-  setTimeout(clearStatus, 2600);
+  const result=await saveOfficialRevision('final','print');
+  if(!result)return;
+  setStatus(`Final #${result.revision.revision_number} saved. Open the PDF preview to print or download.`, 'info');
+  showPdfPreview(result.finalPdf,`Final #${result.revision.revision_number} · Night Memo`);
 }
-
-function previewCurrentMemo() {
-  if (!state.memo) return;
-  showPrintDocument(serializeDocument(), { title: 'Night Memo Preview', autoPrint: false });
+async function previewCurrentMemo() {
+  if(!state.memo)return;
+  try{
+    setStatus('Creating PDF preview…','info');
+    const editor=await ensureMemoEditor();
+    const blob=await editor.export('PDF');
+    showPdfPreview(blob,'Night Memo Preview');clearStatus();
+  }catch(error){setStatus(`PDF preview failed: ${error.message||error}`,'error');}
 }
-
-function showPrintDocument(document, { title = 'Night Memo Preview', autoPrint = false } = {}) {
-  if (autoPrint) {
-    openPrintView({ html: renderManagerMemoPrintHtml(document), title, kind: 'manager-memo' });
-    return Promise.resolve();
-  }
-  return new Promise(resolve => {
-    const modal = $('#printPreviewModal');
-    const frame = $('#printPreviewFrame');
-    $('#printPreviewTitle').textContent = title;
-    modal.hidden = false;
-    frame.onload = () => {
-      frame.onload = null;
-      resolve();
-    };
-    frame.srcdoc = renderManagerMemoPrintHtml(document);
-  });
+function showPdfPreview(blob,title) {
+  if(!(blob instanceof Blob))throw new Error('PDF export was not returned.');
+  if(state.currentPdfUrl)URL.revokeObjectURL(state.currentPdfUrl);
+  const url=URL.createObjectURL(blob);state.currentPdfUrl=url;
+  $('#printPreviewTitle').textContent=title;
+  $('#printPreviewModal').hidden=false;
+  $('#printPreviewFrame').src=url;
+  const link=$('#downloadMemoPdfBtn');link.href=url;link.download=`Night-Memo-${state.reportingDate}.pdf`;
 }
 
 async function regenerateFromWardData() {
   if (!state.memo || !state.editorOpen || state.conflicted || state.boundaryExpired || state.historyMode) return;
   if (!ensureReportingNightCurrent()) return;
-  const ok = confirm('Replace the ward-derived tables and generated notes with the latest submitted ward data? Header, Additional Report, CT/06:00 values and signature will be preserved. A safety checkpoint will be kept first.');
+  const ok = confirm('Regenerate this Night Memo from Ward submissions? This replaces ALL currently edited document content, including manual changes to headings, tables, and notes. A safety checkpoint will be saved first. Continue?');
   if (!ok) return;
   try {
     await flushRecovery();
     await checkpointCurrentWorkingCopy('before_regenerate_ward_sections');
   } catch (_) { return; }
 
-  const currentDoc = serializeDocument();
-  state.memo.document = regenerateWardDerivedSections(currentDoc, { bundle: state.bundle, items: state.items });
+  state.pendingDocxBytes=await generateNewDocx(buildManagerMemoData({
+    bundle:state.bundle,items:state.items,reportingDate:state.reportingDate,
+  }));
+  state.memo.document={version:5,format:'docx',document_id:null};
   state.memo.source_snapshot = sourceSnapshotFromBundle(state.bundle);
   markDirty({ schedule: false });
-  renderEditor({ keepDirty: true });
+  await renderEditor({ keepDirty: true });
   await saveRecoveryNow({ force: true });
   renderSubmissionMonitor();
-  setStatus('Ward-derived sections regenerated. The previous working copy is available as a safety checkpoint. Press Save or Print to create official History.', 'info');
+  setStatus('Document regenerated from Ward data. The previous edited copy is stored as a safety checkpoint. Press Save or Print to create official History.', 'info');
   setTimeout(clearStatus, 3600);
 }
 function renderMemoState() {
@@ -705,11 +702,11 @@ function renderMemoState() {
 }
 
 function setEditingEnabled(enabled) {
-  const editor = $('#memoEditor');
-  editor.setAttribute('aria-disabled', enabled ? 'false' : 'true');
-  $$('input', editor).forEach(input => { input.disabled = !enabled; });
-  $$('[contenteditable]', editor).forEach(el => { el.contentEditable = enabled ? 'true' : 'false'; });
-  $$('.formatting-tools button').forEach(button => { button.disabled = !enabled; });
+  // During Save/Print the iframe must be temporarily locked against input,
+  // but must remain in editable mode for ranuts' DOCX/PDF export API.
+  // History, conflict and reporting-night expiry use genuine remote read-only.
+  if (memoEditorInstance) memoEditorInstance.setReadOnly(!enabled, { temporary: !enabled && state.officialSaving });
+  $('#memoEditor').setAttribute('aria-disabled', enabled ? 'false' : 'true');
 }
 
 function cloneJson(value) {
@@ -735,6 +732,7 @@ async function enterHistoryMode() {
   state.historyReturnMode = state.editorOpen ? 'editor' : 'workspace';
   state.historyReturnTab = state.activeTab;
   state.historyMode = true;
+  setMemoEditorWorkspaceVisible(false);
   setEditingEnabled(false);
   managerTabs?.setEnabled(false);
   $('#managerHistorySidebar').hidden = false;
@@ -767,12 +765,14 @@ function exitHistoryMode() {
   if (state.historyReturnMode === 'editor' && state.memo) {
     state.editorOpen = true;
     $('#memoWorkspacePanel').hidden = true;
-    $('#editorArea').hidden = false;
+    setMemoEditorWorkspaceVisible(true);
     if (!state.conflicted && !state.boundaryExpired && !state.officialSaving) setEditingEnabled(true);
   } else if (state.activeTab === 'memo') {
     state.editorOpen = false;
-    $('#editorArea').hidden = true;
+    setMemoEditorWorkspaceVisible(false);
     $('#memoWorkspacePanel').hidden = false;
+  } else {
+    setMemoEditorWorkspaceVisible(false);
   }
   document.querySelector(`[data-manager-tab="${state.activeTab}"]`)?.focus();
   renderMemoState();
@@ -807,7 +807,7 @@ function renderEmptyArchive() {
   $('#archiveMemoTitle').textContent = 'Night Memo History';
   $('#archiveMemoMeta').textContent = 'No historical memo selected.';
   $('#archiveRevisionList').innerHTML = '<span class="manager-history-empty">No saved Night Memos.</span>';
-  $('#archiveMemoFrame').srcdoc = '<!doctype html><html><body style="font-family:Arial,sans-serif;padding:24px;color:#666">No historical Night Memo is available.</body></html>';
+  $('#archiveMemoMeta').textContent='No historical Night Memo is available.';
   $('#archiveUseAsDraftBtn').hidden = true;
   $('#archiveRecoveryDetails').hidden = true;
 }
@@ -837,7 +837,7 @@ async function selectArchiveNight(reportingDate) {
 
   const preferred = revisions.find(row => row.revision_type === 'final') || revisions[0] || null;
   if (preferred) await selectArchiveRevision(preferred.id);
-  else if (memo) selectArchiveRecovery();
+  else if (memo) await selectArchiveRecovery();
   else renderEmptyArchive();
 }
 
@@ -855,9 +855,16 @@ function renderArchiveRevisionList() {
   host.innerHTML = buttons.join('') || '<span class="manager-history-empty">No saved versions for this night.</span>';
 }
 
-function renderArchiveDocument(document, meta) {
-  $('#archiveMemoMeta').textContent = meta;
-  $('#archiveMemoFrame').srcdoc = renderManagerMemoPrintHtml(document || {});
+async function renderArchiveDocument(document,meta) {
+  const seq=++state.archiveLoadSequence;
+  $('#archiveMemoMeta').textContent=`${meta} · Opening DOCX…`;
+  try{
+    if(!archiveEditorInstance)archiveEditorInstance=createManagerDocumentEditor('#archiveMemoFrame',()=>{},{readonly:true});
+    const bytes=await getManagerDocxBytes(document);
+    if(seq!==state.archiveLoadSequence)return;
+    await archiveEditorInstance.open(bytes,{readonly:true});
+    if(seq===state.archiveLoadSequence)$('#archiveMemoMeta').textContent=meta;
+  }catch(error){if(seq===state.archiveLoadSequence)$('#archiveMemoMeta').textContent=`Cannot open historical DOCX: ${error.message||error}`;}
 }
 
 async function selectArchiveRevision(revisionId) {
@@ -869,19 +876,19 @@ async function selectArchiveRevision(revisionId) {
   renderArchiveRevisionList();
   const type = revision.revision_type === 'final' ? 'Final' : 'Draft';
   const user = revision.created_by_label ? ` · ${revision.created_by_label}` : '';
-  renderArchiveDocument(revision.document, `${type} #${revision.revision_number} · ${formatRevisionStamp(revision)}${user}`);
+  await renderArchiveDocument(revision.document, `${type} #${revision.revision_number} · ${formatRevisionStamp(revision)}${user}`);
   const mayRestore = state.archiveSelectedDate === state.reportingDate;
   $('#archiveUseAsDraftBtn').hidden = !mayRestore;
   $('#archiveUseAsDraftBtn').textContent = `Use ${type} #${revision.revision_number} as Current Draft`;
 }
 
-function selectArchiveRecovery() {
+async function selectArchiveRecovery() {
   if (!state.archiveMemo) return;
   state.archiveSelectedKind = 'recovery';
   state.archiveSelectedId = state.archiveMemo.id;
   renderArchiveRevisionList();
   const stamp = state.archiveMemo.updated_at ? formatDateTime(state.archiveMemo.updated_at, 'en-GB') : '—';
-  renderArchiveDocument(state.archiveMemo.document, `Recovery working copy · ${stamp}`);
+  await renderArchiveDocument(state.archiveMemo.document, `Recovery working copy · ${stamp}`);
   $('#archiveUseAsDraftBtn').hidden = true;
 }
 
@@ -910,7 +917,7 @@ async function selectArchiveCheckpoint(checkpointId) {
   state.archiveSelectedKind = 'checkpoint';
   state.archiveSelectedId = checkpoint.id;
   renderArchiveRevisionList();
-  renderArchiveDocument(checkpoint.document, `Safety recovery · ${archiveReasonLabel(checkpoint.reason)} · ${checkpoint.created_at ? formatDateTime(checkpoint.created_at, 'en-GB') : '—'}`);
+  await renderArchiveDocument(checkpoint.document, `Safety recovery · ${archiveReasonLabel(checkpoint.reason)} · ${checkpoint.created_at ? formatDateTime(checkpoint.created_at, 'en-GB') : '—'}`);
   const mayRestore = state.archiveSelectedDate === state.reportingDate;
   $('#archiveUseAsDraftBtn').hidden = !mayRestore;
   $('#archiveUseAsDraftBtn').textContent = 'Restore this Safety Recovery';
@@ -947,7 +954,9 @@ async function replaceCurrentDraftFromHistory(document, sourceSnapshot, label, c
   if (!state.memo) {
     state.memo = { reporting_date: state.reportingDate, revision: 0, status: 'draft' };
   }
-  state.memo.document = cloneJson(document) || {};
+  const restoredBytes=await getManagerDocxBytes(document);
+  state.pendingDocxBytes=restoredBytes;
+  state.memo.document={version:5,format:'docx',document_id:null};
   state.memo.source_snapshot = cloneJson(sourceSnapshot) || [];
   state.conflicted = false;
   state.lastOfficialType = null;
@@ -959,8 +968,8 @@ async function replaceCurrentDraftFromHistory(document, sourceSnapshot, label, c
   state.historyReturnMode = 'editor';
   exitHistoryMode();
   $('#memoWorkspacePanel').hidden = true;
-  $('#editorArea').hidden = false;
-  renderEditor({ keepDirty: true });
+  setMemoEditorWorkspaceVisible(true);
+  await renderEditor({ keepDirty: true });
   await saveRecoveryNow({ force: true });
   renderSubmissionMonitor();
   setStatus(`Historical ${label} loaded into the working draft. Press Save to create a new Draft version.`, 'info');
@@ -1085,15 +1094,24 @@ async function printOpenWardMemo() {
 
 function setStatus(message, type = 'info') {
   const el = $('#managerStatus');
-  if (!el) return;
-  el.hidden = false;
-  el.className = `manager-status no-print ${type}`;
-  el.textContent = message;
+  if (el) {
+    el.hidden = false;
+    el.className = `manager-status no-print ${type}`;
+    el.textContent = message;
+  }
+  const inline = $('#memoEditorStatus');
+  if (inline) {
+    inline.hidden = !document.body.classList.contains('docx-editor-active');
+    inline.className = `memo-editor-status ${type}`;
+    inline.textContent = message;
+  }
 }
 
 function clearStatus() {
   const el = $('#managerStatus');
   if (el) { el.hidden = true; el.textContent = ''; }
+  const inline = $('#memoEditorStatus');
+  if (inline) { inline.hidden = true; inline.textContent = ''; }
 }
 
 function showFatal(error) {

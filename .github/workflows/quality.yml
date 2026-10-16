@@ -17,6 +17,8 @@ jobs:
       - name: Install dependencies
         run: npm install --no-audit --no-fund
       - name: Verify code
+        env:
+          DOCX_VERIFY_GENERATION: "1"
         run: npm run verify
       - name: Build all pages
         run: npm run build

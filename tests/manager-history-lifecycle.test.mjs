@@ -29,21 +29,21 @@ test('Manager login has workspace chooser instead of automatic editor-only flow'
 test('Save creates Draft revision and Print creates Final revision', () => {
   const js = read('pages/manager-page.js');
   assert.match(js, /saveOfficialRevision\('draft', 'save'\)/);
-  assert.match(js, /saveOfficialRevision\('final', 'print'\)/);
-  assert.match(js, /result\.revision\.document/);
+  assert.match(js, /saveOfficialRevision\('final',\s*'print'\)/);
+  assert.match(js, /showPdfPreview\(result\.finalPdf/);
 });
 
 test('autosave uses recovery path rather than history revision path', () => {
   const js = read('pages/manager-page.js');
   assert.match(js, /setTimeout\(\(\) => saveRecoveryNow\(\)/);
-  assert.match(js, /saveManagerMemoRecovery/);
+  assert.match(js, /saveManagerDocxRecovery/);
 });
 
 test('print renderer has no second app-level Print button', () => {
   const js = read('manager-memo-print.js');
   assert.doesNotMatch(js, /onclick="window\.print\(\)"/);
-  assert.match(js, /N\.O\.\/APN,/);
-  assert.match(js, /DOM\/Medical \(QEH\)/);
+  assert.match(js, /memo\.html/);
+  assert.match(js, /sanitizeManagerMemoHtml/);
 });
 
 test('migration creates immutable revision table and history RPCs', () => {

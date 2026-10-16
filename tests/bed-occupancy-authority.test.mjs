@@ -53,9 +53,9 @@ test('Manager uses newest Night census, its capacity snapshot and signed empty-b
   const night = report('night', 30, 41, 0);
   const bundle = [{ ward, capacity: 100, pmReport: pm, nightReport: night, report: night }];
   const document = buildManagerMemoDocument({ bundle });
-  assert.equal(document.mainTableRows[0].totalPatient, '41');
-  assert.equal(document.mainTableRows[0].emptyBed, '-11');
-  assert.match(document.emptyBedHtml, /Ward A: -11/);
+  assert.match(document.html, /<td>41<\/td>/);
+  assert.match(document.html, /<td>-11<\/td>/);
+  assert.match(document.html, /Ward A: -11/);
   assert.equal(formatManagerEmptyBeds(ward, night, 100), '-11');
 });
 

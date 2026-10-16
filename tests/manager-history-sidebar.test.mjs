@@ -21,7 +21,7 @@ test('History mode hides the live Manager workspace and returns explicitly', () 
   const js = read('pages/manager-page.js');
   assert.match(js, /async function enterHistoryMode\(\)/);
   assert.match(js, /#managerHistorySidebar'\)\.hidden = false/);
-  assert.match(js, /#editorArea'\)\.hidden = true/);
+  assert.match(js, /state\.historyMode = true;\s*setMemoEditorWorkspaceVisible\(false\)/);
   assert.match(js, /function exitHistoryMode\(\)/);
   assert.match(js, /state\.historyReturnMode/);
 });

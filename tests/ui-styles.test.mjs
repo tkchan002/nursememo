@@ -44,7 +44,7 @@ test('style resources have neutral filenames and all references resolve', () => 
   required.forEach(name => assert.ok(cssFiles.has(name), `Missing ${name}`));
   const expectedCss = [
     'empty-bed-reporting.css', 'legacy-shell.css', 'login.css',
-    'maintenance.css', 'manager-night-operations.css', 'manager.css',
+    'maintenance.css', 'manager-document.css', 'manager-night-operations.css', 'manager.css',
     'print-view.css', 'print.css', 'theme.css',
     'ward-draft-submit.css', 'ward.css',
   ];

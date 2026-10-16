@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="./css/legacy-shell.css">
   <link rel="stylesheet" href="./css/manager.css">
   <link rel="stylesheet" href="./css/manager-night-operations.css">
+  <link rel="stylesheet" href="./css/manager-document.css">
   <link rel="stylesheet" href="./css/theme.css">
 </head>
 <body class="legacy-page manager-page">
@@ -107,18 +108,10 @@
               <section id="editorArea" hidden>
                 <section class="editor-toolbar" aria-label="Night Memo editor toolbar">
                   <div class="toolbar-group">
-                    <button type="button" class="pill" id="backWorkspaceBtn">Back</button>
-                    <strong>Night Memo Editor</strong>
+                    <button type="button" class="pill" id="backWorkspaceBtn" aria-label="Back to Patrol Night">Back to Patrol Night</button>
+                    <strong>Night Memo Editor</strong><span class="memo-orientation">A4 landscape</span>
                     <span id="memoStateBadge" class="memo-state-badge draft">Draft</span>
                     <span id="saveState" class="save-state">Ready</span>
-                  </div>
-                  <div class="toolbar-group formatting-tools" aria-label="Text formatting">
-                    <button type="button" data-format="bold" title="Bold"><b>B</b></button>
-                    <button type="button" data-format="italic" title="Italic"><i>I</i></button>
-                    <button type="button" data-format="underline" title="Underline"><u>U</u></button>
-                    <button type="button" data-format="insertUnorderedList" title="Bulleted list">• List</button>
-                    <button type="button" data-format="undo" title="Undo">↶</button>
-                    <button type="button" data-format="redo" title="Redo">↷</button>
                   </div>
                   <div class="toolbar-group toolbar-actions">
                     <button type="button" class="pill" id="saveMemoBtn">Save</button>
@@ -127,70 +120,15 @@
                     <button type="button" class="pill primary-pill" id="printMemoBtn">Print</button>
                   </div>
                 </section>
-
+                <div id="memoEditorStatus" class="memo-editor-status" role="status" aria-live="polite" hidden></div>
                 <section class="memo-canvas-wrap">
-                  <article class="memo-sheet" id="memoEditor" aria-label="Editable official Night Memo document">
-                    <div class="memo-title" id="memoTitle" contenteditable="true" data-rich="false">Night Memo</div>
-                    <div class="memo-header-grid">
-                      <label class="memo-header-fixed-prefix"><span>From: N.O./APN,</span><input id="memoFromName" type="text" autocomplete="off" aria-label="From name and details"></label>
-                      <div class="memo-header-fixed-line"><strong>To:</strong> DOM/Medical (QEH)</div>
-                      <label>DECT Phone <input id="memoDectPhone" type="text" autocomplete="off"></label>
-                      <label>Date <input id="memoDateText" type="text" autocomplete="off"></label>
-                      <label>Call (Team) <input id="memoCallTeam" type="text" autocomplete="off"></label>
-                      <div></div>
-                    </div>
-
-                    <section class="memo-document-section">
-                      <table class="official-table main-night-table">
-                        <thead>
-                          <tr><th rowspan="2">Ward</th><th colspan="3">Admission</th><th colspan="3">Discharge</th><th rowspan="2">Total<br>Patient</th><th rowspan="2">Empty Bed</th><th rowspan="2">Vent.<br>Case</th><th rowspan="2">Bipap<br>Case</th><th rowspan="2">HFNC<br>Case</th><th rowspan="2">AM/PM<br>Staff No.</th></tr>
-                          <tr><th>E/C</th><th>C/C</th><th>T/I</th><th>Home</th><th>T/O</th><th>Death</th></tr>
-                        </thead>
-                        <tbody id="memoMainRows"></tbody>
-                      </table>
-                    </section>
-
-                    <section class="memo-document-section">
-                      <div class="section-label editable-label" contenteditable="true" data-rich="false">Infectious Case:</div>
-                      <table class="official-table infection-table">
-                        <thead><tr><th>Ward</th><th>COVID-19</th><th>CRE</th><th>VRE</th><th>MDRA</th><th>CD</th><th>Influenza</th><th>No of HD / CAPD case</th><th>Remarks</th></tr></thead>
-                        <tbody id="memoInfectionRows"></tbody>
-                      </table>
-                    </section>
-
-                    <section class="memo-free-section">
-                      <div class="section-label">Early bird:</div>
-                      <div id="memoEarlyBird" class="rich-editor" contenteditable="true" data-rich="true"></div>
-                    </section>
-                    <section class="memo-free-section">
-                      <div class="section-label">Empty Bed:</div>
-                      <div id="memoEmptyBed" class="rich-editor" contenteditable="true" data-rich="true"></div>
-                    </section>
-
-                    <section class="memo-free-section">
-                      <div class="section-label">Additional Report:</div>
-                      <div id="memoAdditionalReport" class="rich-editor" contenteditable="true" data-rich="true"></div>
-                    </section>
-
-                    <section class="memo-footer-grid">
-                      <div class="ct-block">
-                        <label class="ct-total">Total No. of CT scan done: <input id="ctTotal" type="text" autocomplete="off"></label>
-                        <div class="at-six-label">At 06:00</div>
-                        <table class="official-table ct-table">
-                          <thead><tr><th></th><th>General</th><th>Cohort</th></tr></thead>
-                          <tbody>
-                            <tr><th>Male</th><td><input id="ctMaleGeneral" type="text"></td><td><input id="ctMaleCohort" type="text"></td></tr>
-                            <tr><th>Female</th><td><input id="ctFemaleGeneral" type="text"></td><td><input id="ctFemaleCohort" type="text"></td></tr>
-                          </tbody>
-                        </table>
-                      </div>
-                      <div class="signature-block">
-                        <label><span contenteditable="true" class="editable-inline" id="signatureLabel">Signature</span>: <span class="signature-line"></span></label>
-                        <label>N.O./APN: <input id="signatureName" type="text" autocomplete="off"></label>
-                        <label>Designation: <input id="signatureDesignation" type="text" autocomplete="off"></label>
-                      </div>
-                    </section>
-                  </article>
+                  <iframe id="memoEditor" title="Editable Night Memo DOCX document" allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                  <div id="memoEditorLoading" class="memo-editor-loading" role="status" aria-live="polite" hidden>
+                    <div class="memo-loading-spinner" aria-hidden="true"></div>
+                    <strong>Opening Night Memo</strong>
+                    <p id="memoEditorLoadingText">Preparing document editor…</p>
+                    <button id="retryMemoEditorBtn" type="button" class="pill primary-pill" hidden>Retry opening</button>
+                  </div>
                 </section>
               </section>
             </section>
@@ -288,7 +226,7 @@
   <div class="manager-modal no-print" id="printPreviewModal" hidden>
     <div class="manager-modal-card print-preview-card">
       <div class="modal-head"><strong id="printPreviewTitle">Night Memo Preview</strong><button type="button" class="pill" data-close-modal="printPreviewModal">Close</button></div>
-      <iframe id="printPreviewFrame" title="Night Memo print preview"></iframe>
+      <iframe id="printPreviewFrame" title="Night Memo PDF preview"></iframe><div class="docx-pdf-actions"><a class="pill" id="downloadMemoPdfBtn" download="Night-Memo.pdf" href="#">Download PDF</a><span>Use the PDF viewer’s print control to print.</span></div>
     </div>
   </div>
 

@@ -27,3 +27,4 @@ export {
 } from './repositories/manager-memo-repository.js';
 // PM and Night are the only supported reporting types.
 export { getWardCycleReport, getCycleReports, submitWardCycleReport, getWardCycleDraft, saveWardCycleDraft, deleteWardCycleDraft } from './repositories/report-cycle-repository.js';
+export { getManagerDocxBytes, saveManagerDocxRecovery, saveManagerDocxRevision } from './repositories/manager-memo-repository.js';

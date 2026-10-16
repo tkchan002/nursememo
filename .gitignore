@@ -11,3 +11,6 @@ dist/
 # One-time account credentials and other private operator outputs.
 .private/
 account-credentials*.csv
+
+# Upstream ranuts/document is checked out and built by GitHub Actions, not committed here.
+.upstream/

@@ -11,7 +11,8 @@
     "imports": "node ./scripts/check-imports.mjs"
   },
   "dependencies": {
-    "@supabase/supabase-js": "2.117.2"
+    "@supabase/supabase-js": "2.117.2",
+    "docx": "9.5.1"
   },
   "devDependencies": {
     "vite": "8.3.1"

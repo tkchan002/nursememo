@@ -1,0 +1,17 @@
+/* Administrative forms share the same controls, but keep their own workflows. */
+@media screen {
+  .maintenance-page .legacy-shell {max-width: 1500px; width: calc(100% - 24px); margin: 12px auto}
+  .maintenance-page .maintenance-tabs .tab {min-width: 0}
+  .maintenance-page .legacy-panel-body {padding: 13px 16px}
+  .maintenance-page .legacy-section-title {font-size: 17px}
+  .maintenance-page .test-data-card,
+  .maintenance-page .demo-summary-item {background: var(--paf-paper); border-color: var(--paf-hairline)}
+  .maintenance-page .maintenance-description {font-size: 12px}
+  .maintenance-page .field label {font-size: 12px}
+  @media (max-width: 900px) {
+    .maintenance-page .legacy-shell {width: calc(100% - 12px); margin: 6px auto}
+  }
+  .maintenance-page .maintenance-inline-checkbox {display:inline-flex;gap:8px;align-items:center}
+  .maintenance-page .account-auth-email {font-size:.8em}
+
+}

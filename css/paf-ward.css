@@ -1,0 +1,130 @@
+/* Ward's existing reporting controls mapped to the shared PAF design system. */
+@media screen {
+  .ward-page .app {max-width: 1400px}
+  .ward-page .ward-window-title {margin: 0}
+  .ward-page .tab-strip {border-bottom: 1px solid #b8b8b8}
+  .ward-page .main-panel {min-height: 50vh}
+  .ward-page .tp {padding: 16px 18px 20px}
+  .ward-page .sec-title {font-size: 17px; margin-bottom: 11px}
+  .ward-page .fr {min-height: 34px; margin-bottom: 2px; gap: 5px}
+  .ward-page .fl {min-width: 175px; font-size: 13px; font-weight: 400; padding: 3px 8px 3px 0}
+  .ward-page .fc {font-size: 13px; gap: 5px 10px}
+  .ward-page .fc label {font-size: 13px}
+  .ward-page .w55 {width: 62px}
+  .ward-page .w130 {width: 145px}
+  .ward-page .w280 {width: 290px}
+  .ward-page #memoDate {width: 145px; background-color: #f0f0f0}
+  .ward-page .btn-get-corner {top: 11px; right: 14px; min-height: 25px; padding: 2px 9px}
+  .ward-page .btn-bar #normalBar,
+  .ward-page .btn-bar #histBar,
+  .ward-page .btn-bar #staffBar {gap: 12px}
+  .ward-page .dt {margin: 6px 0; width: 100%}
+  .ward-page .dt th {height: 30px}
+  .ward-page .dt td {height: 30px}
+  .ward-page .dt td > :is(input, select) {border: 0; box-shadow: none; min-height: 27px; padding: 3px 5px}
+  .ward-page .bed-b {height: 29px; min-height: 29px; border-radius: 1px; font-size: 13px}
+  .ward-page .dev-tog-btn {border-radius: 2px}
+  .ward-page .nr {border-radius: 1px; min-height: 34px; padding: 4px 7px}
+  .ward-page .ro-fr {min-height: 29px}
+  .ward-page .ro-fl {font-size: 12px}
+  .ward-page .ro-fc {font-size: 12px; border-radius: 1px}
+  .ward-page #submissionBanner {border-radius: 1px; padding: 7px 12px; font-size: 12px; min-height: 34px}
+  .ward-page #submissionBanner strong {font-size: 12px}
+  .ward-page #submissionBanner span {font-size: 11px}
+  .ward-page #gdModal {font-size: 13px}
+  .ward-page .gd-btn {min-height: 27px}
+  .ward-page #histSidebar {background: #f4f2e8; border: 1px solid #b8b8aa; border-right: 0}
+  .ward-page #histSidebarTitle {background: linear-gradient(#ededeb,#d8d8d5)}
+  .ward-page .hist-entry {background: #f4f2e8}
+  .ward-page .hist-entry:hover {background: #eaeaea}
+  .ward-page .hist-entry.selected {background: #316ac5; color: #fff}
+  .ward-page .he-date {font-size: 12px}
+  .ward-page .he-sub {font-size: 11px}
+  /* Print preview is an application modal; its contained iframe owns print styles. */
+  .ward-page #pdfSettingsModal .pill {white-space: nowrap}
+  @media (max-width: 900px) {
+    /* #appWrapper becomes a column in the original Ward CSS: explicitly
+       constrain its flex child to prevent mobile min-content widening. */
+    .ward-page .app {width: 100%; max-width: 100%}
+    .ward-page .tp {padding: 12px 10px; overflow-x: auto}
+    .ward-page .fl {min-width: 140px}
+    .ward-page #histSidebar {min-width: 150px; width: 180px}
+  }
+  @media (max-width: 540px) {
+    .ward-page .fr {align-items: flex-start}
+    .ward-page .fl {min-width: 0; width: 100%; padding: 2px 0}
+    .ward-page .fc {width: 100%; flex: 1 1 100%}
+    .ward-page .btn-get-corner {position: static; margin: 0 0 8px; float: right}
+    .ward-page .btn-get-corner + .sec-title {clear: both}
+    .ward-page .dt {min-width: 520px}
+    .ward-page .tp .dt {display: table}
+    .ward-page #histSidebar.open {max-width: 100%; width: 100%}
+    .ward-page .ward-window-title .legacy-subtitle {font-size: 10px}
+  }
+  /* Consolidated Ward presentation: no inline HTML/row-builder styles. */
+  .ward-page .ward-identity {font-size:1.1rem;font-weight:600}
+  .ward-page .ward-contact {font-size:1.1rem}
+  .ward-page .memo-type-label {margin-left:10px;font-weight:700}
+  .ward-page .ward-section-spaced {font-size:1.15rem;margin-top:10px}
+  .ward-page .ward-section-short-gap {font-size:1.15rem;margin-top:8px}
+  .ward-page .ward-section-emphasis {font-size:1.15rem}
+  .ward-page .bed-formula-note {color:var(--paf-muted);margin-left:6px}
+  .ward-page .empty-remarks-heading {font-weight:700;margin-bottom:6px}
+  .ward-page .section-inline-help {font-weight:400;font-size:.85rem;color:var(--paf-muted)}
+  .ward-page .clinical-nil-label {color:var(--paf-title);font-size:1.1rem}
+  .ward-page .clinical-hint {color:var(--paf-muted)}
+  .ward-page .clinical-column-help {font-weight:400;font-size:.75rem;color:var(--paf-muted);font-style:italic}
+  .ward-page .clinical-col-70 {width:70px}
+  .ward-page .clinical-col-180 {width:180px}
+  .ward-page .clinical-col-action {width:36px}
+  .ward-page .clinical-col-45 {width:45px}
+  .ward-page .clinical-col-80 {width:80px}
+  .ward-page .clinical-col-120 {width:120px}
+  .ward-page .clinical-col-220 {width:220px}
+  .ward-page .clinical-col-150 {width:150px}
+  .ward-page .staff-management-heading, .ward-page .ward-history-heading {
+    background:linear-gradient(#ededeb,#d8d8d5);color:#222;
+    font-weight:700;border-bottom:1px solid var(--paf-border);
+  }
+  .ward-page .staff-management-heading {padding:10px 16px;font-size:1.1rem}
+  .ward-page .staff-management-body {padding:16px}
+  .ward-page .staff-management-explanation {color:var(--paf-muted);font-size:.9rem;margin-bottom:16px}
+  .ward-page .ward-history-heading {padding:7px 16px;font-size:.95rem;display:flex;align-items:center;gap:12px}
+  .ward-page #gdCloseBtn {display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;padding:0;border:1px solid #888;border-radius:15px;background:var(--paf-button);color:#333;font:700 13px Arial,sans-serif;cursor:pointer}
+  .ward-page #gdCloseBtn:hover {background:var(--paf-button-hover);border-color:#888;color:#222}
+  .ward-page #gdCloseBtn:focus-visible {outline:2px solid var(--paf-focus);outline-offset:2px}
+  .ward-page .gd-section-hdr {background:linear-gradient(#f0f0f0,#d8d8d8);border-bottom:1px solid var(--paf-border);color:#333}
+  .ward-page .pdf-settings-content {border:1px solid var(--paf-border);border-radius:2px;background:var(--paf-paper)}
+  .ward-page .pdf-settings-header {background:linear-gradient(#ededeb,#d8d8d5);border-bottom:1px solid var(--paf-border)}
+  .ward-page .ward-history-saved-time {font-weight:400;font-size:.85rem;opacity:.85}
+  .ward-page .pdf-preview-title {margin:0;font-size:1.1rem;color:#333}
+  .ward-page .pdf-preview-header-actions {display:flex;gap:8px}
+  .ward-page .pdf-reset-controls {margin-top:auto;padding-top:10px;border-top:1px solid #ddd}
+  .ward-page .pdf-reset-button {width:100%}
+  .ward-page .bed-selector-chevron {font-size:10px;color:#888}
+  .ward-page .device-count-unit {font-size:.9rem;color:#555}
+  .ward-page .early-bird-row {margin-bottom:4px}
+  .ward-page .early-bird-row .eB {width:70px}
+  .ward-page .early-bird-row .eD {width:150px}
+  .ward-page .early-bird-arrow {padding:0 8px;font-size:1rem;font-weight:700}
+  .ward-page .nr .nR {width:120px}
+  .ward-page .nr .nN {width:220px}
+  .ward-page .nr .nA {width:90px}
+  .ward-page .ward-history-nurse-row {font-size:.92rem;margin-bottom:4px;padding:3px 0;border-bottom:1px solid var(--paf-hairline);color:#333}
+  .ward-page .ward-history-empty {color:#777}
+  .ward-page .ro-tbl, .ward-page #gdTable {width:100%;border-collapse:collapse;font-size:12px;background:#fff}
+  .ward-page :is(.ro-tbl,#gdTable) th {background:linear-gradient(#f7f7f7,#d7d7d7);color:#242424;border:1px solid #acacac;padding:6px 8px}
+  .ward-page :is(.ro-tbl,#gdTable) td {border:1px solid #c2c2c2;padding:5px 7px;background:#fff}
+  .ward-page :is(.ro-tbl,#gdTable) tbody tr:hover td {background:#edf4ff}
+  .ward-page .dev-tog-btn {background:var(--paf-button);border:1px solid #888;border-radius:12px;color:#333;font:700 11px/16px Tahoma,Arial,sans-serif;padding:3px 9px;cursor:pointer}
+  .ward-page .dev-tog-btn:hover {background:var(--paf-button-hover);color:#222}
+  .ward-page .dev-tog-btn.active {background:var(--paf-tab-on);border-color:#777;color:#222;box-shadow:inset 0 0 0 1px #fff}
+  .ward-page .dev-tog-btn:focus-visible,.ward-page .btn-x:focus-visible {outline:2px solid var(--paf-focus);outline-offset:2px}
+  .ward-page .btn-x {border:1px solid #999;border-radius:15px;background:var(--paf-button);color:#742525;font:700 14px/16px Arial,sans-serif;box-shadow:none}
+  .ward-page .btn-x:hover {background:var(--paf-button-hover);border-color:#888;color:#722}
+  .ward-page [hidden] {display:none!important}
+  .ward-page #normalBar[hidden] {display:none!important}
+  .ward-page #gdTable[hidden] {display:none!important}
+  .ward-page #statusBox:not(.is-visible) {display:none!important}
+
+}

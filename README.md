@@ -2,9 +2,9 @@
 
 This repository is the **Nurse Memo** demo application. The product name was updated from Night Memo; **PM Memo** and **Night Memo** continue to identify the two reporting types.
 
-## Branding-only change
+## Branding and UI consolidation
 
-The existing Supabase project requires **no SQL migration, schema reload, Edge Function redeployment, or account recreation** for this update. The entire `supabase/` directory is unchanged compared with the source ZIP.
+The existing Supabase project requires **no SQL migration, schema reload, Edge Function redeployment, or account recreation** for this UI update. The entire `supabase/` directory is unchanged compared with the source ZIP.
 
 The old internal identifiers are intentionally retained because they are part of the existing application contract, not user-visible branding:
 
@@ -26,3 +26,9 @@ Run `npm run verify` to run code checks, imports, and tests. Run `npm install` t
 The GitHub Pages URL depends on the GitHub repository name. Changing the app title does not automatically change the repository URL or GitHub Pages address.
 
 See `NURSE_MEMO_DEMO_ACCOUNTS.md` for expected test credentials (not an export of real passwords).
+
+## PAF UI consolidation
+
+The Ward, Manager, Maintenance, Login and print-preview chrome use a consolidated, independently authored PAF-inspired visual system. Common tab and button styling is owned by `css/paf-design-system.css`; each page has only its necessary specialised layout rules. Old inline Ward styles/event attributes and redundant visual rules have been removed.
+
+See [`UI_CONSOLIDATION_REPORT.md`](UI_CONSOLIDATION_REPORT.md) for the complete change inventory, supported exceptions, verification results and limitations.

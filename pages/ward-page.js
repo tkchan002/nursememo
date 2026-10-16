@@ -89,10 +89,42 @@ async function handleMemoTypeChange() {
   await refreshSubmissionBanner();
 }
 
+
+/** Bind approved Ward commands without inline event attributes or globals. */
+function bindWardActions() {
+  const actions = {
+    gdClose, gdConfirm, getDataForTab, addEmptyDetail, addEB, addPt, addCs,
+    addIt, addNR, addStaffRow, saveEntry, submitEntry, handleGen,
+    openPdfSettings, closePdfSettings, printPdf, resetPdfSettings,
+    toggleHistory, toggleStaffList, histReprint, histDeleteCurrent,
+    reload: () => location.reload(),
+  };
+  document.addEventListener('click', event => {
+    const button = event.target.closest('[data-ward-action]');
+    if (!button) return;
+    const action = actions[button.dataset.wardAction];
+    if (!action) return;
+    if (button.dataset.wardAction === 'getDataForTab') {
+      void action(Number(button.dataset.wardTabIndex));
+    } else {
+      void action();
+    }
+  });
+  const changeActions = { toggleNil, toggleNilConsult, toggleNilIntub, updatePdfPreviewDebounced };
+  document.addEventListener('change', event => {
+    const action = changeActions[event.target.dataset.wardChange];
+    if (action) void action();
+  });
+  document.addEventListener('input', event => {
+    if (event.target.dataset.wardInput === 'calcEmpty') calcEmpty();
+  });
+}
+
 async function init() {
   state.access = await requireRole('ward');
   if (!state.access) return;
   setupSubmissionUi();
+  bindWardActions();
   state.ward = state.access.wards || await getWardById(state.access.ward_id);
   $('#wardFrom').textContent = state.ward.name;
   $('#wardContact').innerHTML = `Ext ${esc(state.ward.phone || '—')} &nbsp;&nbsp;&nbsp;<b>Fax:</b> Ext ${esc(state.ward.fax || '—')}`;
@@ -134,9 +166,9 @@ function showStatus(type, msg) {
   if (!box) return;
   box.className = type || 'loading';
   box.textContent = msg;
-  box.style.display = 'block';
+  box.classList.add('is-visible');
   clearTimeout(showStatus._t);
-  if (type !== 'loading') showStatus._t = setTimeout(() => { box.style.display = 'none'; }, 4500);
+  if (type !== 'loading') showStatus._t = setTimeout(() => { box.classList.remove('is-visible'); }, 4500);
 }
 
 function itemByKey(key) { return state.items.find(i => i.key === key); }
@@ -199,7 +231,7 @@ function populateSelect(id, item) {
 function makeBedWidget(containerId, key) {
   const host = document.getElementById(containerId);
   if (!host) return;
-  host.innerHTML = `<div class="bed-w" data-bed-key="${esc(key)}"><div class="bed-b" data-bed-btn><span class="bc" data-bed-summary>None</span><span style="font-size:10px;color:#888">&#9660;</span></div><div class="bed-dd" data-bed-dd></div></div>`;
+  host.innerHTML = `<div class="bed-w" data-bed-key="${esc(key)}"><div class="bed-b" data-bed-btn><span class="bc" data-bed-summary>None</span><span class="bed-selector-chevron">&#9660;</span></div><div class="bed-dd" data-bed-dd></div></div>`;
   const wrap = $('[data-bed-key]', host), dd = $('[data-bed-dd]', wrap), btn = $('[data-bed-btn]', wrap);
   for (let i = 1; i <= bedCeiling(); i += 1) {
     const label = document.createElement('label');
@@ -224,14 +256,14 @@ function updateBedSummary(wrap) { const beds = $$('input[type=checkbox]:checked'
 function makeDeviceWidget(containerId, key) {
   const host = document.getElementById(containerId);
   if (!host) return;
-  host.innerHTML = `<div class="dev-wrap" data-dev-key="${esc(key)}"><div class="dev-tog"><button class="dev-tog-btn active" type="button" data-mode="beds">By Bed</button><button class="dev-tog-btn" type="button" data-mode="count">By Count</button></div><div data-dev-beds id="devbeds_${esc(key)}"></div><div class="dev-cnt-sec" data-dev-count-wrap style="display:none"><input type="number" min="0" placeholder="0" class="dev-cnt-inp" data-dev-count><span style="font-size:0.9rem;color:#555">patients</span></div></div>`;
+  host.innerHTML = `<div class="dev-wrap" data-dev-key="${esc(key)}"><div class="dev-tog"><button class="dev-tog-btn active" type="button" data-mode="beds">By Bed</button><button class="dev-tog-btn" type="button" data-mode="count">By Count</button></div><div data-dev-beds id="devbeds_${esc(key)}"></div><div class="dev-cnt-sec" data-dev-count-wrap hidden><input type="number" min="0" placeholder="0" class="dev-cnt-inp" data-dev-count><span class="device-count-unit">patients</span></div></div>`;
   const wrap = $('[data-dev-key]', host);
   makeBedWidget(`devbeds_${key}`, `${key}__beds`);
   $$('[data-mode]', wrap).forEach(button => button.addEventListener('click', () => { setDeviceMode(key, button.dataset.mode); markDirty(); }));
 }
 
 function devWrap(key) { return $(`[data-dev-key="${CSS.escape(key)}"]`); }
-function setDeviceMode(key, mode) { const wrap = devWrap(key); if (!wrap) return; const bedMode = mode !== 'count'; $$('[data-mode]', wrap).forEach(b => b.classList.toggle('active', b.dataset.mode === (bedMode ? 'beds' : 'count'))); $('[data-dev-beds]', wrap).style.display = bedMode ? '' : 'none'; $('[data-dev-count-wrap]', wrap).style.display = bedMode ? 'none' : ''; wrap.dataset.mode = bedMode ? 'beds' : 'count'; }
+function setDeviceMode(key, mode) { const wrap = devWrap(key); if (!wrap) return; const bedMode = mode !== 'count'; $$('[data-mode]', wrap).forEach(b => b.classList.toggle('active', b.dataset.mode === (bedMode ? 'beds' : 'count'))); $('[data-dev-beds]', wrap).hidden = !bedMode; $('[data-dev-count-wrap]', wrap).hidden = bedMode; wrap.dataset.mode = bedMode ? 'beds' : 'count'; }
 function getDeviceValue(key) { const wrap = devWrap(key); if (!wrap) return normalizeDevice(null); if (wrap.dataset.mode === 'count') return normalizeDevice({ mode: 'count', count: $('[data-dev-count]', wrap).value }); return normalizeDevice({ mode: 'beds', beds: getBeds(`${key}__beds`) }); }
 function setDeviceValue(key, value) { const wrap = devWrap(key); if (!wrap) return; const device = normalizeDevice(value); setDeviceMode(key, device.mode); if (device.mode === 'count') $('[data-dev-count]', wrap).value = device.count || 0; else setBeds(`${key}__beds`, device.beds); }
 
@@ -287,7 +319,7 @@ function addEmptyDetail(value = {}) {
   $('[data-empty-quantity]', row).value = savedNumber;
   $('[data-empty-designation]', row).value = savedCode;
   bindEmptyBedType(row, { onBack: markDirty });
-  $('.btn-x', row).onclick = () => { row.remove(); markDirty(); };
+  $('.btn-x', row).addEventListener('click', () => { row.remove(); markDirty(); });
   $('#emptyDetailRows').append(row);
   markDirty();
 }
@@ -301,12 +333,12 @@ function collectEmptyDetails() {
     return { quantity: number ? Number(number) : null, designation, customDesignation, remark };
   }).filter(Boolean);
 }
-function addEB(bed = '', dest = '') { const row = document.createElement('div'); row.className = 'fr'; row.style.marginBottom = '4px'; let options = '<option value="">--</option>'; for (let i = 1; i <= bedCeiling(); i += 1) options += `<option value="${i}" ${String(bed) === String(i) ? 'selected' : ''}>${i}</option>`; row.innerHTML = `<select class="eB" style="width:70px">${options}</select><span style="padding:0 8px;font-size:1rem;font-weight:700">--&gt;</span><input type="text" class="eD" style="width:150px" placeholder="e.g. KH3A" value="${esc(dest || '')}"><button class="btn-x" type="button" style="margin-left:6px">x</button>`; $('.btn-x', row).onclick = () => { row.remove(); markDirty(); }; $('#ebRows').append(row); }
+function addEB(bed = '', dest = '') { const row = document.createElement('div'); row.className = 'fr early-bird-row'; let options = '<option value="">--</option>'; for (let i = 1; i <= bedCeiling(); i += 1) options += `<option value="${i}" ${String(bed) === String(i) ? 'selected' : ''}>${i}</option>`; row.innerHTML = `<select class="eB">${options}</select><span class="early-bird-arrow">--&gt;</span><input type="text" class="eD" placeholder="e.g. KH3A" value="${esc(dest || '')}"><button class="btn-x" type="button">x</button>`; $('.btn-x', row).addEventListener('click', () => { row.remove(); markDirty(); }); $('#ebRows').append(row); }
 function addPt(b = '', n = '', dx = '') { addTableRow('#ptBody', [b, n, dx], ['Bed', 'Name', 'Dx/Condition']); }
 function addCs(b = '', n = '', pending = '') { addTableRow('#csBody', [b, n, pending], ['Bed', 'Name', 'Pending which subspecialty consultation']); }
-function addTableRow(target, values, placeholders) { const row = document.createElement('tr'); row.innerHTML = values.map((value, i) => `<td><input placeholder="${esc(placeholders[i])}" value="${esc(value || '')}"></td>`).join('') + '<td><button class="btn-x" type="button">x</button></td>'; $('.btn-x', row).onclick = () => { row.remove(); markDirty(); }; $(target).append(row); }
-function addIt(cols = ['', '', '', '', '', '', '', '']) { const row = document.createElement('tr'); row.innerHTML = `<td><input placeholder="Bed" value="${esc(cols[0] || '')}"></td><td><input placeholder="Name & Hosp No" value="${esc(cols[1] || '')}"></td><td><input placeholder="Diagnosis" value="${esc(cols[2] || '')}"></td><td><input placeholder="Reason" value="${esc(cols[3] || '')}"></td><td><select><option value="">--</option><option value="Elective">Elective</option><option value="Emergency">Emergency</option></select></td><td><input placeholder="e.g. Anaes / Parent team" value="${esc(cols[5] || '')}"></td><td><input placeholder="e.g. Intubation Rm / Cubicle" value="${esc(cols[6] || '')}"></td><td><input placeholder="e.g. To ICU/G6/G10 / Stay in ward / death" value="${esc(cols[7] || '')}"></td><td><button class="btn-x" type="button">x</button></td>`; $('select', row).value = cols[4] || ''; $('.btn-x', row).onclick = () => { row.remove(); markDirty(); }; $('#itBody').append(row); }
-function addNR(opts = {}) { nurseCounter += 1; const row = document.createElement('div'); row.className = 'nr'; const id = `nr_${nurseCounter}`; row.innerHTML = `<span class="nr-num">${$('#nrRows').children.length + 1}.</span><select class="nR" style="width:120px"><option>RN</option><option>EN</option><option>APN</option><option>Student Nurse</option></select><input type="text" class="nN" list="${id}_list" style="width:220px" placeholder="Name" value="${esc(opts.name || '')}"><datalist id="${id}_list"></datalist><input type="text" class="nA" style="width:90px" placeholder="Appt" value="${esc(opts.appt || '')}"><label class="ctl"><input type="checkbox" class="nRu" ${opts.runner ? 'checked' : ''}> Night Runner</label><button class="btn-x" type="button">x</button>`; $('.nR', row).value = opts.role || 'RN'; $('.nN', row).dataset.source = opts.source || 'free_text'; $('.nN', row).dataset.staffId = opts.staffId || ''; $('.btn-x', row).onclick = () => { row.remove(); renumberNurses(); markDirty(); }; $('.nR', row).onchange = () => populateNurseDatalist(row); $('.nN', row).oninput = () => autofillNurse(row); $('#nrRows').append(row); populateNurseDatalist(row); }
+function addTableRow(target, values, placeholders) { const row = document.createElement('tr'); row.innerHTML = values.map((value, i) => `<td><input placeholder="${esc(placeholders[i])}" value="${esc(value || '')}"></td>`).join('') + '<td><button class="btn-x" type="button">x</button></td>'; $('.btn-x', row).addEventListener('click', () => { row.remove(); markDirty(); }); $(target).append(row); }
+function addIt(cols = ['', '', '', '', '', '', '', '']) { const row = document.createElement('tr'); row.innerHTML = `<td><input placeholder="Bed" value="${esc(cols[0] || '')}"></td><td><input placeholder="Name & Hosp No" value="${esc(cols[1] || '')}"></td><td><input placeholder="Diagnosis" value="${esc(cols[2] || '')}"></td><td><input placeholder="Reason" value="${esc(cols[3] || '')}"></td><td><select><option value="">--</option><option value="Elective">Elective</option><option value="Emergency">Emergency</option></select></td><td><input placeholder="e.g. Anaes / Parent team" value="${esc(cols[5] || '')}"></td><td><input placeholder="e.g. Intubation Rm / Cubicle" value="${esc(cols[6] || '')}"></td><td><input placeholder="e.g. To ICU/G6/G10 / Stay in ward / death" value="${esc(cols[7] || '')}"></td><td><button class="btn-x" type="button">x</button></td>`; $('select', row).value = cols[4] || ''; $('.btn-x', row).addEventListener('click', () => { row.remove(); markDirty(); }); $('#itBody').append(row); }
+function addNR(opts = {}) { nurseCounter += 1; const row = document.createElement('div'); row.className = 'nr'; const id = `nr_${nurseCounter}`; row.innerHTML = `<span class="nr-num">${$('#nrRows').children.length + 1}.</span><select class="nR"><option>RN</option><option>EN</option><option>APN</option><option>Student Nurse</option></select><input type="text" class="nN" list="${id}_list" placeholder="Name" value="${esc(opts.name || '')}"><datalist id="${id}_list"></datalist><input type="text" class="nA" placeholder="Appt" value="${esc(opts.appt || '')}"><label class="ctl"><input type="checkbox" class="nRu" ${opts.runner ? 'checked' : ''}> Night Runner</label><button class="btn-x" type="button">x</button>`; $('.nR', row).value = opts.role || 'RN'; $('.nN', row).dataset.source = opts.source || 'free_text'; $('.nN', row).dataset.staffId = opts.staffId || ''; $('.btn-x', row).addEventListener('click', () => { row.remove(); renumberNurses(); markDirty(); }); $('.nR', row).addEventListener('change', () => populateNurseDatalist(row)); $('.nN', row).addEventListener('input', () => autofillNurse(row)); $('#nrRows').append(row); populateNurseDatalist(row); }
 function renumberNurses() { $$('.nr', $('#nrRows')).forEach((row, i) => { $('.nr-num', row).textContent = `${i + 1}.`; }); }
 function populateNurseDatalist(row) { const role = $('.nR', row).value; $('datalist', row).innerHTML = state.staff.filter(s => s.role === role).map(s => `<option value="${esc(s.name)}"></option>`).join(''); }
 function autofillNurse(row) { const name = $('.nN', row), role = $('.nR', row).value, staff = state.staff.find(x => x.role === role && x.name.toLowerCase() === name.value.trim().toLowerCase()); if (staff) { $('.nA', row).value = formatAppt(staff.appointment_date); name.dataset.source = 'ward_staff'; name.dataset.staffId = staff.id; } else { name.dataset.source = 'free_text'; name.dataset.staffId = ''; } }
@@ -481,8 +513,8 @@ async function refreshHistory() {
     const entry = document.createElement('div');
     entry.className = 'hist-entry' + (state.currentHist?.id === report.id ? ' selected' : '');
     entry.innerHTML = `<div class="he-body"><span class="he-date">${esc(toDisplayDate(report.report_date))} · ${esc(MEMO_LABELS[report.report_type] || 'Legacy')}</span><span class="he-sub">${esc(report.updated_at ? formatDateTime(report.updated_at) : '')}</span></div><button class="he-del" title="Historical deletion is disabled">x</button>`;
-    $('.he-body', entry).onclick = () => openHistory(report);
-    $('.he-del', entry).onclick = event => { event.stopPropagation(); showStatus('error', 'Historical report deletion is disabled in the Supabase version.'); };
+    $('.he-body', entry).addEventListener('click', () => openHistory(report));
+    $('.he-del', entry).addEventListener('click', event => { event.stopPropagation(); showStatus('error', 'Historical report deletion is disabled in the Supabase version.'); });
     host.append(entry);
   });
 }
@@ -496,7 +528,7 @@ async function openHistory(report) {
   $('#histIdle').classList.remove('show');
   $('#histDetailWrap').classList.add('open');
   wardTabs.setMainLocked(true);
-  $('#normalBar').style.display = 'none';
+  $('#normalBar').hidden = true;
   $('#staffBar').classList.remove('show');
   $('#histBar').classList.add('show');
   $('#hbReprint').disabled = false;
@@ -536,7 +568,7 @@ function renderHistorySections(report, items, capacity) {
 
   $('#hd3').innerHTML = `<div class="ro-wrap"><div class="ro-sec-title">Subspecialty Consultation</div>${D.nilConsultation ? '<div class="ro-nil">Nil Consultation</div>' : roTable(['Bed', 'Name', 'Pending consultation'], D.consultations)}<div class="ro-sec-title">Intubation Record</div>${D.nilIntubation ? '<div class="ro-nil">Nil Intubation</div>' : roTable(['Bed', 'Name / Hosp No.', 'Diagnosis', 'Reason', 'Elective / Emergency', 'By Whom', 'Location', 'Outcome'], D.intubations)}</div>`;
 
-  $('#hd4').innerHTML = `<div class="ro-wrap"><div class="ro-sec-title">Night Nurse</div>${D.nurses.map((n, i) => `<p style="font-size:.92rem;margin-bottom:4px;padding:3px 0;border-bottom:1px solid #E0E0D8;color:#333">${i + 1}. ${esc(n.role || '')} ${esc(n.name || '')}${n.appt ? ` (${esc(n.appt)})` : ''}${n.runner ? ' [Night Runner]' : ''}</p>`).join('') || '<p style="color:#999">No nurses recorded.</p>'}${roFr('AM Duty Staff:', D.staffAM)}${roFr('PM Duty Staff:', D.staffPM)}${roFr('Signature:', `${D.sigRank || ''} ${D.sigName || ''}`.trim())}${roFr('Appointment:', D.sigAppt)}</div>`;
+  $('#hd4').innerHTML = `<div class="ro-wrap"><div class="ro-sec-title">Night Nurse</div>${D.nurses.map((n, i) => `<p class="ward-history-nurse-row">${i + 1}. ${esc(n.role || '')} ${esc(n.name || '')}${n.appt ? ` (${esc(n.appt)})` : ''}${n.runner ? ' [Night Runner]' : ''}</p>`).join('') || '<p class="ward-history-empty">No nurses recorded.</p>'}${roFr('AM Duty Staff:', D.staffAM)}${roFr('PM Duty Staff:', D.staffPM)}${roFr('Signature:', `${D.sigRank || ''} ${D.sigName || ''}`.trim())}${roFr('Appointment:', D.sigAppt)}</div>`;
 }
 
 function roFr(label, value) { const v = Array.isArray(value) ? (value.length ? value.map(x => `<span class="ro-bch">${esc(x)}</span>`).join('') : 'Nil') : esc(value ?? ''); return `<div class="ro-fr"><span class="ro-fl">${esc(label)}</span><span class="ro-fc">${v || '—'}</span></div>`; }
@@ -552,7 +584,7 @@ function setFormMode() {
   wardTabs.setMainLocked(false);
   $('#histBar').classList.remove('show');
   $('#staffBar').classList.remove('show');
-  $('#normalBar').style.display = 'flex';
+  $('#normalBar').hidden = false;
   wardTabs.focusActiveMain();
 }
 
@@ -566,7 +598,7 @@ async function toggleHistory() {
   $('#histDetailWrap').classList.remove('open');
   $('#histIdle').classList.add('show');
   wardTabs.setMainLocked(true);
-  $('#normalBar').style.display = 'none';
+  $('#normalBar').hidden = true;
   $('#staffBar').classList.remove('show');
   $('#histBar').classList.add('show');
   $('#hbReprint').disabled = true;
@@ -585,14 +617,14 @@ async function toggleStaffList() {
   $('#histIdle').classList.remove('show');
   $('#staffListWrap').classList.add('open');
   wardTabs.setMainLocked(true);
-  $('#normalBar').style.display = 'none';
+  $('#normalBar').hidden = true;
   $('#histBar').classList.remove('show');
   $('#staffBar').classList.add('show');
   $('#staffCloseBtn')?.focus();
   await renderStaffList();
 }
 async function renderStaffList() { state.staff = await getWardStaff(state.ward.id, false); const body = $('#staffListBody'); body.innerHTML = ''; state.staff.forEach(appendStaffRow); renderStaffDataLists(); }
-function appendStaffRow(staff = { role: 'RN', name: '', appointment_date: '', active: true }) { const row = document.createElement('tr'); row.dataset.id = staff.id || ''; row.innerHTML = `<td><select class="staffRole"><option>RN</option><option>EN</option><option>APN</option><option>Student Nurse</option></select></td><td><input class="staffName" value="${esc(staff.name || '')}"></td><td><input class="staffAppt" placeholder="dd/mm/yyyy" value="${esc(formatAppt(staff.appointment_date))}"></td><td><button class="btn-x" type="button">x</button></td>`; $('.staffRole', row).value = staff.role || 'RN'; ['.staffRole', '.staffName', '.staffAppt'].forEach(sel => $(sel, row).addEventListener('change', () => saveStaffRow(row))); $('.btn-x', row).onclick = async () => { if (!row.dataset.id) return row.remove(); await setStaffActive(row.dataset.id, false); showStatus('success', 'Staff record deactivated.'); await renderStaffList(); }; $('#staffListBody').append(row); }
+function appendStaffRow(staff = { role: 'RN', name: '', appointment_date: '', active: true }) { const row = document.createElement('tr'); row.dataset.id = staff.id || ''; row.innerHTML = `<td><select class="staffRole"><option>RN</option><option>EN</option><option>APN</option><option>Student Nurse</option></select></td><td><input class="staffName" value="${esc(staff.name || '')}"></td><td><input class="staffAppt" placeholder="dd/mm/yyyy" value="${esc(formatAppt(staff.appointment_date))}"></td><td><button class="btn-x" type="button">x</button></td>`; $('.staffRole', row).value = staff.role || 'RN'; ['.staffRole', '.staffName', '.staffAppt'].forEach(sel => $(sel, row).addEventListener('change', () => saveStaffRow(row))); $('.btn-x', row).addEventListener('click', async () => { if (!row.dataset.id) return row.remove(); await setStaffActive(row.dataset.id, false); showStatus('success', 'Staff record deactivated.'); await renderStaffList(); }); $('#staffListBody').append(row); }
 function addStaffRow() { appendStaffRow(); }
 async function saveStaffRow(row) { const name = $('.staffName', row).value.trim(); if (!name) return; try { const saved = await saveWardStaff({ id: row.dataset.id || undefined, ward_id: state.ward.id, role: $('.staffRole', row).value, name, appointment_date: apptToISO($('.staffAppt', row).value), active: true, display_order: 0 }); row.dataset.id = saved.id; showStatus('success', 'Staff record saved.'); state.staff = await getWardStaff(state.ward.id, false); renderStaffDataLists(); } catch (error) { showStatus('error', error.message || String(error)); } }
 
@@ -608,7 +640,7 @@ async function getDataForTab(tab) {
   $('#gdSectionHdr').textContent = { 1: 'Admission / Bed Count', 2: 'Infection / Devices', 3: 'Patient List', 4: 'Consultation / Intubation', 5: 'Night Nurse' }[tab] || 'Previous Data';
   const noHistory = !prev;
   $('#gdNoHistory').classList.toggle('show', noHistory);
-  $('#gdTable').style.display = noHistory ? 'none' : 'table';
+  $('#gdTable').hidden = noHistory;
   $('#gdConfirmBtn').disabled = noHistory;
   if (noHistory) {
     $('#gdTbody').innerHTML = '';
@@ -695,4 +727,4 @@ async function resetPdfSettings() { if (!confirm('Reset all font sizes to the de
 async function printPdf() { const mod = await getPrintModule(); openPrintView({ html: mod.renderWardMemoHtml(printContext({ report_type: state.memoType, report_date: $('#memoDate').value, payload: collectPayload() }, state.items, state.capacity)), title: MEMO_LABELS[state.memoType], kind: 'ward-memo' }); }
 async function applyPdfSettings() { const mod = await getPrintModule(); pdfSettings = mod.saveWardPrintSettings(readPrintControls()); showStatus('loading', 'Choose “Save as PDF” in the print dialog.'); printPdf(); }
 
-Object.assign(window, { calcEmpty, addEmptyDetail, addEB, addPt, addCs, addIt, addNR, toggleNil, toggleNilConsult, toggleNilIntub, saveEntry, submitEntry, handleGen, openPdfSettings, closePdfSettings, printPdf, applyPdfSettings, updatePdfPreviewDebounced, resetPdfSettings, toggleHistory, toggleStaffList, addStaffRow, getDataForTab, gdClose, gdConfirm, histReprint, histDeleteCurrent });
+// All Ward screen actions are module-local and bound by bindWardActions().

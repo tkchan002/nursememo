@@ -46,7 +46,7 @@ test('role choices are large source-defined SVG icons', () => {
 test('password visibility control remains semantic and page-owned', () => {
   assert.match(indexHtml, /id="password" type="password"/);
   assert.match(indexHtml, /id="togglePassword"[^>]*aria-controls="password"[^>]*aria-pressed="false"[^>]*aria-label="Show password"/);
-  assert.match(loginPage, /qs\('#togglePassword'\)\.onclick/);
+  assert.match(loginPage, /qs\('#togglePassword'\)\.addEventListener\('click'/);
   assert.match(loginPage, /input\.type = visible \? 'text' : 'password'/);
   assert.match(loginPage, /button\.setAttribute\('aria-pressed', String\(visible\)\)/);
   assert.doesNotMatch(indexHtml, /onclick=/);

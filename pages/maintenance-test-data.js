@@ -234,7 +234,7 @@ export async function refreshGeneratedDemoBatches() {
         <td><button type="button" class="btn danger small" data-delete-demo-batch="${esc(row.id)}">Delete Batch</button></td>
       </tr>`).join('')}</tbody></table></div>`;
     qsa('[data-delete-demo-batch]').forEach(button => {
-      button.onclick = () => removeGeneratedDemoBatch(button.dataset.deleteDemoBatch);
+      button.addEventListener('click', () => removeGeneratedDemoBatch(button.dataset.deleteDemoBatch));
     });
   } catch (error) {
     host.innerHTML = `<div class="error">${esc(error.message || String(error))}</div>`;
@@ -274,15 +274,15 @@ export function initMaintenanceTestData() {
   const seed = $('#demoSeed');
   if (date) {
     date.value = todayISO();
-    date.onchange = () => invalidatePrepared();
+    date.addEventListener('change', () => invalidatePrepared());
   }
-  if (scenario) scenario.onchange = () => invalidatePrepared();
-  if (seed) seed.oninput = () => invalidatePrepared();
-  if ($('#demoGenerateBtn')) $('#demoGenerateBtn').onclick = generatePreview;
-  if ($('#demoImportBtn')) $('#demoImportBtn').onclick = commitPreparedBatch;
-  if ($('#demoRefreshBatchesBtn')) $('#demoRefreshBatchesBtn').onclick = refreshGeneratedDemoBatches;
-  if ($('#demoNewSeedBtn')) $('#demoNewSeedBtn').onclick = () => {
+  if (scenario) scenario.addEventListener('change', () => invalidatePrepared());
+  if (seed) seed.addEventListener('input', () => invalidatePrepared());
+  if ($('#demoGenerateBtn')) $('#demoGenerateBtn').addEventListener('click', generatePreview);
+  if ($('#demoImportBtn')) $('#demoImportBtn').addEventListener('click', commitPreparedBatch);
+  if ($('#demoRefreshBatchesBtn')) $('#demoRefreshBatchesBtn').addEventListener('click', refreshGeneratedDemoBatches);
+  if ($('#demoNewSeedBtn')) $('#demoNewSeedBtn').addEventListener('click', () => {
     $('#demoSeed').value = String(Date.now());
     invalidatePrepared('New seed selected. Generate a new preview before importing.');
-  };
+  });
 }

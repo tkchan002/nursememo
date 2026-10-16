@@ -34,9 +34,9 @@ test('Maintenance page delegates Test Data behavior to its own module', () => {
 
 test('Test Data module invalidates a preview when configuration controls change', () => {
   assert.match(testData, /function invalidatePrepared/);
-  assert.match(testData, /date\.onchange = \(\) => invalidatePrepared/);
-  assert.match(testData, /scenario\.onchange = \(\) => invalidatePrepared/);
-  assert.match(testData, /seed\.oninput = \(\) => invalidatePrepared/);
+  assert.match(testData, /date\.addEventListener\('change', \(\) => invalidatePrepared/);
+  assert.match(testData, /scenario\.addEventListener\('change', \(\) => invalidatePrepared/);
+  assert.match(testData, /seed\.addEventListener\('input', \(\) => invalidatePrepared/);
 });
 
 test('configuration loading uses one bulk staff query instead of one request per ward', async () => {

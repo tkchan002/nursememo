@@ -39,7 +39,6 @@ function renderJob(printJob) {
   `;
 
   document.getElementById('printDocumentHost').append(...Array.from(parsed.body.childNodes).map(node => node.cloneNode(true)));
-  installShellOverrides();
 
   document.getElementById('printActionBtn').addEventListener('click', () => {
     window.print();
@@ -97,27 +96,6 @@ function renderMissingJob() {
   });
 }
 
-function installShellOverrides() {
-  const style = document.createElement('style');
-  style.dataset.printViewShell = '1';
-  style.textContent = `
-    .print-view-toolbar{all:initial;box-sizing:border-box!important;position:fixed!important;top:0!important;left:0!important;right:0!important;z-index:2147483647!important;min-height:56px!important;padding:8px max(10px,env(safe-area-inset-right)) 8px max(10px,env(safe-area-inset-left))!important;display:flex!important;align-items:center!important;gap:10px!important;background:#f3f3ef!important;border-bottom:1px solid #9b9b94!important;font-family:Arial,sans-serif!important;color:#222!important;box-shadow:0 2px 8px rgba(0,0,0,.18)!important}
-    .print-view-toolbar *{box-sizing:border-box!important;font-family:Arial,sans-serif!important}
-    .print-view-title-wrap{display:flex!important;flex:1!important;min-width:0!important;flex-direction:column!important;gap:2px!important;line-height:1.2!important}
-    .print-view-title-wrap strong{font-size:14px!important;white-space:nowrap!important;overflow:hidden!important;text-overflow:ellipsis!important}
-    .print-view-title-wrap span{font-size:11px!important;color:#60605c!important}
-    .print-view-button{appearance:none!important;border:1px solid #777!important;border-radius:3px!important;min-height:40px!important;padding:7px 14px!important;font-size:14px!important;font-weight:700!important;line-height:1!important;cursor:pointer!important;white-space:nowrap!important}
-    .print-view-button.primary{background:#245ea8!important;color:white!important;border-color:#16457e!important}
-    .print-view-button.secondary{background:#fff!important;color:#222!important}
-    .print-view-body{padding-top:58px!important}
-    .print-view-viewport{overflow-x:hidden!important;min-height:calc(100dvh - 58px)!important;padding:10px 0 max(10px,env(safe-area-inset-bottom))!important}
-    .print-view-stage{position:relative!important;width:100%!important;display:flex!important;justify-content:center!important;align-items:flex-start!important}
-    .print-document-host{display:inline-block!important;max-width:none!important}
-    @media(max-width:520px){.print-view-title-wrap span{display:none!important}.print-view-button{min-height:44px!important;padding:8px 11px!important;font-size:13px!important}}
-    @media print{.print-view-toolbar{display:none!important}.print-view-body{padding-top:0!important}.print-view-viewport{padding:0!important;overflow:visible!important}.print-view-stage{height:auto!important;display:block!important}.print-document-host{transform:none!important;display:block!important}}
-  `;
-  document.head.append(style);
-}
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, char => ({

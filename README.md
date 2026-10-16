@@ -34,3 +34,7 @@ The Ward, Manager, Maintenance, Login and print-preview chrome use a consolidate
 See [`UI_CONSOLIDATION_REPORT.md`](UI_CONSOLIDATION_REPORT.md) for the complete change inventory, supported exceptions, verification results and limitations.
 
 See [UI_STYLE_GUIDE.md](UI_STYLE_GUIDE.md) for the neutral stylesheet layout.
+
+## October 2026 readability and Manager printing update
+
+The shared screen font sizes have been increased, Manager Ward List and Runner List have an in-page print preview, and Maintenance shows the generated Auth email when editing an account. The disposable demo Manager login now accepts `patrol` without requiring immediate Supabase account recreation. See [RELEASE_NOTES_2026-10-16.md](RELEASE_NOTES_2026-10-16.md) for the test-only login fallback and deployment caveats.

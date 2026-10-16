@@ -18,7 +18,7 @@ Other small feature-specific stylesheets remain in place for their named feature
 
 Each application page loads its existing layout styles followed by `css/theme.css`. Page-specific clinical styling lives at the end of the corresponding page stylesheet, inside `@media screen` so report print layouts remain unaffected. The shared theme has a single file; the common control rules are not duplicated across each page.
 
-The Get Data popup uses neutral `ui-dialog*` presentation classes; all existing `gd*` IDs, Ward event action hooks, and retrieval behaviour are preserved. Screen colour variables use `--ui-*` names. The login ID field has no account-example placeholder, while demo-mode autofill is unchanged.
+The Get Data popup uses neutral `ui-dialog*` presentation classes; all existing `gd*` IDs, Ward event action hooks, and retrieval behaviour are preserved. Screen colour variables use `--ui-*` names. The login ID field has no account-example placeholder, while the demo Manager login now defaults to `patrol` (with a test-only legacy-account fallback).
 
 ## Verification
 

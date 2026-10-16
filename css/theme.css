@@ -367,3 +367,37 @@
     .legacy-user-badge, .mode-badge {white-space: normal}
   }
 }
+
+
+/* Readable screen typography: preserve print-document and Night Memo sheet sizes. */
+@media screen {
+  body.legacy-page.ward-page, body.legacy-page.manager-page,
+  body.legacy-page.maintenance-page { font-size:14px; line-height:1.43; }
+  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab) {
+    font-size:13px; line-height:18px; min-height:28px; height:28px;
+    padding:4px 10px;
+  }
+  :is(.tab-strip, .legacy-tabs, .hd-tab-strip, .manager-primary-tabs) {
+    height:31px; min-height:31px;
+  }
+  :is(.data-table, .legacy-table, .report-table, .dt, .submission-table,
+      .ward-source-table, .night-staffing-table, .ward-list-table) {font-size:14px}
+  :is(.data-table, .legacy-table, .report-table, .dt, .submission-table,
+      .ward-source-table, .night-staffing-table, .ward-list-table) th {font-size:13px}
+  body.legacy-page :is(input[type=text], input[type=email], input[type=password],
+      input[type=number], input[type=date], select, textarea) {
+    font-size:14px; line-height:1.4; min-height:30px;
+  }
+  .ward-page .fl, .ward-page .fc, .ward-page .fc label,
+  .ward-page .ro-fl, .ward-page .ro-fc,
+  .maintenance-page .field label, .maintenance-page .maintenance-description,
+  .manager-page .manager-archive-meta, .manager-page .manager-history-night-meta {font-size:14px}
+  .ward-page .ro-tbl, .ward-page #gdTable {font-size:14px}
+  .ward-page #gdTable th, .ward-page .ro-tbl th {font-size:13px}
+  .legacy-window-title .legacy-subtitle,
+  .legacy-user-badge, .user-badge, .mode-badge {font-size:12px}
+  .ward-page .ward-window-title .legacy-subtitle {font-size:12px}
+  .maintenance-page .account-auth-email {font-size:12px}
+  /* Intentionally no global font overrides of .memo-sheet, .manager-print-page,
+     .pdf-preview, iframe content, or @media print. */
+}

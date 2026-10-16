@@ -11,7 +11,7 @@ const titles = {
 };
 const defaults = {
   ward: 'C10',
-  manager: 'PatrolNight',
+  manager: 'patrol',
   maintenance: 'NightMaintenance',
 };
 const destinations = {

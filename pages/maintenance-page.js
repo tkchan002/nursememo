@@ -15,6 +15,7 @@ import { moveOrderedItem, sortByOrder } from '../domain/ordering.js';
 import { emptyBedGenderLabel, validateWardName } from '../domain/ward.js';
 import { editableCapacity, capacityNumber } from '../domain/capacity-history.js';
 import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
+import { loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
 import { validateMaintenancePassword, toStoredMaintenancePassword } from '../domain/maintenance-accounts.js';
 
 const $ = qs;
@@ -57,6 +58,7 @@ function bind() {
   $('#addAccountBtn').addEventListener('click', () => openAccountModal());
   $('#refreshAccountsBtn').addEventListener('click', () => ensureAccountsLoaded(true));
   $('#accountForm').addEventListener('submit', saveAccount);
+  $('#accountLogin').addEventListener('input', updateAccountEmailPreview);
   $('#passwordForm').addEventListener('submit', savePassword);
   $('#showNewPassword').addEventListener('change', () => {
     const type = $('#showNewPassword').checked ? 'text' : 'password';
@@ -353,7 +355,21 @@ function openAccountModal(a = null) {
   $('#accountPassword').value = '';
   $('#accountPasswordWrap').classList.toggle('hidden', !!a);
   $('#accountPassword').required = !a;
+  updateAccountEmailPreview();
   openModal('#accountModal');
+}
+function updateAccountEmailPreview() {
+  const entered = $('#accountLogin').value.trim();
+  const output = $('#accountAuthEmailPreview');
+  try {
+    output.textContent = loginIdToEmail(entered);
+    output.classList.remove('invalid');
+  } catch {
+    output.textContent = 'Enter a valid Login ID (2–32 characters, starting with a letter).';
+    output.classList.add('invalid');
+  }
+  $('#accountRenameHelp').hidden = !state.editingAccount
+    || entered.toLowerCase() === state.editingAccount.login_id.toLowerCase();
 }
 async function saveAccount(event) {
   event.preventDefault();

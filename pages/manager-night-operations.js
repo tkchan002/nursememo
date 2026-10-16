@@ -6,6 +6,7 @@ import { getCurrentNightRosterSnapshots } from '../data/repositories/night-roste
 import { reportingNightDate } from '../domain/manager-memo.js';
 import { buildNightOperationsModel } from '../domain/night-roster.js';
 import { renderNightStaffPrintHtml, renderNightRunnerPrintHtml } from '../night-roster-print.js';
+const rosterLogoUrl = new URL('../assets/heart-logo.png', import.meta.url).href;
 
 const $ = qs;
 const state = {
@@ -13,6 +14,8 @@ const state = {
   model: buildNightOperationsModel(),
   refreshing: false,
   loaded: false,
+  printKind: null,
+  previousFocus: null,
 };
 
 bindControls();
@@ -24,6 +27,22 @@ function bindControls() {
   $('#refreshStatusBtn')?.addEventListener('click', () => refreshNightOperations({ quiet: true }).catch(() => {}));
   $('#printNightStaffBtn')?.addEventListener('click', printNightStaff);
   $('#printNightRunnerBtn')?.addEventListener('click', printNightRunners);
+  $('#rosterPreviewCloseBtn')?.addEventListener('click', closeRosterPreview);
+  $('#rosterPreviewPrintBtn')?.addEventListener('click', printRosterPreview);
+  $('#rosterPreviewResetBtn')?.addEventListener('click', () => {
+    $('#rosterPreviewFontSize').value = '10';
+    updateRosterPreview();
+  });
+  $('#rosterPreviewFontSize')?.addEventListener('input', updateRosterPreview);
+  $('#rosterPreviewModal')?.addEventListener('click', event => {
+    if (event.target === $('#rosterPreviewModal')) closeRosterPreview();
+  });
+  document.addEventListener('keydown', event => {
+    if ($('#rosterPreviewModal')?.hidden === false && event.key === 'Escape') {
+      event.preventDefault();
+      closeRosterPreview();
+    }
+  });
   document.addEventListener('manager-primary-tab-change', event => {
     if (event.detail?.tab === 'staffing') refreshNightOperations({ quiet: state.loaded }).catch(showError);
   });
@@ -95,14 +114,54 @@ function displayReportingDate(value) {
 }
 
 function printNightStaff() {
-  showRosterPrint(renderNightStaffPrintHtml({ reportingDate: state.reportingDate, wardRosters: state.model.wardRosters }), 'Night Staff List');
+  showRosterPreview('staff');
 }
 
 function printNightRunners() {
-  showRosterPrint(renderNightRunnerPrintHtml({ reportingDate: state.reportingDate, runners: state.model.runners }), 'Night Runner List');
+  showRosterPreview('runner');
 }
 
-function showRosterPrint(html, title) {
+function rosterFontSize() {
+  return Math.max(8, Math.min(14, Number($('#rosterPreviewFontSize').value) || 10));
+}
+
+function createRosterPrintDocument() {
+  const options = { reportingDate: state.reportingDate, logoUrl: rosterLogoUrl, fontSize: rosterFontSize() };
+  return state.printKind === 'staff'
+    ? renderNightStaffPrintHtml({ ...options, wardRosters: state.model.wardRosters })
+    : renderNightRunnerPrintHtml({ ...options, runners: state.model.runners });
+}
+
+function showRosterPreview(kind) {
+  if (!state.loaded) return;
+  state.printKind = kind;
+  state.previousFocus = document.activeElement;
+  $('#rosterPreviewTitle').textContent = kind === 'staff' ? 'Night Staff List Preview' : 'Night Runner List Preview';
+  $('#rosterPreviewFontSize').value = '10';
+  $('#rosterPreviewModal').hidden = false;
+  updateRosterPreview();
+  $('#rosterPreviewCloseBtn').focus();
+}
+
+function updateRosterPreview() {
+  if ($('#rosterPreviewModal').hidden || !state.printKind) return;
+  const frame = $('#rosterPreviewFrame');
+  frame.srcdoc = createRosterPrintDocument();
+}
+
+function closeRosterPreview() {
+  $('#rosterPreviewModal').hidden = true;
+  $('#rosterPreviewFrame').removeAttribute('srcdoc');
+  state.printKind = null;
+  state.previousFocus?.focus?.();
+  state.previousFocus = null;
+}
+
+function printRosterPreview() {
+  if (!state.printKind) return;
+  const title = state.printKind === 'staff' ? 'Night Staff List' : 'Night Runner List';
+  const html = createRosterPrintDocument();
+  // Existing print-view service handles same-origin print jobs and Print / PDF.
   openPrintView({ html, title, kind: 'night-roster' });
 }
 

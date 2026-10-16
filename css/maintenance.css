@@ -77,3 +77,9 @@
   .maintenance-page .account-auth-email {font-size:.8em}
 
 }
+
+/* Account identity is edited through the existing authorised Maintenance form. */
+.account-generated-email output{display:block;background:#f6f6f1;border:1px solid #b7b7ae;padding:8px 10px;color:#323232;overflow-wrap:anywhere;font-size:14px;min-height:33px}
+.account-generated-email output.invalid{color:#963232}
+.account-rename-help{font-size:13px;color:#53565a;line-height:1.4;margin-top:4px}
+.account-rename-help[hidden]{display:none}

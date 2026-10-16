@@ -121,7 +121,7 @@ const linesToHtml = lines => lines.length ? lines.map(line => `<div>${escapeHtml
 export const MANAGER_MEMO_FROM_PREFIX = 'N.O./APN,';
 export const MANAGER_MEMO_TO = 'DOM/Medical (QEH)';
 
-export function buildManagerMemoDocument({ bundle = [], items = [], reportingDate = reportingNightDate() } = {}) {
+export function buildManagerMemoData({ bundle = [], items = [], reportingDate = reportingNightDate() } = {}) {
   const template = {
     version: 3,
     title: 'Night Memo',
@@ -149,7 +149,11 @@ export function buildManagerMemoDocument({ bundle = [], items = [], reportingDat
       designation: 'N.O./APN',
     },
   };
-  return { version: 4, html: renderEditableManagerMemoHtml(template) };
+  return template;
+}
+
+export function buildManagerMemoDocument(args = {}) {
+  return {version:4,html:renderEditableManagerMemoHtml(buildManagerMemoData(args))};
 }
 
 export function regenerateWardDerivedSections(_document, { bundle = [], items = [], reportingDate = reportingNightDate() } = {}) {

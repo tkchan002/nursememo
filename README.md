@@ -1,3 +1,9 @@
+# Experimental DOCX Manager Branch
+
+**Read [DOCX_BRANCH_SETUP.md](./DOCX_BRANCH_SETUP.md) before deploying.** This branch requires the supplied Supabase SQL patch, is for fictional demo data only, and embeds an external browser word processor. GitHub Pages branch deployments may temporarily replace the existing site.
+
+---
+
 # Nurse Memo
 
 This repository is the **Nurse Memo** demo application. The product name was updated from Night Memo; **PM Memo** and **Night Memo** continue to identify the two reporting types.

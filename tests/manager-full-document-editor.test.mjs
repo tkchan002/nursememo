@@ -38,14 +38,15 @@ test('document regeneration creates a new document and does not carry over edite
  assert.match(next.html,/Early bird:/);
 });
 
-test('Jodit is lazy-loaded, replacing segmented contenteditable document sections',async()=>{
- const html=await read('manager.html');const page=await read('pages/manager-page.js');const adapter=await read('editor/manager-jodit.js');
- assert.match(html,/<textarea id="memoEditor"/);
- assert.doesNotMatch(html,/id="memoFromName"|id="memoMainRows"|id="memoEarlyBird"/);
- assert.match(adapter,/import\('jodit'\)/);
- assert.match(adapter,/['"]font['"],\s*['"]fontsize['"]/);
- assert.match(adapter,/['"]table['"]/);
- assert.match(page,/memoEditorInstance\.getValue\(\)/);
+test('Manager uses embedded DOCX editor and binary persistence rather than Jodit',async()=>{
+ const html=await read('manager.html');const page=await read('pages/manager-page.js');const adapter=await read('editor/manager-ranuts.js');
+ assert.match(html,/<iframe id="memoEditor"/);
+ assert.doesNotMatch(html,/<textarea id="memoEditor"/);
+ assert.match(adapter,/document:open-buffer/);
+ assert.match(adapter,/document:save/);
+ assert.match(page,/saveManagerDocxRecovery/);
+ assert.match(page,/saveManagerDocxRevision/);
+ assert.match(page,/getManagerDocxBytes/);
  assert.match(page,/Regenerate this Night Memo/);
 });
 

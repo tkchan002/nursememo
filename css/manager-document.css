@@ -1,72 +1,9 @@
-/* Nurse Memo's independent document styling; applies to Jodit editing and output. */
-.manager-memo-document,.jodit-wysiwyg{font-family:Arial,Helvetica,sans-serif;font-size:11pt;line-height:1.25;color:#111;overflow-wrap:break-word}
-.manager-memo-document .nm-document-title,.jodit-wysiwyg .nm-document-title{font-size:18pt;text-align:center;text-decoration:underline;margin:0 0 10pt;font-weight:700}
-.manager-memo-document h2,.jodit-wysiwyg h2{font-size:11pt;margin:10pt 0 4pt;font-weight:700}
-.manager-memo-document p,.jodit-wysiwyg p{margin:3pt 0}
-.manager-memo-document table,.jodit-wysiwyg table{border-collapse:collapse;width:100%;margin:4pt 0 8pt;table-layout:auto}
-.manager-memo-document th,.manager-memo-document td,.jodit-wysiwyg th,.jodit-wysiwyg td{border:1px solid #333;padding:3px 4px;vertical-align:top}
-.manager-memo-document th,.jodit-wysiwyg th{font-weight:700}
-.manager-memo-document .nm-document-main,.jodit-wysiwyg .nm-document-main{font-size:9pt;table-layout:auto}
-.manager-memo-document .nm-document-infection,.jodit-wysiwyg .nm-document-infection{font-size:9pt;table-layout:auto}
-.manager-memo-document .nm-document-header,.jodit-wysiwyg .nm-document-header{font-size:10pt;table-layout:auto}
-.manager-memo-document .nm-document-header td,.jodit-wysiwyg .nm-document-header td{border:0;padding:2px 3px}
-.manager-memo-document .nm-document-ct,.jodit-wysiwyg .nm-document-ct{max-width:320px;width:52%}
-.manager-memo-document .nm-document-signature,.jodit-wysiwyg .nm-document-signature{margin-top:14pt}
-.manager-memo-document ul,.manager-memo-document ol,.jodit-wysiwyg ul,.jodit-wysiwyg ol{margin:4px 0 4px 24px;padding-left:15px}
-
-/* The editor's paper canvas is LANDSCAPE A4; the page grows with the document.
-   One vertical scrollbar (the browser), no 770px nested editor scroll. */
-.manager-page #editorArea,
-.manager-page .memo-canvas-wrap {min-width:0;max-width:100%}
-.manager-page [data-manager-tab-panel="memo"] .memo-canvas-wrap {
-  max-height:none; overflow-x:auto; overflow-y:visible; padding:0;
-  border:1px solid #aaa; background:#e7e7e4; box-shadow:none;
-}
-.manager-page .memo-document-hint {display:none}
-.manager-page .jodit-container {
-  box-sizing:border-box; width:100%!important; min-width:0!important;
-  border:0!important; box-shadow:none!important; background:#e7e7e4;
-}
-.manager-page .jodit-toolbar__box {
-  background:linear-gradient(#f7f7f7,#dedede)!important;
-  border:0!important;border-bottom:1px solid #b5b5b5!important;
-  padding:3px 6px!important;
-}
-.manager-page .jodit-toolbar-button {border-radius:2px;min-height:26px}
-.manager-page .jodit-toolbar-button:hover {background:#dff6fa!important}
-.manager-page .jodit-toolbar-button__button {min-height:26px}
-.manager-page .jodit-workplace {
-  box-sizing:border-box; height:auto!important; max-height:none!important;
-  min-height:0!important; overflow:visible!important;
-  padding:16px!important; background:#e7e7e4!important;
-}
-.manager-page .jodit-wysiwyg {
-  display:block!important; box-sizing:border-box!important;
-  width:297mm!important; max-width:none!important;
-  min-height:210mm!important; height:auto!important;
-  margin:0 auto!important; padding:10mm 12mm!important;
-  background:#fff;box-shadow:0 2px 9px #0002;
-  overflow:visible!important; outline:none;
-}
-.manager-page .jodit-wysiwyg:focus {box-shadow:0 2px 9px #0002,0 0 0 1px #6493c8}
-.manager-page .jodit-status-bar{background:#eee; min-height:21px}
-@media(max-width:1190px){
-  /* Keep actual A4 text and columns readable; scroll the paper horizontally when necessary. */
-  .manager-page .jodit-workplace{padding:8px!important;min-width:calc(297mm + 16px)}
-}
-@media(max-width:700px){
-  .manager-page .jodit-toolbar__box{padding:3px!important}
-  .manager-page .jodit-toolbar-button{min-height:29px}
-  .manager-page .jodit-wysiwyg{padding:9mm 10mm!important}
-}
-
-.manager-memo-document .nm-document-main th,
-.manager-memo-document .nm-document-infection th,
-.manager-page .jodit-wysiwyg .nm-document-main th,
-.manager-page .jodit-wysiwyg .nm-document-infection th{
-  word-break:normal;overflow-wrap:normal;hyphens:none;
-}
-.manager-memo-document .nm-document-main tr,
-.manager-page .jodit-wysiwyg .nm-document-main tr {break-inside:avoid}
-
-.manager-page .memo-orientation{font-size:12px;color:#565656;font-weight:400;border-left:1px solid #b8b8b8;padding-left:9px}
+/* Embedded document editor; document pagination is owned by ranuts/ONLYOFFICE. */
+.manager-page #editorArea,.manager-page .memo-canvas-wrap{min-width:0;max-width:100%}
+.manager-page .memo-canvas-wrap{padding:0!important;overflow:hidden!important;border:1px solid #aaa;background:#ebebe7}
+.manager-page #memoEditor{display:block;width:100%;height:min(79vh,1050px);min-height:570px;border:0;background:white}
+.manager-page .manager-archive-frame{min-height:65vh;background:#fff}
+.manager-page .docx-pdf-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:7px 12px;background:#eee}
+.manager-page .docx-pdf-actions span{font-size:12px;color:#555}
+.manager-page .docx-readonly{pointer-events:none}
+@media(max-width:600px){.manager-page #memoEditor{min-height:520px;height:75vh}.manager-page .docx-pdf-actions{flex-wrap:wrap}}

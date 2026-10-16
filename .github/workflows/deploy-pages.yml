@@ -4,7 +4,7 @@ on:
   push:
     branches:
       - main
-      - new-editor
+      - docx
 
   # Also gives you a Run workflow button in GitHub.
   workflow_dispatch:
@@ -39,6 +39,8 @@ jobs:
         run: npm install --no-audit --no-fund
 
       - name: Run verification
+        env:
+          DOCX_VERIFY_GENERATION: "1"
         run: npm run verify
 
       - name: Build production site

@@ -122,7 +122,7 @@
                 </section>
 
                 <section class="memo-canvas-wrap">
-                  <textarea id="memoEditor" aria-label="Full editable Night Memo document"></textarea>
+                  <iframe id="memoEditor" title="Editable Night Memo DOCX document" allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
                 </section>
               </section>
             </section>
@@ -220,7 +220,7 @@
   <div class="manager-modal no-print" id="printPreviewModal" hidden>
     <div class="manager-modal-card print-preview-card">
       <div class="modal-head"><strong id="printPreviewTitle">Night Memo Preview</strong><button type="button" class="pill" data-close-modal="printPreviewModal">Close</button></div>
-      <iframe id="printPreviewFrame" title="Night Memo print preview"></iframe>
+      <iframe id="printPreviewFrame" title="Night Memo PDF preview"></iframe><div class="docx-pdf-actions"><a class="pill" id="downloadMemoPdfBtn" download="Night-Memo.pdf" href="#">Download PDF</a><span>Use the PDF viewer’s print control to print.</span></div>
     </div>
   </div>
 

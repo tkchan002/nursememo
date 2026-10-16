@@ -21,7 +21,7 @@ test('Save and Print serialize through one persistence queue and freeze editing'
   assert.match(js, /function enqueuePersistence\(task\)/);
   assert.match(js, /state\.officialSaving = true;\s*setEditingEnabled\(false\)/s);
   assert.match(js, /await flushRecovery\(\)/);
-  assert.match(js, /enqueuePersistence\(\(\) => saveManagerMemoRevision/);
+  assert.match(js, /enqueuePersistence\(\(\) => saveManagerDocxRevision/);
 });
 
 test('Manager warns before unload and blocks writes after reporting-night rollover', () => {

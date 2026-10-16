@@ -8,10 +8,13 @@ const root = fileURLToPath(new URL('../', import.meta.url));
 const read = (name) => readFile(path.join(root, name), 'utf8');
 
 test('Ward, Manager, and roster print actions import the real print service', async () => {
-  for (const file of ['ward-print.js', 'pages/ward-page.js', 'pages/manager-page.js', 'pages/manager-night-operations.js']) {
+  for (const file of ['ward-print.js', 'pages/ward-page.js', 'pages/manager-night-operations.js']) {
     const source = await read(file);
     assert.match(source, /import\s*\{\s*openPrintView\s*\}\s*from\s*['"][^'"]*print-job-service\.js['"]/);
   }
+  const manager=await read('pages/manager-page.js');
+  assert.match(manager,/memoEditorInstance\.export\('PDF'\)/);
+  assert.doesNotMatch(manager,/openPrintView\(\{ html: renderManagerMemoPrintHtml/);
   const service = await read('services/print-job-service.js');
   assert.match(service, /export function openPrintView\(/);
   assert.match(service, /locationObject\.assign\(target\.href\)/);

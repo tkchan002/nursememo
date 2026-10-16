@@ -252,3 +252,59 @@ export async function getManagerMemoCheckpoint(checkpointId) {
   if (error) throw error;
   return data || null;
 }
+
+// DOCX branch RPCs: bytes stored in PostgreSQL bytea, references retained by the
+// original Manager recovery, revision and checkpoint lifecycle.
+import { bytesToBase64, base64ToBytes, assertDocxBytes, docxMetadata } from '../../documents/docx-bytes.js';
+
+export async function getManagerDocxBytes(documentRef) {
+  const id=documentRef?.document_id;
+  if (documentRef?.version!==5 || documentRef.format!=='docx' || !id) {
+    throw new Error('Old HTML memo cannot be opened as DOCX. Use Start New in this demo branch.');
+  }
+  if (DB_MODE==='demo') {
+    const row=(demoRead().manager_memo_docx_documents||[]).find(v=>v.id===id);
+    if (!row) throw new Error('DOCX content was not found.');
+    return base64ToBytes(row.data);
+  }
+  const {data,error}=await supabase.rpc('read_manager_memo_docx',{p_document_id:id});
+  if(error)throw error;
+  return base64ToBytes(data);
+}
+
+export async function saveManagerDocxRecovery({reportingDate,bytes,sourceSnapshot,expectedRevision=0}) {
+  const b64=bytesToBase64(bytes);
+  if(DB_MODE==='demo') {
+    const state=demoRead();
+    state.manager_memo_docx_documents ||= [];
+    const id=uid('docx');
+    const current=(state.manager_memos||[]).find(x=>x.reporting_date===reportingDate);
+    if (Number(current?.revision||0)!==Number(expectedRevision||0)) throw conflictError();
+    state.manager_memo_docx_documents.push({id,data:b64});
+    demoWrite(state);
+    return saveManagerMemoRecovery({reportingDate,document:docxMetadata(id,bytes),sourceSnapshot,expectedRevision});
+  }
+  const {data,error}=await supabase.rpc('save_manager_memo_recovery_docx',{
+    p_reporting_date:reportingDate,p_docx_base64:b64,p_source_snapshot:sourceSnapshot||[],p_expected_revision:Number(expectedRevision||0),
+  });
+  if(error)throw error;
+  return data;
+}
+
+export async function saveManagerDocxRevision({reportingDate,bytes,sourceSnapshot,expectedRevision=0,revisionType,reason,actorLabel=''}) {
+  const b64=bytesToBase64(bytes);
+  if(DB_MODE==='demo') {
+    const state=demoRead();
+    const current=(state.manager_memos||[]).find(x=>x.reporting_date===reportingDate);
+    if (Number(current?.revision||0)!==Number(expectedRevision||0)) throw conflictError();
+    state.manager_memo_docx_documents ||= [];
+    const id=uid('docx');state.manager_memo_docx_documents.push({id,data:b64});demoWrite(state);
+    return saveManagerMemoRevision({reportingDate,document:docxMetadata(id,bytes),sourceSnapshot,expectedRevision,revisionType,reason,actorLabel});
+  }
+  const {data,error}=await supabase.rpc('save_manager_memo_revision_docx',{
+    p_reporting_date:reportingDate,p_docx_base64:b64,p_source_snapshot:sourceSnapshot||[],p_expected_revision:Number(expectedRevision||0),
+    p_revision_type:revisionType,p_reason:reason||null,p_actor_label:actorLabel||'',
+  });
+  if(error)throw error;
+  return data;
+}

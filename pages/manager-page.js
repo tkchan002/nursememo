@@ -7,8 +7,9 @@ import { initManagerTabs } from '../components/manager-tabs.js';
 import {
   DB_MODE,
   getManagerMemo,
-  saveManagerMemoRecovery,
-  saveManagerMemoRevision,
+  getManagerDocxBytes,
+  saveManagerDocxRecovery,
+  saveManagerDocxRevision,
   listManagerMemoRevisions,
   getManagerMemoRevision,
   listManagerMemoArchive,
@@ -20,18 +21,14 @@ import { reportSubmittedAt } from '../domain/report-session.js';
 import { MEMO_LABELS } from '../domain/report-cycle.js';
 import { wardSubmissionStates } from '../domain/submission-status.js';
 import {
-  buildManagerMemoDocument,
+  buildManagerMemoData,
   isReportNewerThanSource,
-  regenerateWardDerivedSections,
   reportingNightDate,
   sourceSnapshotFromBundle,
 } from '../domain/manager-memo.js';
 import { loadManagerCurrent } from '../services/report-service.js';
-import { renderManagerMemoPrintHtml } from '../manager-memo-print.js';
-import { sanitizeManagerMemoHtml } from '../domain/manager-memo-html.js';
-import { createManagerDocumentEditor } from '../editor/manager-jodit.js';
+import { createManagerDocumentEditor } from '../editor/manager-ranuts.js';
 import { buildManagerWardInformation } from '../domain/manager-ward-information.js';
-import { openPrintView } from '../services/print-job-service.js';
 
 const $ = qs;
 const $$ = qsa;
@@ -70,6 +67,9 @@ const state = {
   activeTab: 'submission',
   historyReturnTab: 'submission',
   wardPreviewContext: null,
+  pendingDocxBytes: null,
+  currentPdfUrl: null,
+  archiveLoadSequence: 0,
 };
 
 let persistenceTail = Promise.resolve();
@@ -77,6 +77,7 @@ let managerTabs = null;
 let wardPrintModulePromise = null;
 let memoEditorInstance = null;
 let memoEditorLoading = null;
+let archiveEditorInstance = null;
 
 bootstrap().catch(showFatal);
 
@@ -136,7 +137,7 @@ function bindStaticControls() {
   $('#archiveRevisionList').addEventListener('click', async event => {
     const button = event.target.closest('[data-archive-revision-id], [data-archive-recovery]');
     if (!button) return;
-    if (button.dataset.archiveRecovery != null) selectArchiveRecovery();
+    if (button.dataset.archiveRecovery != null) await selectArchiveRecovery();
     else await selectArchiveRevision(button.dataset.archiveRevisionId);
   });
 
@@ -309,11 +310,13 @@ async function startNewDraft() {
     } catch (_) { return; }
   }
 
-  const document = buildManagerMemoDocument({
+  const docxBytes = await generateNewDocx(buildManagerMemoData({
     bundle: state.bundle,
     items: state.items,
     reportingDate: state.reportingDate,
-  });
+  }));
+  state.pendingDocxBytes = docxBytes;
+  const document = { version:5, format:'docx', document_id:null };
   const sourceSnapshot = sourceSnapshotFromBundle(state.bundle);
 
   state.memo = {
@@ -349,49 +352,41 @@ async function backToWorkspace() {
   await refreshHistory();
   renderWorkspace();
 }
+// Load the DOCX generator only when Start New/Regenerate is requested.
+// Failure to load the optional editor generator cannot block Submission Status or Night Staffing.
+async function generateNewDocx(model) {
+  const { buildManagerDocxBytes } = await import('../documents/manager-docx.js');
+  return buildManagerDocxBytes(model);
+}
+
 async function ensureMemoEditor() {
-  if (memoEditorInstance) return memoEditorInstance;
-  if (!memoEditorLoading) memoEditorLoading = createManagerDocumentEditor('#memoEditor', () => {
-    if (!state.rendering && state.editorOpen) markDirty();
-  });
-  try {
-    memoEditorInstance = await memoEditorLoading;
-    return memoEditorInstance;
-  } catch (error) {
-    memoEditorLoading = null;
-    throw error;
-  }
+  if(memoEditorInstance)return memoEditorInstance;
+  if(!memoEditorLoading)memoEditorLoading=Promise.resolve(createManagerDocumentEditor('#memoEditor',()=>{
+    if(!state.rendering && state.editorOpen)markDirty();
+  }));
+  try{memoEditorInstance=await memoEditorLoading;await memoEditorInstance.ready();return memoEditorInstance;}
+  catch(error){memoEditorLoading=null;throw error;}
 }
 
-async function renderEditor({ keepDirty = false } = {}) {
-  if (!state.memo) return;
-  state.rendering = true;
-  const previousDirty = state.dirty;
-  try {
-    const instance = await ensureMemoEditor();
-    // Old demo memo formats are intentionally unsupported: user opted out of migration.
-    const current = state.memo.document;
-    if (current?.version !== 4 || typeof current.html !== 'string') {
-      throw new Error('This is an old demo memo format. Select Start New to create an editable document.');
-    }
-    instance.setValue(current.html);
-    setEditingEnabled(!state.conflicted && !state.boundaryExpired && !state.officialSaving && !state.historyMode);
-    state.dirty = keepDirty ? previousDirty : false;
-    if (!keepDirty) { state.editGeneration = 0; state.savedGeneration = 0; }
+async function renderEditor({keepDirty=false}={}) {
+  if(!state.memo)return;
+  state.rendering=true;
+  const previousDirty=state.dirty;
+  try{
+    const editor=await ensureMemoEditor();
+    const bytes=state.pendingDocxBytes || await getManagerDocxBytes(state.memo.document);
+    await editor.open(bytes,{readonly:state.conflicted||state.boundaryExpired||state.officialSaving||state.historyMode});
+    setEditingEnabled(!state.conflicted&&!state.boundaryExpired&&!state.officialSaving&&!state.historyMode);
+    state.dirty=keepDirty?previousDirty:false;
+    if(!keepDirty){state.editGeneration=0;state.savedGeneration=0;}
     updateSaveState();
-  } catch (error) {
-    setStatus(`Unable to open Night Memo editor: ${error.message || error}`, 'error');
-    $('#saveMemoBtn').disabled = true;
-    $('#printMemoBtn').disabled = true;
-    throw error;
-  } finally {
-    state.rendering = false;
-  }
+  }catch(error){setStatus(`Unable to open Night Memo DOCX: ${error.message||error}`,'error');$('#saveMemoBtn').disabled=true;$('#printMemoBtn').disabled=true;throw error;}
+  finally{state.rendering=false;}
 }
 
-function serializeDocument() {
-  if (!memoEditorInstance) throw new Error('The Night Memo editor is not ready.');
-  return { version: 4, html: sanitizeManagerMemoHtml(memoEditorInstance.getValue()) };
+async function serializeDocument() {
+  const editor=await ensureMemoEditor();
+  return editor.export('DOCX');
 }
 
 function ensureReportingNightCurrent() {
@@ -420,7 +415,7 @@ function markDirty({ schedule = true } = {}) {
   renderMemoState();
   updateSaveState();
   clearTimeout(state.saveTimer);
-  if (schedule) state.saveTimer = setTimeout(() => saveRecoveryNow().catch(() => {}), 1800);
+  if (schedule) state.saveTimer = setTimeout(() => saveRecoveryNow().catch(() => {}), 9000);
 }
 
 function updateSaveState(message = '') {
@@ -451,17 +446,18 @@ async function saveRecoveryNow({ force = false } = {}) {
     if (!ensureReportingNightCurrent()) throw new Error('REPORTING_NIGHT_CHANGED');
 
     const generation = state.editGeneration;
-    const document = state.editorOpen ? serializeDocument() : state.memo.document;
+    const bytes = state.editorOpen ? await serializeDocument() : state.pendingDocxBytes || await getManagerDocxBytes(state.memo.document);
     state.recoverySaving = true;
     updateSaveState();
     try {
-      const saved = await saveManagerMemoRecovery({
+      const saved = await saveManagerDocxRecovery({
         reportingDate: state.reportingDate,
-        document,
+        bytes,
         sourceSnapshot: state.memo.source_snapshot || [],
         expectedRevision: state.memo.revision || 0,
       });
       state.memo = saved;
+      state.pendingDocxBytes = bytes;
       state.savedGeneration = Math.max(state.savedGeneration, generation);
       state.dirty = state.editGeneration > state.savedGeneration;
       renderWorkspace();
@@ -520,10 +516,12 @@ async function saveOfficialRevision(revisionType, reason) {
   try {
     await flushRecovery();
     const generation = state.editGeneration;
-    const document = serializeDocument();
-    const result = await enqueuePersistence(() => saveManagerMemoRevision({
+    const bytes = await serializeDocument();
+    // A failed PDF export must never create a misleading Final revision.
+    const finalPdf = revisionType==='final' ? await memoEditorInstance.export('PDF') : null;
+    const result = await enqueuePersistence(() => saveManagerDocxRevision({
       reportingDate: state.reportingDate,
-      document,
+      bytes,
       sourceSnapshot: state.memo.source_snapshot || [],
       expectedRevision: state.memo.revision || 0,
       revisionType,
@@ -531,6 +529,7 @@ async function saveOfficialRevision(revisionType, reason) {
       actorLabel: actorLabel(),
     }));
     state.memo = result.memo;
+    state.pendingDocxBytes = bytes;
     state.savedGeneration = Math.max(state.savedGeneration, generation);
     state.dirty = state.editGeneration > state.savedGeneration;
     state.lastOfficialType = revisionType;
@@ -538,7 +537,7 @@ async function saveOfficialRevision(revisionType, reason) {
     renderMemoState();
     renderWorkspace();
     updateSaveState();
-    return result;
+    return {...result,finalPdf};
   } catch (error) {
     handleSaveError(error, revisionType);
     throw error;
@@ -571,37 +570,28 @@ async function saveDraftVersion() {
 }
 
 async function printFinalVersion() {
-  const result = await saveOfficialRevision('final', 'print');
-  if (!result) return;
-  setStatus(`Final #${result.revision.revision_number} saved. Opening print dialog…`, 'info');
-  await showPrintDocument(result.revision.document, {
-    title: `Final #${result.revision.revision_number} · Night Memo`,
-    autoPrint: true,
-  });
-  setTimeout(clearStatus, 2600);
+  const result=await saveOfficialRevision('final','print');
+  if(!result)return;
+  setStatus(`Final #${result.revision.revision_number} saved. Open the PDF preview to print or download.`, 'info');
+  showPdfPreview(result.finalPdf,`Final #${result.revision.revision_number} · Night Memo`);
 }
-
-function previewCurrentMemo() {
-  if (!state.memo) return;
-  showPrintDocument(serializeDocument(), { title: 'Night Memo Preview', autoPrint: false });
+async function previewCurrentMemo() {
+  if(!state.memo)return;
+  try{
+    setStatus('Creating PDF preview…','info');
+    const editor=await ensureMemoEditor();
+    const blob=await editor.export('PDF');
+    showPdfPreview(blob,'Night Memo Preview');clearStatus();
+  }catch(error){setStatus(`PDF preview failed: ${error.message||error}`,'error');}
 }
-
-function showPrintDocument(document, { title = 'Night Memo Preview', autoPrint = false } = {}) {
-  if (autoPrint) {
-    openPrintView({ html: renderManagerMemoPrintHtml(document), title, kind: 'manager-memo' });
-    return Promise.resolve();
-  }
-  return new Promise(resolve => {
-    const modal = $('#printPreviewModal');
-    const frame = $('#printPreviewFrame');
-    $('#printPreviewTitle').textContent = title;
-    modal.hidden = false;
-    frame.onload = () => {
-      frame.onload = null;
-      resolve();
-    };
-    frame.srcdoc = renderManagerMemoPrintHtml(document);
-  });
+function showPdfPreview(blob,title) {
+  if(!(blob instanceof Blob))throw new Error('PDF export was not returned.');
+  if(state.currentPdfUrl)URL.revokeObjectURL(state.currentPdfUrl);
+  const url=URL.createObjectURL(blob);state.currentPdfUrl=url;
+  $('#printPreviewTitle').textContent=title;
+  $('#printPreviewModal').hidden=false;
+  $('#printPreviewFrame').src=url;
+  const link=$('#downloadMemoPdfBtn');link.href=url;link.download=`Night-Memo-${state.reportingDate}.pdf`;
 }
 
 async function regenerateFromWardData() {
@@ -614,7 +604,10 @@ async function regenerateFromWardData() {
     await checkpointCurrentWorkingCopy('before_regenerate_ward_sections');
   } catch (_) { return; }
 
-  state.memo.document = regenerateWardDerivedSections(serializeDocument(), { bundle: state.bundle, items: state.items, reportingDate: state.reportingDate });
+  state.pendingDocxBytes=await generateNewDocx(buildManagerMemoData({
+    bundle:state.bundle,items:state.items,reportingDate:state.reportingDate,
+  }));
+  state.memo.document={version:5,format:'docx',document_id:null};
   state.memo.source_snapshot = sourceSnapshotFromBundle(state.bundle);
   markDirty({ schedule: false });
   await renderEditor({ keepDirty: true });
@@ -738,7 +731,7 @@ function renderEmptyArchive() {
   $('#archiveMemoTitle').textContent = 'Night Memo History';
   $('#archiveMemoMeta').textContent = 'No historical memo selected.';
   $('#archiveRevisionList').innerHTML = '<span class="manager-history-empty">No saved Night Memos.</span>';
-  $('#archiveMemoFrame').srcdoc = '<!doctype html><html><body style="font-family:Arial,sans-serif;padding:24px;color:#666">No historical Night Memo is available.</body></html>';
+  $('#archiveMemoMeta').textContent='No historical Night Memo is available.';
   $('#archiveUseAsDraftBtn').hidden = true;
   $('#archiveRecoveryDetails').hidden = true;
 }
@@ -768,7 +761,7 @@ async function selectArchiveNight(reportingDate) {
 
   const preferred = revisions.find(row => row.revision_type === 'final') || revisions[0] || null;
   if (preferred) await selectArchiveRevision(preferred.id);
-  else if (memo) selectArchiveRecovery();
+  else if (memo) await selectArchiveRecovery();
   else renderEmptyArchive();
 }
 
@@ -786,9 +779,16 @@ function renderArchiveRevisionList() {
   host.innerHTML = buttons.join('') || '<span class="manager-history-empty">No saved versions for this night.</span>';
 }
 
-function renderArchiveDocument(document, meta) {
-  $('#archiveMemoMeta').textContent = meta;
-  $('#archiveMemoFrame').srcdoc = renderManagerMemoPrintHtml(document || {});
+async function renderArchiveDocument(document,meta) {
+  const seq=++state.archiveLoadSequence;
+  $('#archiveMemoMeta').textContent=`${meta} · Opening DOCX…`;
+  try{
+    if(!archiveEditorInstance)archiveEditorInstance=createManagerDocumentEditor('#archiveMemoFrame',()=>{},{readonly:true});
+    const bytes=await getManagerDocxBytes(document);
+    if(seq!==state.archiveLoadSequence)return;
+    await archiveEditorInstance.open(bytes,{readonly:true});
+    if(seq===state.archiveLoadSequence)$('#archiveMemoMeta').textContent=meta;
+  }catch(error){if(seq===state.archiveLoadSequence)$('#archiveMemoMeta').textContent=`Cannot open historical DOCX: ${error.message||error}`;}
 }
 
 async function selectArchiveRevision(revisionId) {
@@ -800,19 +800,19 @@ async function selectArchiveRevision(revisionId) {
   renderArchiveRevisionList();
   const type = revision.revision_type === 'final' ? 'Final' : 'Draft';
   const user = revision.created_by_label ? ` · ${revision.created_by_label}` : '';
-  renderArchiveDocument(revision.document, `${type} #${revision.revision_number} · ${formatRevisionStamp(revision)}${user}`);
+  await renderArchiveDocument(revision.document, `${type} #${revision.revision_number} · ${formatRevisionStamp(revision)}${user}`);
   const mayRestore = state.archiveSelectedDate === state.reportingDate;
   $('#archiveUseAsDraftBtn').hidden = !mayRestore;
   $('#archiveUseAsDraftBtn').textContent = `Use ${type} #${revision.revision_number} as Current Draft`;
 }
 
-function selectArchiveRecovery() {
+async function selectArchiveRecovery() {
   if (!state.archiveMemo) return;
   state.archiveSelectedKind = 'recovery';
   state.archiveSelectedId = state.archiveMemo.id;
   renderArchiveRevisionList();
   const stamp = state.archiveMemo.updated_at ? formatDateTime(state.archiveMemo.updated_at, 'en-GB') : '—';
-  renderArchiveDocument(state.archiveMemo.document, `Recovery working copy · ${stamp}`);
+  await renderArchiveDocument(state.archiveMemo.document, `Recovery working copy · ${stamp}`);
   $('#archiveUseAsDraftBtn').hidden = true;
 }
 
@@ -841,7 +841,7 @@ async function selectArchiveCheckpoint(checkpointId) {
   state.archiveSelectedKind = 'checkpoint';
   state.archiveSelectedId = checkpoint.id;
   renderArchiveRevisionList();
-  renderArchiveDocument(checkpoint.document, `Safety recovery · ${archiveReasonLabel(checkpoint.reason)} · ${checkpoint.created_at ? formatDateTime(checkpoint.created_at, 'en-GB') : '—'}`);
+  await renderArchiveDocument(checkpoint.document, `Safety recovery · ${archiveReasonLabel(checkpoint.reason)} · ${checkpoint.created_at ? formatDateTime(checkpoint.created_at, 'en-GB') : '—'}`);
   const mayRestore = state.archiveSelectedDate === state.reportingDate;
   $('#archiveUseAsDraftBtn').hidden = !mayRestore;
   $('#archiveUseAsDraftBtn').textContent = 'Restore this Safety Recovery';
@@ -878,7 +878,9 @@ async function replaceCurrentDraftFromHistory(document, sourceSnapshot, label, c
   if (!state.memo) {
     state.memo = { reporting_date: state.reportingDate, revision: 0, status: 'draft' };
   }
-  state.memo.document = cloneJson(document) || {};
+  const restoredBytes=await getManagerDocxBytes(document);
+  state.pendingDocxBytes=restoredBytes;
+  state.memo.document={version:5,format:'docx',document_id:null};
   state.memo.source_snapshot = cloneJson(sourceSnapshot) || [];
   state.conflicted = false;
   state.lastOfficialType = null;

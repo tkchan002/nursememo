@@ -53,37 +53,78 @@ test('Pages deployment builds upstream and rejects missing self-hosted assets',(
   assert.doesNotMatch(workflow,/run: npm run verify \|\| true/);
 });
 
-test('GitHub Pages preparation rebases the upstream paths and decodes converter safely',()=>{
+test('Pages preparation preserves the ONLYOFFICE nested-index suffix and rewrites only site roots',()=>{
   const tmp=mkdtempSync(join(tmpdir(),'nurse-selfhost-'));
   const sourceDist=join(tmp,'vendor','dist');
   const published=join(tmp,'release','office');
-  mkdirSync(join(sourceDist,'sdkjs','common','wasm','x2t'),{recursive:true});
-  for (const sub of ['web-apps','assets']) mkdirSync(join(sourceDist,sub),{recursive:true});
-  writeFileSync(join(sourceDist,'editor.html'),'<link href="/ran-fonts/fonts.css"><script src="/sdkjs/common.js"></script><a href="/editor">Edit</a><script src="./assets/editor-aa.js"></script>');
-  writeFileSync(join(sourceDist,'assets/editor-aa.js'),`const sdk='/web-apps/apps/documenteditor';const other='/sw.js';`);
+  mkdirSync(join(sourceDist,'sdkjs/common/wasm/x2t'),{recursive:true});
+  mkdirSync(join(sourceDist,'web-apps/apps/api/documents'),{recursive:true});
+  mkdirSync(join(sourceDist,'web-apps/apps/documenteditor/main'),{recursive:true});
+  mkdirSync(join(sourceDist,'assets'),{recursive:true});
+  for(const name of ['index.html','editor.html','history.html']) {
+    writeFileSync(join(sourceDist,name),
+      '<link href="/ran-fonts/fonts.css"><script src="/sdkjs/common.js"></script>'+ 
+      '<a href="/editor">Edit</a><a href="/index.html">Home</a><script src="./assets/editor-aa.js"></script>');
+  }
+  writeFileSync(join(sourceDist,'web-apps/apps/documenteditor/main/index.html'),'<title>ONLYOFFICE editing frame</title>');
+  writeFileSync(join(sourceDist,'web-apps/apps/api/documents/api.js'),
+    'function editorFrame(path){ var suffix="/index.html"; return path+suffix; }');
+  writeFileSync(join(sourceDist,'assets/editor-aa.js'),
+    `const sdk='/web-apps/apps/documenteditor';const other='/sw.js';`);
   writeFileSync(join(sourceDist,'LICENSE'),'AGPL test fixture');
   writeFileSync(join(sourceDist,'NOTICE'),'upstream notices test fixture');
   const raw=Buffer.from([0,97,115,109,1,0,0,0]);
   writeFileSync(join(sourceDist,'sdkjs/common/wasm/x2t/x2t.wasm.br'),brotliCompressSync(raw));
-  writeFileSync(join(sourceDist,'sdkjs/common/wasm/x2t/x2t_helper.js'),`const wasm='/sdkjs/common/wasm/x2t/x2t.wasm.br';`);
-  try{
-    const result=spawnSync(process.execPath,['scripts/prepare-editor-site.mjs'],{
-      cwd:new URL('..',import.meta.url),encoding:'utf8',env:{...process.env,RANUTS_DIST:sourceDist,RANUTS_DEPLOY_DIR:published,GITHUB_REPOSITORY:'owner/nurse-memo-demo',RANUTS_REVISION:'test-rev'},timeout:120000
-    });
-    assert.equal(result.status,0,result.stderr+' '+result.stdout);
-    const html=readFileSync(join(published,'editor.html'),'utf8');
-    assert.match(html,/\/nurse-memo-demo\/office\/sdkjs\/common\.js/);
-    assert.match(html,/\/nurse-memo-demo\/office\/editor\.html/);
-    assert.match(html,/\/nurse-memo-demo\/office\/ran-fonts\/fonts\.css/);
-    const js=readFileSync(join(published,'assets/editor-aa.js'),'utf8');
-    assert.match(js,/\/nurse-memo-demo\/office\/web-apps\/apps/);
-    assert.match(js,/\/nurse-memo-demo\/office\/sw\.js/);
-    const helper=readFileSync(join(published,'sdkjs/common/wasm/x2t/x2t_helper.js'),'utf8');
-    assert.match(helper,/x2t\.wasm/);
-    assert.doesNotMatch(helper,/x2t\.wasm\.br/);
-    assert.deepEqual(readFileSync(join(published,'sdkjs/common/wasm/x2t/x2t.wasm')),raw);
-    assert.ok(existsSync(join(published,'..','.nojekyll')));
-    const meta=JSON.parse(readFileSync(join(published,'nurse-memo-editor-build.json'),'utf8'));
-    assert.equal(meta.officeBase,'/nurse-memo-demo/office/');
-  }finally{rmSync(tmp,{force:true,recursive:true});}
+  writeFileSync(join(sourceDist,'sdkjs/common/wasm/x2t/x2t_helper.js'),
+    `const wasm='/sdkjs/common/wasm/x2t/x2t.wasm.br';`);
+  try {
+    for (const [siteBase, baseVar] of [['/nursememo/',''], ['/','/']]) {
+      const result=spawnSync(process.execPath,['scripts/prepare-editor-site.mjs'],{
+        cwd:new URL('..',import.meta.url),encoding:'utf8',
+        env:{...process.env,RANUTS_DIST:sourceDist,RANUTS_DEPLOY_DIR:published,
+          GITHUB_REPOSITORY:'tkchan002/nursememo',PAGES_BASE_PATH:baseVar,RANUTS_REVISION:'beb7-test'},
+        timeout:120000
+      });
+      assert.equal(result.status,0, result.stderr+' '+result.stdout);
+      const officeBase=siteBase+'office/';
+      const html=readFileSync(join(published,'editor.html'),'utf8');
+      assert.match(html,new RegExp(officeBase.replaceAll('/','\\/')+'sdkjs\\/common\\.js'));
+      assert.ok(html.includes(`${officeBase}editor.html`));
+      assert.ok(html.includes(`${officeBase}index.html`), 'top-level home link rebased');
+      assert.ok(html.includes(`${officeBase}ran-fonts/fonts.css`));
+      const js=readFileSync(join(published,'assets/editor-aa.js'),'utf8');
+      assert.ok(js.includes(`${officeBase}web-apps/apps`));
+      assert.ok(js.includes(`${officeBase}sw.js`));
+      const api=readFileSync(join(published,'web-apps/apps/api/documents/api.js'),'utf8');
+      assert.ok(api.includes('suffix="/index.html"'), 'ONLYOFFICE nested filename suffix is not rebased');
+      assert.ok(!api.includes(`${officeBase}index.html`), 'regression: nested editor frame URL must not be corrupted');
+      assert.ok(existsSync(join(published,'web-apps/apps/documenteditor/main/index.html')));
+      assert.ok(existsSync(join(published,'editor/index.html')));
+      assert.ok(existsSync(join(published,'history/index.html')));
+      const alias=readFileSync(join(published,'editor/index.html'),'utf8');
+      assert.match(alias,/location\.search\+location\.hash/);
+      const helper=readFileSync(join(published,'sdkjs/common/wasm/x2t/x2t_helper.js'),'utf8');
+      assert.ok(helper.includes('x2t.wasm'));
+      assert.ok(!helper.includes('x2t.wasm.br'));
+      assert.deepEqual(readFileSync(join(published,'sdkjs/common/wasm/x2t/x2t.wasm')),raw);
+      assert.ok(existsSync(join(published,'..','.nojekyll')));
+      const meta=JSON.parse(readFileSync(join(published,'nurse-memo-editor-build.json'),'utf8'));
+      assert.equal(meta.officeBase,officeBase);
+      assert.equal(meta.packagingFix,'onlyoffice-nested-index-path-v2');
+      const check=spawnSync(process.execPath,['scripts/verify-pages-editor.mjs'],{
+        cwd:new URL('..',import.meta.url),encoding:'utf8',
+        env:{...process.env,RANUTS_DEPLOY_DIR:published},timeout:120000
+      });
+      assert.equal(check.status,0,check.stderr+' '+check.stdout);
+    }
+  } finally { rmSync(tmp,{force:true,recursive:true}); }
+});
+
+test('CI pins the successfully tested upstream build and retains one combined site',()=>{
+  const workflow=source('.github/workflows/deploy-pages.yml');
+  assert.match(workflow,/beb7e2fd6c2eada4c4ff21e94ac37d5c39a79fc0/);
+  assert.match(workflow,/path: \.\/dist/);
+  assert.match(workflow,/node scripts\/verify-pages-editor\.mjs/);
+  const adapter=source('editor/manager-ranuts.js');
+  assert.doesNotMatch(adapter,/nursememo-office/);
 });

@@ -46,4 +46,4 @@ Choose either the full-repository ZIP (replace branch contents) or the replaceme
 - These checks do **not** prove live cross-origin iframe behavior, Supabase persistence, DOCX rendering or GitHub Pages production build. Test them after deploying your branch.
 - A local Chromium screenshot run was attempted but the headless browser did not finish in this container. No visual-browser pass is claimed.
 
-The editor remains hosted at `https://edit.chaxus.com`; it is an independent application and its ribbon cannot be restyled by Nurse Memo CSS. This is a demo setup and must not be used with real patient data without reviewing the editor-hosting security boundary.
+The current branch builds and hosts the editor at `/office/` in the Nurse Memo Pages artifact. The upstream editor remains a separate iframe application and its internal ribbon cannot be restyled directly by Nurse Memo CSS. This is a demo setup and must not be used with real patient data without reviewing the editor-hosting security boundary.

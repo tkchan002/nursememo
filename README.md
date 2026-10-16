@@ -4,7 +4,7 @@
 
 This is a complete source repository for the Nurse Memo `docx-editor-test` branch. It includes Ward, Maintenance, Night Staffing, reporting, authentication, Manager history and PostgreSQL DOCX persistence, plus a GitHub Actions workflow that builds and self-hosts ranuts/document (a browser-only ONLYOFFICE-derived editor) in the published GitHub Pages artifact.
 
-**Start with [SELF_HOSTED_DOCUMENT_SETUP.md](SELF_HOSTED_DOCUMENT_SETUP.md)** for installation, hosting requirements and known risks. The source archive is deliberately small because GitHub Actions downloads/builds the upstream engine separately; the engine is not fetched by the user at runtime from `edit.chaxus.com` after a successful deployment.
+**Start with [ONE_REPOSITORY_OFFICE_FIX.md](ONE_REPOSITORY_OFFICE_FIX.md) and [SELF_HOSTED_DOCUMENT_SETUP.md](SELF_HOSTED_DOCUMENT_SETUP.md)** for installation, hosting requirements and known risks. The source archive is deliberately small because GitHub Actions downloads/builds the upstream engine separately; the engine is not fetched by the user at runtime from `edit.chaxus.com` after a successful deployment.
 
 ## Key features
 
@@ -13,7 +13,7 @@ This is a complete source repository for the Nurse Memo `docx-editor-test` branc
 - The same iframe is reused for editing. The document editor opens in a nearly full-screen workspace.
 - A4 landscape DOCX and API PDF export retain their existing workflow. Documents are stored as PostgreSQL binary data (`bytea`) and referenced by the Manager history tables.
 - No new database migration is required **if the existing DOCX-branch migration was applied already**. First-time installation needs `supabase/patches/20261016_manager_docx_database.sql`.
-- The deployment workflow checks the Nurse Memo source, builds Nurse Memo with Vite, checks out ranuts/document, builds that upstream project, adapts it to the GitHub Pages project path and copies the complete editor assets to `/office/`.
+- The deployment workflow checks the Nurse Memo source, builds Nurse Memo with Vite, checks out ranuts/document, builds that upstream project, adapts it to the chosen GitHub Pages project or custom-domain root path and preserves nested ONLYOFFICE index URLs and copies the complete editor assets to `/office/`.
 
 ## Build and verification
 
@@ -27,8 +27,8 @@ Run `npm run verify` in a Node.js environment to test the locally available code
 - `editor/manager-ranuts.js`: origin-validated iframe bridge using same-origin `office/editor.html`.
 - `documents/`: DOCX generator and binary codec.
 - `data/`, `supabase/`: existing database and authorisation contract.
-- `scripts/prepare-editor-site.mjs`: self-hosted vendor staging, relative-site path adaptation and converter decompression.
-- `scripts/verify-pages-editor.mjs`: presence/integrity checks of published editor assets.
+- `scripts/prepare-editor-site.mjs`: self-hosted vendor staging, site-root asset adaptation, the nested ONLYOFFICE routing fix, page-route aliases, and converter decompression.
+- `scripts/verify-pages-editor.mjs`: presence/integrity checks of published editor assets, including the nested ONLYOFFICE document frame.
 - `.github/workflows/deploy-pages.yml`: composite deployment of Nurse Memo and the upstream editor.
 
 The legacy design/change notes elsewhere in this repo describe earlier Jodit or remote ranuts trials and are retained for historical context only. They should not override this README and `SELF_HOSTED_DOCUMENT_SETUP.md`.

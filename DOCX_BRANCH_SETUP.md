@@ -14,7 +14,7 @@ This complete source ZIP is based on `Nurse_Memo_Complete_Landscape_Editor_Repos
 
 ## Functional test plan
 
-- Manager > Night Memo > Start Night Memo. Expect external word processor to load automatically in a controlled iframe. Normal A4 landscape tables, CT values, APN/signature and paragraphs should appear.
+- Manager > Night Memo > Start Night Memo. Expect the self-hosted word processor under `/office/` to load automatically in a controlled iframe. Normal A4 landscape tables, CT values, APN/signature and paragraphs should appear.
 - Edit text and a table cell. Check the UI indicates unsaved edits; wait for Recovery saved. Reload then Continue Draft and verify those edits returned.
 - Click Save twice; check Draft #1 and Draft #2 in History, and that restoring an earlier Draft does not overwrite immutable History.
 - Click Preview; the API-created selectable-text PDF should appear in a popup without creating a Final revision.
@@ -25,7 +25,7 @@ This complete source ZIP is based on `Nurse_Memo_Complete_Landscape_Editor_Repos
 
 ## Technical boundaries / important limitations
 
-- The external editor runs at `https://edit.chaxus.com/editor`; the host validates `postMessage` origin **and** iframe identity. Editing, export and document buffers pass through the browser iframe API. **Use fictional demo data only**. Do not use public third-party hosted editors for identifiable clinical records without appropriate security/legal review.
+- The current editor runs on the same GitHub Pages origin as Nurse Memo at `/office/editor.html`; the host validates `postMessage` origin **and** iframe identity. Editing, export and document buffers pass through the browser iframe API. **Use fictional demo data only**. Do not use public third-party hosted editors for identifiable clinical records without appropriate security/legal review.
 - **DOCX and only DOCX** is canonical for the official Manager Night Memo. Version-4 HTML history is intentionally not migrated. To avoid an old-format error in this demo, choose Start New.
 - A new `manager_memo_docx_documents` row is inserted atomically with each recovery or immutable Draft/Final save; the existing memo JSON stores only `{version:5,format:'docx',document_id,...}`. Safety checkpoints retain the referenced DOCX bytes. All access is via security-definer RPCs with active Manager checks; direct table access remains revoked.
 - The limit is **3 MiB per DOCX**. DOCX Base64 is used only for the temporary API request; it is decoded to PostgreSQL `bytea` before storage.

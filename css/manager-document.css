@@ -1,9 +1,83 @@
-/* Embedded document editor; document pagination is owned by ranuts/ONLYOFFICE. */
-.manager-page #editorArea,.manager-page .memo-canvas-wrap{min-width:0;max-width:100%}
-.manager-page .memo-canvas-wrap{padding:0!important;overflow:hidden!important;border:1px solid #aaa;background:#ebebe7}
-.manager-page #memoEditor{display:block;width:100%;height:min(79vh,1050px);min-height:570px;border:0;background:white}
+/* Nurse Memo DOCX — dedicated office workspace. No fake paginated HTML. */
+.manager-page #editorArea[hidden] { display:none !important; }
+.manager-page #editorArea {
+  position:fixed;
+  inset:0;
+  z-index:900;
+  display:flex;
+  flex-direction:column;
+  width:100vw;
+  height:100vh;
+  height:100dvh;
+  min-width:0;
+  max-width:none;
+  overflow:hidden;
+  padding:0;
+  border:0;
+  background:#e9e9e9;
+  box-sizing:border-box;
+}
+.manager-page.docx-editor-active { overflow:hidden; }
+.manager-page #editorArea .editor-toolbar {
+  position:relative;
+  top:auto;
+  z-index:1;
+  flex:0 0 auto;
+  padding:9px 15px;
+  min-height:54px;
+  gap:8px 16px;
+  border:0;
+  border-bottom:1px solid #a8a8a8;
+  box-shadow:none;
+  background:#eeeee9;
+  box-sizing:border-box;
+}
+.manager-page #editorArea .editor-toolbar .toolbar-group {gap:8px;min-width:0;}
+.manager-page #editorArea .editor-toolbar .toolbar-actions {margin-left:auto;}
+.manager-page #editorArea .save-state {min-width:0;white-space:nowrap;}
+.manager-page #editorArea .memo-canvas-wrap {
+  display:flex;
+  flex:1 1 auto;
+  min-width:0;
+  min-height:0;
+  max-height:none; /* override the old tab-sized memo iframe limit */
+  margin:0;
+  padding:0 !important;
+  border:0;
+  overflow:hidden !important;
+  background:#e6e6e6;
+  box-shadow:none;
+}
+.manager-page #editorArea #memoEditor {
+  display:block;
+  flex:1 1 auto;
+  width:100%;
+  height:100%;
+  min-height:0;
+  max-height:none;
+  border:0;
+  background:#fff;
+}
+.manager-page .memo-editor-status {
+  flex:0 0 auto;
+  padding:7px 15px;
+  border-bottom:1px solid #b0b0b0;
+  font-size:13px;
+  line-height:1.35;
+  background:#eef5ff;
+  color:#234464;
+}
+.manager-page .memo-editor-status[hidden] {display:none;}
+.manager-page .memo-editor-status.warning {background:#fff6d8;color:#5e4909;}
+.manager-page .memo-editor-status.error {background:#ffe9e7;color:#7a1d18;}
+/* Keep History responsive/readable; a read-only iframe must still scroll. */
 .manager-page .manager-archive-frame{min-height:65vh;background:#fff}
+.manager-page .docx-readonly {background:#fff;}
 .manager-page .docx-pdf-actions{display:flex;align-items:center;justify-content:flex-end;gap:12px;padding:7px 12px;background:#eee}
 .manager-page .docx-pdf-actions span{font-size:12px;color:#555}
-.manager-page .docx-readonly{pointer-events:none}
-@media(max-width:600px){.manager-page #memoEditor{min-height:520px;height:75vh}.manager-page .docx-pdf-actions{flex-wrap:wrap}}
+@media(max-width:760px) {
+  .manager-page #editorArea .editor-toolbar{padding:7px 9px;min-height:0;}
+  .manager-page #editorArea .toolbar-group{flex-wrap:wrap;}
+  .manager-page #editorArea .save-state{white-space:normal;}
+  .manager-page .docx-pdf-actions{flex-wrap:wrap;}
+}

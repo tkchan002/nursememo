@@ -290,11 +290,27 @@ function renderWorkspace() {
   $('#startNewBtn').textContent = recovery ? 'Start New' : 'Start Night Memo';
 }
 
+// DOCX editing is a dedicated full-viewport workspace. The surrounding Manager
+// tabs remain available once the Manager leaves the document editor.
+function setMemoEditorWorkspaceVisible(visible) {
+  $('#editorArea').hidden = !visible;
+  document.body.classList.toggle('docx-editor-active', Boolean(visible));
+  const inlineStatus = $('#memoEditorStatus');
+  const globalStatus = $('#managerStatus');
+  if (inlineStatus) {
+    inlineStatus.hidden = !visible || !globalStatus || globalStatus.hidden;
+    if (!inlineStatus.hidden) {
+      inlineStatus.textContent = globalStatus.textContent;
+      inlineStatus.className = `memo-editor-status ${globalStatus.classList.contains('error') ? 'error' : globalStatus.classList.contains('warning') ? 'warning' : 'info'}`;
+    }
+  }
+}
+
 async function openExistingDraft() {
   if (!state.memo) return;
   state.editorOpen = true;
   $('#memoWorkspacePanel').hidden = true;
-  $('#editorArea').hidden = false;
+  setMemoEditorWorkspaceVisible(true);
   await renderEditor();
   renderMemoState();
 }
@@ -335,7 +351,7 @@ async function startNewDraft() {
   markDirty({ schedule: false });
 
   $('#memoWorkspacePanel').hidden = true;
-  $('#editorArea').hidden = false;
+  setMemoEditorWorkspaceVisible(true);
   await renderEditor({ keepDirty: true });
   await saveRecoveryNow({ force: true });
   renderSubmissionMonitor();
@@ -347,7 +363,7 @@ async function backToWorkspace() {
     try { await flushRecovery(); } catch (_) { return; }
   }
   state.editorOpen = false;
-  $('#editorArea').hidden = true;
+  setMemoEditorWorkspaceVisible(false);
   $('#memoWorkspacePanel').hidden = false;
   await refreshHistory();
   renderWorkspace();
@@ -360,12 +376,23 @@ async function generateNewDocx(model) {
 }
 
 async function ensureMemoEditor() {
-  if(memoEditorInstance)return memoEditorInstance;
-  if(!memoEditorLoading)memoEditorLoading=Promise.resolve(createManagerDocumentEditor('#memoEditor',()=>{
-    if(!state.rendering && state.editorOpen)markDirty();
-  }));
-  try{memoEditorInstance=await memoEditorLoading;await memoEditorInstance.ready();return memoEditorInstance;}
-  catch(error){memoEditorLoading=null;throw error;}
+  if (memoEditorInstance) return memoEditorInstance;
+  if (!memoEditorLoading) {
+    const candidate = createManagerDocumentEditor('#memoEditor', () => {
+      if (!state.rendering && state.editorOpen) markDirty();
+    });
+    memoEditorLoading = candidate.ready().then(() => {
+      memoEditorInstance = candidate;
+      return candidate;
+    }).catch(error => {
+      // A failed editor initialisation must not leave behind a cached,
+      // permanently unusable iframe for subsequent open attempts.
+      candidate.destroy();
+      throw error;
+    });
+  }
+  try { return await memoEditorLoading; }
+  catch (error) { memoEditorLoading = null; memoEditorInstance = null; throw error; }
 }
 
 async function renderEditor({keepDirty=false}={}) {
@@ -632,7 +659,10 @@ function renderMemoState() {
 }
 
 function setEditingEnabled(enabled) {
-  if (memoEditorInstance) memoEditorInstance.setReadOnly(!enabled);
+  // During Save/Print the iframe must be temporarily locked against input,
+  // but must remain in editable mode for ranuts' DOCX/PDF export API.
+  // History, conflict and reporting-night expiry use genuine remote read-only.
+  if (memoEditorInstance) memoEditorInstance.setReadOnly(!enabled, { temporary: !enabled && state.officialSaving });
   $('#memoEditor').setAttribute('aria-disabled', enabled ? 'false' : 'true');
 }
 
@@ -659,6 +689,7 @@ async function enterHistoryMode() {
   state.historyReturnMode = state.editorOpen ? 'editor' : 'workspace';
   state.historyReturnTab = state.activeTab;
   state.historyMode = true;
+  setMemoEditorWorkspaceVisible(false);
   setEditingEnabled(false);
   managerTabs?.setEnabled(false);
   $('#managerHistorySidebar').hidden = false;
@@ -691,12 +722,14 @@ function exitHistoryMode() {
   if (state.historyReturnMode === 'editor' && state.memo) {
     state.editorOpen = true;
     $('#memoWorkspacePanel').hidden = true;
-    $('#editorArea').hidden = false;
+    setMemoEditorWorkspaceVisible(true);
     if (!state.conflicted && !state.boundaryExpired && !state.officialSaving) setEditingEnabled(true);
   } else if (state.activeTab === 'memo') {
     state.editorOpen = false;
-    $('#editorArea').hidden = true;
+    setMemoEditorWorkspaceVisible(false);
     $('#memoWorkspacePanel').hidden = false;
+  } else {
+    setMemoEditorWorkspaceVisible(false);
   }
   document.querySelector(`[data-manager-tab="${state.activeTab}"]`)?.focus();
   renderMemoState();
@@ -892,7 +925,7 @@ async function replaceCurrentDraftFromHistory(document, sourceSnapshot, label, c
   state.historyReturnMode = 'editor';
   exitHistoryMode();
   $('#memoWorkspacePanel').hidden = true;
-  $('#editorArea').hidden = false;
+  setMemoEditorWorkspaceVisible(true);
   await renderEditor({ keepDirty: true });
   await saveRecoveryNow({ force: true });
   renderSubmissionMonitor();
@@ -1018,15 +1051,24 @@ async function printOpenWardMemo() {
 
 function setStatus(message, type = 'info') {
   const el = $('#managerStatus');
-  if (!el) return;
-  el.hidden = false;
-  el.className = `manager-status no-print ${type}`;
-  el.textContent = message;
+  if (el) {
+    el.hidden = false;
+    el.className = `manager-status no-print ${type}`;
+    el.textContent = message;
+  }
+  const inline = $('#memoEditorStatus');
+  if (inline) {
+    inline.hidden = !document.body.classList.contains('docx-editor-active');
+    inline.className = `memo-editor-status ${type}`;
+    inline.textContent = message;
+  }
 }
 
 function clearStatus() {
   const el = $('#managerStatus');
   if (el) { el.hidden = true; el.textContent = ''; }
+  const inline = $('#memoEditorStatus');
+  if (inline) { inline.hidden = true; inline.textContent = ''; }
 }
 
 function showFatal(error) {

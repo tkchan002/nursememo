@@ -34,7 +34,11 @@ export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=
   window.addEventListener('message',onMessage);
   frame.src=`${EDITOR_URL}?embed=1&embedOrigin=${encodeURIComponent(location.origin)}&locale=en`;
 
-  frame.addEventListener('load',()=>{if(ready){ready=false;fail(new Error('Document editor reloaded during an operation.'));}});
+  // A browser iframe load event is NOT evidence of a reload. The editor may send
+  // document:ready before its initial load event. Rejecting a pending open here
+  // caused a false failure even while the DOCX was visibly opening correctly.
+  // Operation completion is confirmed only by a matching document:opened/saved
+  // message; actual interruption is handled by the existing request timeout.
   async function request(type,payload={}){
     await readyPromise;
     if(destroyed)throw new Error('Editor was closed.');
@@ -57,7 +61,20 @@ export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=
       if(String.fromCharCode(...head)!=='%PDF-')throw new Error('Editor returned invalid PDF data.');
       return blob;
     },
-    setReadOnly(disabled){readOnly=Boolean(disabled);frame.inert=readOnly;frame.classList.toggle('docx-readonly',readOnly);},
+    // A temporary interaction lock is used only while exporting/saving. Sending
+    // document:set-readonly then would break document:save (the remote editor
+    // intentionally rejects export in read-only mode). For History/conflicts we
+    // instead use the editor's genuine read-only protocol, not a CSS disguise.
+    setReadOnly(disabled,{temporary=false}={}) {
+      if(temporary){frame.inert=Boolean(disabled);return;}
+      frame.inert=false;
+      readOnly=Boolean(disabled);
+      frame.classList.toggle('docx-readonly',readOnly);
+      readyPromise.then(()=>{
+        if(destroyed)return;
+        frame.contentWindow.postMessage({id:`nm-readonly-${++count}`,type:'document:set-readonly',payload:{readonly:readOnly}},EDITOR_ORIGIN);
+      }).catch(()=>{});
+    },
     async isDirty(){return Boolean((await request('document:get-state')).dirty);},
     destroy(){destroyed=true;clearTimeout(readyTimer);fail(new Error('Editor closed.'));window.removeEventListener('message',onMessage);frame.removeAttribute('src');},
   };

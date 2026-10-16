@@ -108,7 +108,7 @@
               <section id="editorArea" hidden>
                 <section class="editor-toolbar" aria-label="Night Memo editor toolbar">
                   <div class="toolbar-group">
-                    <button type="button" class="pill" id="backWorkspaceBtn">Back</button>
+                    <button type="button" class="pill" id="backWorkspaceBtn" aria-label="Back to Patrol Night">Back to Patrol Night</button>
                     <strong>Night Memo Editor</strong><span class="memo-orientation">A4 landscape</span>
                     <span id="memoStateBadge" class="memo-state-badge draft">Draft</span>
                     <span id="saveState" class="save-state">Ready</span>
@@ -120,7 +120,7 @@
                     <button type="button" class="pill primary-pill" id="printMemoBtn">Print</button>
                   </div>
                 </section>
-
+                <div id="memoEditorStatus" class="memo-editor-status" role="status" aria-live="polite" hidden></div>
                 <section class="memo-canvas-wrap">
                   <iframe id="memoEditor" title="Editable Night Memo DOCX document" allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
                 </section>

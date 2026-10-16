@@ -411,7 +411,8 @@ async function ensureMemoEditor() {
   if (!memoEditorLoading) {
     const candidate = createManagerDocumentEditor('#memoEditor', () => {
       if (!state.rendering && state.editorOpen) markDirty();
-    });
+    }, { onNativeExport: file => handleNativeEditorExport(file).catch(error =>
+      setStatus(`Unable to download Night Memo: ${error.message || error}`, 'error')) });
     memoEditorLoading = candidate.ready().then(() => {
       memoEditorInstance = candidate;
       return candidate;
@@ -654,6 +655,55 @@ async function previewCurrentMemo() {
     showPdfPreview(blob,'Night Memo Preview');clearStatus();
   }catch(error){setStatus(`PDF preview failed: ${error.message||error}`,'error');}
 }
+/** Receive a completed native ONLYOFFICE File > Download As export.
+ * The converter has already run inside the editor: do not trigger a second
+ * export or create an official Final revision. Keep the PDF preview as a
+ * fallback when a browser blocks an asynchronous automatic download.
+ */
+async function handleNativeEditorExport(file, { history = false } = {}) {
+  if (!(file instanceof Blob)) throw new Error('The document editor returned no file.');
+  const originalName = String(file.name || '');
+  const ext = originalName.split('.').pop()?.toLowerCase();
+  const supported = new Set(['pdf', 'docx', 'rtf', 'txt', 'odt', 'html']);
+  if (!supported.has(ext)) {
+    setStatus(`Editor exported an unsupported file type: ${ext || 'unknown'}.`, 'error');
+    return;
+  }
+  const date = history ? (state.archiveSelectedDate || state.reportingDate) : state.reportingDate;
+  const outputName = `Night-Memo-${date}.${ext}`;
+  if (ext === 'pdf') {
+    const magic = new Uint8Array(await file.slice(0, 5).arrayBuffer());
+    if (String.fromCharCode(...magic) !== '%PDF-') {
+      setStatus('The editor returned an invalid PDF. Download cancelled.', 'error');
+      return;
+    }
+    showPdfPreview(file, history ? 'Historical Night Memo PDF' : 'Night Memo PDF');
+    const link = $('#downloadMemoPdfBtn');
+    link.download = outputName;
+    link.click();
+    return;
+  }
+  if (ext === 'docx') {
+    const header = new Uint8Array(await file.slice(0, 2).arrayBuffer());
+    if (header[0] !== 0x50 || header[1] !== 0x4b) {
+      setStatus('The editor returned an invalid DOCX. Download cancelled.', 'error');
+      return;
+    }
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = outputName;
+    anchor.hidden = true;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+  } finally {
+    // Do not revoke immediately: Firefox/Safari may consume the URL later.
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+  }
+}
 function showPdfPreview(blob,title) {
   if(!(blob instanceof Blob))throw new Error('PDF export was not returned.');
   if(state.currentPdfUrl)URL.revokeObjectURL(state.currentPdfUrl);
@@ -859,7 +909,11 @@ async function renderArchiveDocument(document,meta) {
   const seq=++state.archiveLoadSequence;
   $('#archiveMemoMeta').textContent=`${meta} · Opening DOCX…`;
   try{
-    if(!archiveEditorInstance)archiveEditorInstance=createManagerDocumentEditor('#archiveMemoFrame',()=>{},{readonly:true});
+    if(!archiveEditorInstance)archiveEditorInstance=createManagerDocumentEditor('#archiveMemoFrame',()=>{},{
+      readonly:true,
+      onNativeExport: file => handleNativeEditorExport(file, { history: true }).catch(error =>
+        setStatus(`Unable to download historical Night Memo: ${error.message || error}`, 'error')),
+    });
     const bytes=await getManagerDocxBytes(document);
     if(seq!==state.archiveLoadSequence)return;
     await archiveEditorInstance.open(bytes,{readonly:true});

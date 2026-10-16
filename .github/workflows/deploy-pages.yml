@@ -70,6 +70,9 @@ jobs:
         working-directory: .upstream/ranuts-document
         run: pnpm install --frozen-lockfile
 
+      - name: Connect native ONLYOFFICE downloads to Nurse Memo
+        run: node scripts/patch-editor-embedded-downloads.mjs
+
       - name: Build the actual ranuts/ONLYOFFICE editor
         working-directory: .upstream/ranuts-document
         run: pnpm run build

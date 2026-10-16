@@ -4,7 +4,7 @@ export const EDITOR_URL = new URL('../office/editor.html', import.meta.url).href
 export const EDITOR_ORIGIN=new URL(EDITOR_URL).origin;
 const TIMEOUT_MS=120000;
 const zipBuffer=bytes=>bytes.buffer.slice(bytes.byteOffset,bytes.byteOffset+bytes.byteLength);
-export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=false}={}) {
+export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=false,onNativeExport=()=>{}}={}) {
   const frame=document.querySelector(selector);
   if(!frame || frame.tagName!=='IFRAME')throw new Error('DOCX editor requires an iframe.');
   let ready=false, destroyed=false, current=null, count=0, readOnly=readonly;
@@ -19,6 +19,15 @@ export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=
     const {type,id,payload={}}=event.data;
     if(type==='document:ready'){ready=true;clearTimeout(readyTimer);readyResolve();return;}
     if(type==='document:dirty-changed'){if(payload.dirty && !readOnly)onChange();return;}
+    // An unsolicited export originates from ONLYOFFICE's own File > Download As
+    // menu, not from an outstanding document:save request. Only our own iframe
+    // on the expected origin may supply it (checked above).
+    if(type==='document:exported'){
+      if(!(payload?.file instanceof Blob))return;
+      try { Promise.resolve(onNativeExport(payload.file)).catch(error=>console.error('Native document export failed:',error)); }
+      catch(error) { console.error('Native document export failed:',error); }
+      return;
+    }
     if(!current || current.id!==id)return;
     const request=current;current=null;clearTimeout(request.timer);
     if(type==='document:error'){request.reject(new Error(payload.message||'Word processor reported an error.'));return;}

@@ -8,7 +8,8 @@ import {
   DB_MODE,
   getManagerMemo,
   getManagerDocxBytes,
-  getNightMemoDocxLayout,
+  getNightMemoTemplateMetadata,
+  getNightMemoVisualTemplate,
   saveManagerDocxRecovery,
   saveManagerDocxRevision,
   listManagerMemoRevisions,
@@ -69,7 +70,8 @@ const state = {
   historyReturnTab: 'submission',
   wardPreviewContext: null,
   pendingDocxBytes: null,
-  docxLayout: null,
+  docxTemplatePublished: false,
+  docxTemplateVersion: 0,
   currentPdfUrl: null,
   archiveLoadSequence: 0,
 };
@@ -111,12 +113,13 @@ async function bootstrap() {
   scheduleMemoEditorPreload();
   state.reportingDate = reportingNightDate();
   await refreshWardStatus({ initial: true });
-  // Load the published layout in parallel; it affects new DOCX generation only.
+  // Load template metadata in parallel; fetch the actual DOCX only if needed.
   // An existing memo always reopens its saved, immutable DOCX bytes.
-  await Promise.all([loadWorkspace(), getNightMemoDocxLayout().then(value => {
-    state.docxLayout = value.layout;
+  await Promise.all([loadWorkspace(), getNightMemoTemplateMetadata().then(value => {
+    state.docxTemplatePublished = value.hasTemplate;
+    state.docxTemplateVersion = value.version;
   }).catch(error => {
-    console.warn('[Nurse Memo] Using default DOCX layout:', error.message || error);
+    console.warn('[Nurse Memo] Template metadata unavailable, using the built-in DOCX:', error.message || error);
   })]);
   renderSubmissionMonitor();
   renderWardInformation();
@@ -399,9 +402,20 @@ async function backToWorkspace() {
 }
 // Load the DOCX generator only when Start New/Regenerate is requested.
 // Failure to load the optional editor generator cannot block Submission Status or Night Staffing.
+let publishedMasterPromise = null;
 async function generateNewDocx(model) {
+  if (state.docxTemplatePublished) {
+    // One fetch per Manager session, shared by background warm and foreground
+    // generation. Nothing is downloaded when there is no published master.
+    if (!publishedMasterPromise) publishedMasterPromise = getNightMemoVisualTemplate()
+      .catch(error => { publishedMasterPromise=null; throw error; });
+    const bytes = await publishedMasterPromise;
+    if (!bytes) throw new Error('Published Night Memo DOCX template is missing. Contact Maintenance.');
+    const { renderVisualTemplate } = await import('../documents/visual-template.js');
+    return renderVisualTemplate(bytes, model);
+  }
   const { buildManagerDocxBytes } = await import('../documents/manager-docx.js');
-  return buildManagerDocxBytes(model, state.docxLayout || undefined);
+  return buildManagerDocxBytes(model);
 }
 
 // document:ready only means the UI is loaded. Cold document:opened must also
@@ -426,12 +440,12 @@ function scheduleMemoEditorPreload() {
 }
 
 function memoDocumentWarmKey() {
-  if (state.pendingDocxBytes) return `generated:${JSON.stringify(buildManagerMemoData({
+  if (state.pendingDocxBytes) return `generated:v${state.docxTemplateVersion}:${JSON.stringify(buildManagerMemoData({
     bundle: state.bundle, items: state.items, reportingDate: state.reportingDate,
   }))}`;
   if (state.memo?.document?.document_id) return `saved:${state.memo.document.document_id}`;
   if (state.memo && state.memo.document) return null; // Unknown saved document identity: do not guess.
-  return `generated:${JSON.stringify(buildManagerMemoData({
+  return `generated:v${state.docxTemplateVersion}:${JSON.stringify(buildManagerMemoData({
     bundle: state.bundle, items: state.items, reportingDate: state.reportingDate,
   }))}`;
 }

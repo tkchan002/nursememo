@@ -15,6 +15,8 @@ This is a complete source repository for the Nurse Memo `docx-editor-test` branc
 - No new database migration is required **if the existing DOCX-branch migration was applied already**. First-time installation needs `supabase/patches/20261016_manager_docx_database.sql`.
 - The deployment workflow checks the Nurse Memo source, builds Nurse Memo with Vite, checks out ranuts/document, builds that upstream project, adapts it to the chosen GitHub Pages project or custom-domain root path and preserves nested ONLYOFFICE index URLs and copies the complete editor assets to `/office/`.
 
+**Visual template upgrade for the existing Supabase demo:** see [DEMO_VISUAL_TEMPLATE_INSTALL.md](DEMO_VISUAL_TEMPLATE_INSTALL.md). It uses one SQL script and does not require the retired numeric template migrations.
+
 ## Build and verification
 
 Run `npm run verify` in a Node.js environment to test the locally available code. The real GitHub Pages deployment additionally requires `npm install`, `npm run build`, an upstream pnpm build and `node scripts/prepare-editor-site.mjs`. This build runs automatically in GitHub Actions; you do not need npm or pnpm on your Mac.

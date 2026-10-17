@@ -3,7 +3,7 @@ import {
   getAllWards, getOperatingPeriods, getCapacityHistory, createWard, reorderWards,
   addOperatingPeriod, closeOperatingPeriod, saveWardConfiguration, getAccounts, adminAccount,
   getWardStaff, saveWardStaff, setStaffActive, getReportItems, saveReportItem, reorderReportItems, getAuditLog,
-  getMaintenanceWardsSnapshot, getNightMemoDocxLayout, saveNightMemoDocxLayout, DB_MODE,
+  getMaintenanceWardsSnapshot, getNightMemoTemplateMetadata, getNightMemoVisualTemplate, publishNightMemoVisualTemplate, DB_MODE,
 } from '../data/index.js';
 import { qs, qsa, esc } from '../core/dom.js';
 import { todayISO, toDisplayDate, formatDateTime } from '../core/dates.js';
@@ -17,7 +17,7 @@ import { editableCapacity, capacityNumber } from '../domain/capacity-history.js'
 import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
 import { loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
 import { validateMaintenancePassword, toStoredMaintenancePassword } from '../domain/maintenance-accounts.js';
-import { DEFAULT_DOCX_LAYOUT, normalizeDocxLayout } from '../documents/docx-layout.js';
+import { assertDocxBytes } from '../documents/docx-bytes.js';
 
 const $ = qs;
 const state = {
@@ -33,7 +33,8 @@ const state = {
   wardModalSequence: 0,
   capacityAtOpen: null,
   savingWard: false,
-  docxLayoutVersion: null,
+  docxTemplateVersion: null,
+  visualEditor: null, visualLoading: null, templateDirty: false, publishedTemplate:false,
   loaded: { wards: false, accounts: false, items: false },
   loading: {},
 };
@@ -72,10 +73,10 @@ function bind() {
   $('#addItemBtn').addEventListener('click', () => openItemModal());
   $('#itemForm').addEventListener('submit', saveItem);
   $('#refreshAudit').addEventListener('click', renderAudit);
-  $('#docxLayoutForm').addEventListener('submit', publishDocxLayout);
-  $('#docxResetBtn').addEventListener('click', () => fillDocxLayout(DEFAULT_DOCX_LAYOUT));
-  $('#docxReloadBtn').addEventListener('click', () => loadDocxLayout());
-  $('#docxSampleBtn').addEventListener('click', () => downloadDocxLayoutSample());
+  $('#docxSaveBtn').addEventListener('click', publishVisualTemplate);
+  $('#docxResetBtn').addEventListener('click', () => resetVisualTemplate());
+  $('#docxReloadBtn').addEventListener('click', () => loadVisualTemplate(true));
+  $('#docxSampleBtn').addEventListener('click', () => downloadVisualTemplateSample());
 }
 
 async function showPage(name) {
@@ -87,7 +88,7 @@ async function showPage(name) {
     if (name === 'staff') { await ensureWardsLoaded(); await renderMaintStaff(); }
     if (name === 'items') await ensureItemsLoaded();
     if (name === 'audit') await renderAudit();
-    if (name === 'docx') await loadDocxLayout();
+    if (name === 'docx') await loadVisualTemplate();
     if (name === 'demo') await refreshGeneratedDemoBatches();
   } catch (error) {
     console.error(`Unable to load maintenance tab ${name}:`, error);
@@ -493,64 +494,93 @@ async function saveItem(event) {
 }
 async function renderAudit() { const rows = await getAuditLog(200); $('#auditRows').innerHTML = rows.length ? rows.map(r => `<div class="audit-row"><b>${esc(formatDateTime(r.occurred_at))}</b> · <code>${esc(r.action)}</code> · ${esc(r.entity_type || '')} ${esc(r.entity_id || '')}<div class="muted">${esc(JSON.stringify(r.details || {}))}</div></div>`).join('') : '<div class="muted">No audit entries yet.</div>'; }
 
-// Maintenance-only DOCX master layout controls. Existing DOCX files are never
-// converted, rewritten, or stored here: publishing affects future creation.
-const layoutFields = Object.keys(DEFAULT_DOCX_LAYOUT);
-function readDocxLayoutForm() {
-  const form = $('#docxLayoutForm');
-  return normalizeDocxLayout(Object.fromEntries(layoutFields.map(key => [key, form.elements.namedItem(key).value])));
+// The master template is edited in the same self-hosted DOCX editor used for
+// Night Memo. Only publishing changes the shared template; no autosave writes
+// partial changes to Supabase.
+async function ensureVisualEditor() {
+  if (state.visualEditor) return state.visualEditor;
+  if (state.visualLoading) return state.visualLoading;
+  const {createManagerDocumentEditor}=await import('../editor/manager-ranuts.js');
+  const editor=createManagerDocumentEditor('#docxTemplateEditor', () => {
+    state.templateDirty=true;
+    $('#docxTemplateStatus').textContent='Unpublished template changes. Click Publish This Template to make them available to new memos.';
+  });
+  state.visualLoading=editor.ready().then(() => {
+    state.visualEditor=editor;
+    return editor;
+  }).catch(error => { editor.destroy();throw error; }).finally(() => {state.visualLoading=null;});
+  return state.visualLoading;
 }
-function fillDocxLayout(layout) {
-  const form = $('#docxLayoutForm');
-  for (const key of layoutFields) form.elements.namedItem(key).value = layout[key];
+async function openTemplateBytes(bytes) {
+  const editor=await ensureVisualEditor();
+  await editor.open(assertDocxBytes(bytes));
+  state.templateDirty=false;
 }
-async function loadDocxLayout() {
-  const status = $('#docxLayoutStatus');
-  status.textContent = 'Loading document template settings…';
+async function loadVisualTemplate(force=false) {
+  if (state.visualEditor && !force) return;
+  if (force && state.templateDirty && !window.confirm('Discard your unpublished template edits?')) return;
+  const status=$('#docxTemplateStatus');
+  status.textContent='Loading published document template…';
+  $('#docxSaveBtn').disabled=true;
   try {
-    const current = await getNightMemoDocxLayout();
-    state.docxLayoutVersion = current.version;
-    fillDocxLayout(current.layout);
-    status.textContent = `Published layout version ${current.version}. Edits affect new documents only.`;
-  } catch (error) {
-    state.docxLayoutVersion = null;
-    status.textContent = `Unable to load settings. Check the DOCX layout migration in Supabase: ${error.message || error}`;
+    const template=await getNightMemoTemplateMetadata();
+    state.docxTemplateVersion=template.version;
+    const bytes=template.hasTemplate ? await getNightMemoVisualTemplate() : null;
+    const {buildEditableTemplateSample}=await import('../documents/visual-template.js');
+    await openTemplateBytes(bytes || await buildEditableTemplateSample());
+    state.publishedTemplate=Boolean(bytes);
+    status.textContent=`Ready to edit · published version ${template.version}${bytes ? '' : ' (default template)'}. Changes apply to new documents only after Publish.`;
+  } catch(error) {
+    status.textContent=`Unable to open template: ${error.message || error}`;
     throw error;
-  }
+  } finally {$('#docxSaveBtn').disabled=false;}
 }
-async function publishDocxLayout(event) {
-  event.preventDefault();
-  const status = $('#docxLayoutStatus');
-  if (state.docxLayoutVersion === null) { flash('Load the template before publishing.', 'error'); return; }
-  const button = $('#docxSaveBtn');
-  button.disabled = true;
+async function resetVisualTemplate() {
+  if(state.templateDirty && !window.confirm('Replace your unpublished edits with the default template?')) return;
   try {
-    const saved = await saveNightMemoDocxLayout(readDocxLayoutForm(),state.docxLayoutVersion);
-    state.docxLayoutVersion = saved.version;
-    fillDocxLayout(saved.layout);
-    status.textContent = `Published version ${saved.version}. Reload Manager before starting a new draft to use this layout.`;
-    flash('DOCX layout published. Existing documents are unchanged.', 'success');
-  } catch (error) {
-    status.textContent = error.message || String(error);
-    flash(status.textContent,'error',7000);
-  } finally { button.disabled = false; }
+    const template=await getNightMemoTemplateMetadata();
+    const {buildEditableTemplateSample}=await import('../documents/visual-template.js');
+    await openTemplateBytes(await buildEditableTemplateSample());
+    state.docxTemplateVersion=template.version;
+    state.templateDirty=true;
+    $('#docxTemplateStatus').textContent='Default template loaded. Publish it to replace the shared template.';
+  } catch(error) {flash(error.message||String(error),'error',8000);}
 }
-async function downloadDocxLayoutSample() {
-  const button=$('#docxSampleBtn');
-  button.disabled=true;
+async function publishVisualTemplate() {
+  const status=$('#docxTemplateStatus');
+  if(state.docxTemplateVersion===null||!state.visualEditor) {flash('Load the template before publishing.','error');return;}
+  const button=$('#docxSaveBtn'); button.disabled=true;
   try {
-    const layout=readDocxLayoutForm();
-    const { buildManagerDocxBytes } = await import('../documents/manager-docx.js');
-    const rows=[{ward:'C10',admissionEC:3,admissionCC:0,transferIn:0,discharge:3,transferOut:2,death:0,totalPatient:7,
-      emptyBed:'1D',ventilator:0,bipap:0,hfnc:0,staff:'3/3'}];
-    const bytes=await buildManagerDocxBytes({title:'Night Memo (Male)',
-      header:{fromName:'Sample APN',dectPhone:'2322',callTeam:'MC',date:'19/9/2025'},
-      mainTableRows:rows,infectionRows:[{ward:'C10',covid:0,cre:0,vre:0,mdra:0,cd:0,influenza:'1M (bed 1)',hdCapd:'HD: 0  CAPD: 0',remarks:''}],
-      earlyBirdHtml:'<div>C10: 1F (bed 5) to KH3B</div>',emptyBedHtml:'<div>C10: 1D room</div>',additionalReportHtml:'<div>No additional reports</div>',
-      ct:{maleGeneral:0,maleCohort:0,femaleGeneral:0,femaleCohort:0},signature:{name:'Sample APN',designation:'N.O./APN'}},layout);
+    const {validateVisualTemplate}=await import('../documents/visual-template.js');
+    const bytes=validateVisualTemplate(await state.visualEditor.export('DOCX'));
+    const saved=await publishNightMemoVisualTemplate(bytes,state.docxTemplateVersion);
+    state.docxTemplateVersion=saved.version;
+    state.templateDirty=false;
+    state.publishedTemplate=true;
+    status.textContent=`Published version ${saved.version}. Newly generated Night Memos will use this document. Existing saved drafts and reports are unchanged.`;
+    flash('Visual DOCX template published successfully.','success');
+  } catch(error) {
+    status.textContent=`Cannot publish: ${error.message||error}`;
+    flash(status.textContent,'error',10000);
+  } finally {button.disabled=false;}
+}
+async function downloadVisualTemplateSample() {
+  const button=$('#docxSampleBtn');button.disabled=true;
+  try {
+    if (!state.visualEditor) throw new Error('Wait until the template editor opens.');
+    const {validateVisualTemplate,renderVisualTemplate}=await import('../documents/visual-template.js');
+    const template=validateVisualTemplate(await state.visualEditor.export('DOCX'));
+    const sample={title:'Night Memo (Male)',header:{fromName:'Sample APN',dectPhone:'2322',callTeam:'MC',date:'19/9/2025'},
+      mainTableRows:[{ward:'C10',admissionEC:3,admissionCC:0,transferIn:0,discharge:3,transferOut:2,death:0,totalPatient:7,emptyBed:'1D',ventilator:0,bipap:0,hfnc:0,staff:'3/3'}],
+      infectionRows:[{ward:'C10',covid:0,cre:0,vre:0,mdra:0,cd:0,influenza:'1M (bed 1)',hdCapd:'HD: 0 CAPD: 0',remarks:''}],
+      earlyBirdHtml:'<div>C10: 1F (bed 5) to KH3B</div>',emptyBedHtml:'<div>C10: 1D room</div>',
+      additionalReportHtml:'<div>Example report</div>',ct:{total:0,maleGeneral:0,maleCohort:0,femaleGeneral:0,femaleCohort:0},
+      signature:{name:'Sample APN',designation:'N.O./APN'}};
+    const bytes=renderVisualTemplate(template,sample);
     const url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
-    const a=document.createElement('a');a.href=url;a.download='Night-Memo-Template-Sample.docx';document.body.appendChild(a);a.click();a.remove();
+    const a=document.createElement('a');a.href=url;a.download='Night-Memo-Template-Preview.docx';document.body.appendChild(a);a.click();a.remove();
     setTimeout(()=>URL.revokeObjectURL(url),30000);
-  } catch (error) { flash(`Unable to generate sample: ${error.message || error}`,'error',7000); }
-  finally { button.disabled=false; }
+    $('#docxTemplateStatus').textContent='Preview downloaded. Template is NOT published until you click Publish This Template.';
+  } catch(error) {flash(`Unable to create preview: ${error.message||error}`,'error',9000);}
+  finally {button.disabled=false;}
 }

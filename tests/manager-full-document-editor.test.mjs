@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { buildManagerMemoData } from '../domain/manager-memo.js';
-import { normalizeDocxLayout } from '../documents/docx-layout.js';
 const read=name=>readFile(new URL(`../${name}`,import.meta.url),'utf8');
 test('new Night Memo source model produces tables and narrative sections',()=>{
  const model=buildManagerMemoData({bundle:[],reportingDate:'2026-10-16'});
@@ -12,11 +11,6 @@ test('new Night Memo source model produces tables and narrative sections',()=>{
  assert.ok(Object.hasOwn(model,'earlyBirdHtml'));
  assert.ok(Object.hasOwn(model,'ct'));
  assert.ok(Object.hasOwn(model,'signature'));
-});
-test('DOCX controls are bounded and do not accept HTML/CSS overrides',()=>{
- assert.equal(normalizeDocxLayout({tableFontPt:9}).tableFontPt,9);
- assert.throws(()=>normalizeDocxLayout({tableFontPt:40}),/Invalid/);
- assert.equal(Object.hasOwn(normalizeDocxLayout({css:'<style>bad</style>'}),'css'),false);
 });
 test('Manager uses embedded DOCX editor and binary persistence',async()=>{
  const html=await read('manager.html'),page=await read('pages/manager-page.js'),adapter=await read('editor/manager-ranuts.js');

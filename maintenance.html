@@ -79,27 +79,23 @@
         </section>
 
         <section class="maint-page" data-maint-page="docx">
-          <div class="section-title">Night Memo DOCX Template · A4 Landscape</div>
-          <p class="muted">These settings apply only when creating or regenerating a Night Memo. Saved DOCX drafts, final reports and history are not modified. Header columns have no visible borders; signature stays at the right immediately after CT Scan.</p>
-          <p id="docxLayoutStatus" role="status" aria-live="polite" class="muted">Open this tab to load the published layout.</p>
-          <form id="docxLayoutForm" class="docx-layout-form">
-            <div class="docx-layout-fields">
-              <div class="field"><label for="docxMargin">All page margins (mm)</label><input id="docxMargin" name="marginMm" type="number" min="8" max="20" step="1" required></div>
-              <div class="field"><label for="docxBodyFont">Paragraph font (pt)</label><input id="docxBodyFont" name="bodyFontPt" type="number" min="8" max="12" step="0.5" required></div>
-              <div class="field"><label for="docxTableFont">Table font (pt)</label><input id="docxTableFont" name="tableFontPt" type="number" min="7" max="11" step="0.5" required></div>
-              <div class="field"><label for="docxTitleFont">Title font (pt)</label><input id="docxTitleFont" name="titleFontPt" type="number" min="12" max="22" step="0.5" required></div>
-              <div class="field"><label for="docxSectionFont">Section heading font (pt)</label><input id="docxSectionFont" name="sectionFontPt" type="number" min="9" max="14" step="0.5" required></div>
-              <div class="field"><label for="docxCellPadding">Table cell padding (mm)</label><input id="docxCellPadding" name="cellPaddingMm" type="number" min="0.5" max="2.5" step="0.5" required></div>
-              <div class="field"><label for="docxHeaderSplit">Header left column (%)</label><input id="docxHeaderSplit" name="headerLeftPercent" type="number" min="50" max="75" step="1" required></div>
-              <div class="field"><label for="docxSignatureWidth">Signature block width (%)</label><input id="docxSignatureWidth" name="signatureWidthPercent" type="number" min="35" max="60" step="1" required></div>
-            </div>
-            <div class="right-actions docx-layout-actions">
-              <button class="btn secondary" id="docxResetBtn" type="button">Restore Defaults</button>
-              <button class="btn secondary" id="docxReloadBtn" type="button">Reload</button>
-              <button class="btn secondary" id="docxSampleBtn" type="button">Download Sample DOCX</button>
-              <button class="btn" id="docxSaveBtn" type="submit">Publish Layout</button>
-            </div>
-          </form>
+          <div class="section-title">Night Memo · Visual Document Template</div>
+          <p class="muted">Edit the master document here, just like in Night Memo. Keep the curly-braced data fields (such as {date} and {ward}) so the nurse's report can still be filled automatically. Formatting, text, tables and position are saved in the published DOCX.</p>
+          <p id="docxTemplateStatus" class="muted" role="status" aria-live="polite">Open this tab to load the current published template.</p>
+          <div class="docx-visual-actions">
+            <button type="button" class="btn secondary" id="docxResetBtn">Start from Default</button>
+            <button type="button" class="btn secondary" id="docxReloadBtn">Discard Edits / Reload Published</button>
+            <button type="button" class="btn secondary" id="docxSampleBtn">Preview with Example Data</button>
+            <button type="button" class="btn" id="docxSaveBtn">Publish This Template</button>
+          </div>
+          <div id="docxTemplateHost" class="docx-template-host">
+            <iframe id="docxTemplateEditor" title="Edit the master Night Memo DOCX template" allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+          </div>
+          <details class="docx-template-fields-help"><summary>Data placeholders (keep these in the document)</summary>
+            <p>Headings and all surrounding text may be changed. Keep the data fields wherever you want them to appear. The main and infectious-case table row loops must stay in their corresponding rows so every ward is shown.</p>
+            <p><code>{title}</code>, <code>{fromName}</code>, <code>{dectPhone}</code>, <code>{callTeam}</code>, <code>{date}</code>, <code>{earlyBirdText}</code>, <code>{emptyBedText}</code>, <code>{additionalReportText}</code>, <code>{ctTotal}</code>, <code>{maleGeneral}</code>, <code>{maleCohort}</code>, <code>{femaleGeneral}</code>, <code>{femaleCohort}</code>, <code>{signatureName}</code>, <code>{signatureDesignation}</code></p>
+            <p>Admission table repeat markers: <code>{#mainTableRows}</code> … <code>{/mainTableRows}</code>. Infection table repeat markers: <code>{#infectionRows}</code> … <code>{/infectionRows}</code>. The row fields include <code>{ward}</code> and all existing admission, discharge, bed, infection, and staffing columns.</p>
+          </details>
         </section>
 
         <section class="maint-page" data-maint-page="audit">

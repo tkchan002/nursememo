@@ -84,11 +84,10 @@
 .account-rename-help{font-size:13px;color:#53565a;line-height:1.4;margin-top:4px}
 .account-rename-help[hidden]{display:none}
 
-/* Bounded Maintenance DOCX layout controls, aligned to the existing system. */
-.docx-layout-form{max-width:950px;margin:18px 0}
-.docx-layout-fields{display:grid;grid-template-columns:repeat(4,minmax(135px,1fr));gap:16px}
-.docx-layout-fields .field{min-width:0}
-.docx-layout-fields input{max-width:175px;width:100%}
-.docx-layout-actions{margin-top:22px;display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-start}
-@media(max-width:960px){.docx-layout-fields{grid-template-columns:repeat(2,minmax(140px,1fr))}}
-@media(max-width:500px){.docx-layout-fields{grid-template-columns:1fr}}
+/* The template editor is the SAME full DOCX editor as the Manager uses. */
+.docx-visual-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
+.docx-template-host{border:1px solid var(--ui-hairline,#aaa);height:min(77vh,850px);min-height:530px;background:#fff}
+.docx-template-host iframe{width:100%;height:100%;display:block;border:0}
+.docx-template-fields-help{margin:16px 0;font-size:.88rem;line-height:1.5;overflow-wrap:anywhere}
+.docx-template-fields-help code{padding:2px 4px;background:#eee}
+@media(max-width:700px){.docx-template-host{height:75vh;min-height:450px}}

@@ -402,22 +402,26 @@ create policy manager_checkpoints_select_manager on public.manager_memo_recovery
 revoke all on public.manager_memos,public.manager_memo_revisions,public.manager_memo_recovery_snapshots from public,anon,authenticated;
 grant select on public.manager_memos,public.manager_memo_revisions,public.manager_memo_recovery_snapshots to authenticated;
 
--- A4 landscape DOCX layout is managed in Maintenance and read by Manager.
--- The additive version of this change is in migrations/20261017_docx_layout_settings.sql.
--- Additive migration for deployed Nurse Memo databases (Supabase SQL Editor).
--- Does not delete or alter existing memo, archive, Ward or HTML print data.
-
-create table if not exists public.night_memo_docx_layout (
+-- The editable Night Memo DOCX master is managed by Maintenance and read by Manager.
+-- Only template metadata can be queried by the application directly. The stored
+-- DOCX can only be read/written through role-checked RPC functions.
+create table public.night_memo_visual_templates (
  id integer primary key default 1 check (id=1),
- layout jsonb not null,
- version integer not null default 1 check (version>0),
+ template_docx bytea,
+ has_template boolean not null default false,
+ version integer not null default 1 check (version > 0),
  updated_at timestamptz not null default now(),
- updated_by uuid references auth.users(id) on delete set null
+ updated_by uuid references auth.users(id) on delete set null,
+ constraint night_memo_visual_docx_valid check (
+   (template_docx is null and not has_template) or
+   (template_docx is not null and has_template and
+    octet_length(template_docx) between 100 and 3145728 and
+    substring(template_docx from 1 for 2) = decode('504b','hex'))
+ )
 );
-insert into public.night_memo_docx_layout(id,layout,version)
-values(1,'{"marginMm":12,"bodyFontPt":9,"tableFontPt":8,"titleFontPt":16,"sectionFontPt":10,"cellPaddingMm":1,"headerLeftPercent":60,"signatureWidthPercent":43}'::jsonb,1)
-on conflict(id) do nothing;
-create or replace function public.night_memo_docx_layout_version()
+insert into public.night_memo_visual_templates(id,version) values (1,1);
+
+create or replace function public.night_memo_visual_template_version()
 returns trigger language plpgsql security definer set search_path=public,pg_temp as $$
 begin
  if public.app_role() is distinct from 'maintenance' then
@@ -428,21 +432,57 @@ begin
  new.updated_by := auth.uid();
  return new;
 end;$$;
-revoke all on function public.night_memo_docx_layout_version() from public,anon,authenticated;
-drop trigger if exists trg_night_memo_docx_layout_version on public.night_memo_docx_layout;
-create trigger trg_night_memo_docx_layout_version before update on public.night_memo_docx_layout
- for each row execute function public.night_memo_docx_layout_version();
-alter table public.night_memo_docx_layout enable row level security;
-drop policy if exists docx_layout_read on public.night_memo_docx_layout;
-drop policy if exists docx_layout_maintenance_update on public.night_memo_docx_layout;
-create policy docx_layout_read on public.night_memo_docx_layout for select to authenticated
- using(public.app_role() in ('manager','maintenance'));
-create policy docx_layout_maintenance_update on public.night_memo_docx_layout for update to authenticated
- using(public.app_role()='maintenance') with check(public.app_role()='maintenance');
-revoke all on public.night_memo_docx_layout from public,anon,authenticated;
-grant select on public.night_memo_docx_layout to authenticated;
-grant update(layout) on public.night_memo_docx_layout to authenticated;
+revoke all on function public.night_memo_visual_template_version() from public,anon,authenticated;
+create trigger trg_night_memo_visual_template_version
+ before update on public.night_memo_visual_templates for each row
+ execute function public.night_memo_visual_template_version();
 
+alter table public.night_memo_visual_templates enable row level security;
+create policy visual_template_metadata_read on public.night_memo_visual_templates
+ for select to authenticated using (public.app_role() in ('manager','maintenance'));
+revoke all on public.night_memo_visual_templates from public,anon,authenticated;
+grant select(id,version,has_template) on public.night_memo_visual_templates to authenticated;
+
+create or replace function public.read_night_memo_visual_template()
+returns text language plpgsql security definer set search_path = public,pg_temp as $$
+declare v_bytes bytea;
+begin
+ if auth.uid() is null or public.app_role() not in ('manager','maintenance') then
+   raise exception 'Not permitted to read template' using errcode='42501';
+ end if;
+ select template_docx into v_bytes from public.night_memo_visual_templates where id=1;
+ return case when v_bytes is null then null else encode(v_bytes,'base64') end;
+end;$$;
+
+create or replace function public.publish_night_memo_visual_template(
+ p_docx_base64 text, p_expected_version integer
+) returns integer language plpgsql security definer set search_path = public,pg_temp as $$
+declare v_bytes bytea; v_version integer;
+begin
+ if auth.uid() is null or public.app_role() <> 'maintenance' then
+   raise exception 'Maintenance role required' using errcode='42501';
+ end if;
+ if p_docx_base64 is null or length(p_docx_base64)>4200000 then
+   raise exception 'DOCX template too large' using errcode='22023';
+ end if;
+ v_bytes:=decode(p_docx_base64,'base64');
+ if octet_length(v_bytes)<100 or octet_length(v_bytes)>3145728
+   or substring(v_bytes from 1 for 2)<>decode('504b','hex') then
+   raise exception 'DOCX template must be a valid ZIP document up to 3 MiB' using errcode='22023';
+ end if;
+ update public.night_memo_visual_templates
+    set template_docx=v_bytes,has_template=true
+  where id=1 and version=p_expected_version
+  returning version into v_version;
+ if v_version is null then
+   raise exception 'Template changed in another session. Reload before publishing.' using errcode='40001';
+ end if;
+ return v_version;
+end;$$;
+revoke all on function public.read_night_memo_visual_template() from public,anon,authenticated;
+revoke all on function public.publish_night_memo_visual_template(text,integer) from public,anon,authenticated;
+grant execute on function public.read_night_memo_visual_template() to authenticated;
+grant execute on function public.publish_night_memo_visual_template(text,integer) to authenticated;
 
 -- Night staffing snapshots are current operational data, not old report compatibility.
 create table public.night_roster_snapshots (

@@ -12,7 +12,9 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.117.2",
-    "docx": "9.5.1"
+    "docx": "9.5.1",
+    "docxtemplater": "3.69.3",
+    "pizzip": "3.2.0"
   },
   "devDependencies": {
     "vite": "8.3.1"

@@ -4,8 +4,13 @@ import {
   Document, Packer, Paragraph, TextRun, Table, TableRow, TableCell,
   WidthType, AlignmentType, VerticalAlign, BorderStyle, PageOrientation,
 } from 'docx';
-import { normalizeDocxLayout } from './docx-layout.js';
 
+// Internal fallback appearance only. Maintenance edits/publishes the DOCX itself.
+const DEFAULT_DOCUMENT_STYLE = Object.freeze({
+  marginMm: 12, bodyFontPt: 9, tableFontPt: 8, titleFontPt: 16,
+  sectionFontPt: 10, cellPaddingMm: 1, headerLeftPercent: 60,
+  signatureWidthPercent: 43,
+});
 const FONT = 'Arial';
 const PAGE_WIDTH = 16838; // A4 landscape, twentieths of a point.
 const twipsFromMm = value => Math.round(value * 1440 / 25.4);
@@ -100,8 +105,8 @@ function signatureBlock(signature,layout,availableWidth) {
     borders:noBorders,rows:[new TableRow({cantSplit:true,children:[left,right]})]});
 }
 
-export function createNightMemoDocument(m={}, customLayout={}) {
-  const layout=normalizeDocxLayout(customLayout);
+export function createNightMemoDocument(m={}) {
+  const layout=DEFAULT_DOCUMENT_STYLE;
   const h=m.header||{},c=m.ct||{},s=m.signature||{};
   const margin=twipsFromMm(layout.marginMm);
   const width=PAGE_WIDTH-2*margin;
@@ -129,6 +134,6 @@ export function createNightMemoDocument(m={}, customLayout={}) {
   return new Document({sections:[{properties:{page:{size:{width:11906,height:PAGE_WIDTH,orientation:PageOrientation.LANDSCAPE},
     margin:{top:margin,bottom:margin,left:margin,right:margin,header:360,footer:360}}},children}]});
 }
-export async function buildManagerDocxBytes(model, layout) {
-  return new Uint8Array(await (await Packer.toBlob(createNightMemoDocument(model,layout))).arrayBuffer());
+export async function buildManagerDocxBytes(model) {
+  return new Uint8Array(await (await Packer.toBlob(createNightMemoDocument(model))).arrayBuffer());
 }

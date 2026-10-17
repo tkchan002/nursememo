@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { todayISO, addDaysISO } from '../core/dates.js';
 import { createRequestSequencer } from '../core/request-sequencer.js';
-import { sanitizeTemplateCss, isTrustedWindowMessage } from '../core/template-security.js';
+import { normalizeDocxLayout, DEFAULT_DOCX_LAYOUT } from '../documents/docx-layout.js';
 
 test('report date follows Hong Kong calendar day rather than UTC day', () => {
   const instant = new Date('2026-09-25T16:30:00.000Z'); // 00:30 on 26 Sep in Hong Kong
@@ -17,20 +17,11 @@ test('request sequencer invalidates earlier async requests', () => {
   assert.equal(seq.isCurrent(second), true);
 });
 
-test('template CSS cannot inject closing style markup or active URL schemes', () => {
-  const css = `.x{color:red}</style><script>alert(1)</script>@import url('https://evil.invalid/x.css');.y{background:url(javascript:alert(2))}`;
-  const clean = sanitizeTemplateCss(css);
-  assert.equal(clean.includes('<'), false);
-  assert.equal(clean.includes('>'), false);
-  assert.equal(/@import/i.test(clean), false);
-  assert.equal(/javascript:/i.test(clean), false);
-});
-
-test('window messages require both expected source and origin', () => {
-  const source = {};
-  assert.equal(isTrustedWindowMessage({ source, origin: 'https://example.test' }, source, 'https://example.test'), true);
-  assert.equal(isTrustedWindowMessage({ source: {}, origin: 'https://example.test' }, source, 'https://example.test'), false);
-  assert.equal(isTrustedWindowMessage({ source, origin: 'https://evil.test' }, source, 'https://example.test'), false);
+test('DOCX template only accepts bounded numeric layout fields', () => {
+  assert.deepEqual(normalizeDocxLayout({}), DEFAULT_DOCX_LAYOUT);
+  assert.throws(() => normalizeDocxLayout({marginMm:100}),/Invalid DOCX layout/);
+  assert.throws(() => normalizeDocxLayout({bodyFontPt:'<script>'}),/Invalid DOCX layout/);
+  assert.equal(normalizeDocxLayout({evil:'ignored'}).evil,undefined);
 });
 
 test('ISO date arithmetic is timezone-independent', () => {

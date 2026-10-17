@@ -8,6 +8,7 @@ import {
   DB_MODE,
   getManagerMemo,
   getManagerDocxBytes,
+  getNightMemoDocxLayout,
   saveManagerDocxRecovery,
   saveManagerDocxRevision,
   listManagerMemoRevisions,
@@ -68,6 +69,7 @@ const state = {
   historyReturnTab: 'submission',
   wardPreviewContext: null,
   pendingDocxBytes: null,
+  docxLayout: null,
   currentPdfUrl: null,
   archiveLoadSequence: 0,
 };
@@ -109,7 +111,13 @@ async function bootstrap() {
   scheduleMemoEditorPreload();
   state.reportingDate = reportingNightDate();
   await refreshWardStatus({ initial: true });
-  await loadWorkspace();
+  // Load the published layout in parallel; it affects new DOCX generation only.
+  // An existing memo always reopens its saved, immutable DOCX bytes.
+  await Promise.all([loadWorkspace(), getNightMemoDocxLayout().then(value => {
+    state.docxLayout = value.layout;
+  }).catch(error => {
+    console.warn('[Nurse Memo] Using default DOCX layout:', error.message || error);
+  })]);
   renderSubmissionMonitor();
   renderWardInformation();
   renderWorkspace();
@@ -393,7 +401,7 @@ async function backToWorkspace() {
 // Failure to load the optional editor generator cannot block Submission Status or Night Staffing.
 async function generateNewDocx(model) {
   const { buildManagerDocxBytes } = await import('../documents/manager-docx.js');
-  return buildManagerDocxBytes(model);
+  return buildManagerDocxBytes(model, state.docxLayout || undefined);
 }
 
 // document:ready only means the UI is loaded. Cold document:opened must also

@@ -11,7 +11,7 @@ export { getReportItems, saveReportItem, reorderReportItems } from './repositori
 export { getRecentReports, getPreviousReport } from './repositories/report-repository.js';
 export { getAccounts, adminAccount } from './repositories/account-repository.js';
 export { getAuditLog, recordAudit } from './repositories/audit-repository.js';
-export { getManagerPrintTemplates, getActiveManagerPrintTemplate, saveManagerPrintTemplate, publishManagerPrintTemplate } from './repositories/template-repository.js';
+export { getNightMemoDocxLayout, saveNightMemoDocxLayout } from './repositories/docx-layout-repository.js';
 export { getMaintenanceWardsSnapshot } from './repositories/bootstrap-repository.js';
 export { importGeneratedDemoBatch, listGeneratedDemoBatches, deleteGeneratedDemoBatch } from './repositories/demo-data-repository.js';
 export {

@@ -26,7 +26,7 @@ test('DOCX generator makes landscape tables, repeatable headers and non-spaced s
  assert.match(gen,/PageOrientation.LANDSCAPE/);
  assert.match(gen,/tableHeader:true/);
  assert.match(gen,/Signature: /);
- assert.match(gen,/Designation: /);
+ assert.match(gen,/designation.*N.O.\/APN/);
  assert.doesNotMatch(gen,/Signature:[^\n]{20,} {10,}Designation:/);
 });
 test('SQL performs binary and reference persistence together, disallows public table access',()=>{

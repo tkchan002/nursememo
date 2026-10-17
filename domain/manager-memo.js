@@ -1,4 +1,3 @@
-import { renderEditableManagerMemoHtml } from './manager-memo-html.js';
 import { addDaysISO, todayISO, toDisplayDate } from '../core/dates.js';
 import { deviceCount, normalizeDevice, normalizeReportPayload } from './report-model.js';
 import { reportSubmittedAt } from './report-session.js';
@@ -152,12 +151,3 @@ export function buildManagerMemoData({ bundle = [], items = [], reportingDate = 
   return template;
 }
 
-export function buildManagerMemoDocument(args = {}) {
-  return {version:4,html:renderEditableManagerMemoHtml(buildManagerMemoData(args))};
-}
-
-export function regenerateWardDerivedSections(_document, { bundle = [], items = [], reportingDate = reportingNightDate() } = {}) {
-  // Regeneration is an explicitly confirmed full replacement. The previous document
-  // is checkpointed before this function is called; no hidden merging of edited cells.
-  return buildManagerMemoDocument({ bundle, items, reportingDate });
-}

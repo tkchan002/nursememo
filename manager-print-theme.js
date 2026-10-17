@@ -1,4 +1,3 @@
-import { MANAGER_MEMO_DOCUMENT_CSS } from './manager-document-print-css.js';
 export const MANAGER_PRINT_CSS = `
 @page{size:A4 portrait;margin:10mm 10mm 11mm}
 *{box-sizing:border-box}
@@ -30,13 +29,6 @@ body{font-family:Arial,Helvetica,sans-serif;color:#111;background:#d8d8d8;font-s
 .manager-print-two-col{display:grid;grid-template-columns:1fr .85fr;gap:12mm;align-items:end;margin-top:5mm}
 .manager-print-signature{justify-self:end;min-width:62mm}
 .manager-print-signature-line{display:inline-block;width:40mm;height:4mm;border-bottom:1px solid #111;vertical-align:bottom}
-.manager-memo-print{font-size:9.2pt}
-.manager-memo-print .manager-print-meta{gap:1mm 8mm;margin-bottom:2.5mm}
-.manager-memo-print .manager-print-section{margin:2.1mm 0}
-.manager-memo-print .manager-print-section-title{font-size:9.6pt;margin-bottom:.7mm;padding-bottom:.5mm}
-.manager-memo-print .manager-print-rich{min-height:2.5mm;font-size:9pt;line-height:1.18}
-.manager-memo-print .manager-print-rich ul,.manager-memo-print .manager-print-rich ol{margin:.4mm 0}
-.manager-memo-print .manager-print-two-col{margin-top:2.5mm}
 .manager-print-footer{margin-top:6mm;padding-top:2mm;border-top:1px solid #777;font-size:8pt;color:#444;display:flex;justify-content:space-between;gap:8mm}
 .manager-print-footer span:last-child{text-align:right}
 /* Fit the on-screen iframe on phones; physical A4 printing remains unchanged. */
@@ -77,7 +69,7 @@ export function renderManagerPrintFooter({ label, printedAt = new Date() } = {})
   return `<footer class="manager-print-footer"><span>${safeLabel}</span><span>Printed ${escapePrintHtml(printedStamp(printedAt))} HKT</span></footer>`;
 }
 
-export function renderManagerPrintDocument({ title, subtitle = '', body = '', footerLabel = title, printedAt = new Date(), logoUrl = '', rosterFontSize = null, hideTitle = false, memoLandscape = false } = {}) {
+export function renderManagerPrintDocument({ title, subtitle = '', body = '', footerLabel = title, printedAt = new Date(), logoUrl = '', rosterFontSize = null, hideTitle = false } = {}) {
   const safeTitle = escapePrintHtml(title || 'Patrol Night');
   const fontSize = rosterFontSize === null ? null : Math.max(8, Math.min(14, Number(rosterFontSize) || 10));
   const rosterClass = fontSize === null ? '' : ' roster-print-document';
@@ -85,9 +77,5 @@ export function renderManagerPrintDocument({ title, subtitle = '', body = '', fo
   const logo = logoUrl ? `<img class="manager-print-logo" src="${escapePrintHtml(logoUrl)}" alt="Nurse Memo heart logo">` : '';
   // Last @page declaration applies to this standalone print document only.
   // Ward and Night Runner roster documents keep their established portrait format.
-  const landscapeCss = memoLandscape ? `
-@page{size:A4 landscape;margin:10mm 11mm 11mm}
-@media screen{.manager-print-page{width:297mm;min-height:210mm;padding:10mm 11mm}}
-@media print{.manager-print-page{width:auto;min-height:0;padding:0}}` : '';
-  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${MANAGER_PRINT_CSS}${MANAGER_MEMO_DOCUMENT_CSS}${landscapeCss}</style></head><body data-print-system="manager-v2"><article class="manager-print-page${rosterClass}"${rosterStyle}>${logo}${hideTitle ? '' : `<h1 class="manager-print-title">${safeTitle}</h1>`}${subtitle ? `<div class="manager-print-subtitle">${escapePrintHtml(subtitle)}</div>` : ''}${body}${renderManagerPrintFooter({ label: footerLabel, printedAt })}</article></body></html>`;
+  return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${safeTitle}</title><style>${MANAGER_PRINT_CSS}</style></head><body data-print-system="manager-v2"><article class="manager-print-page${rosterClass}"${rosterStyle}>${logo}${hideTitle ? '' : `<h1 class="manager-print-title">${safeTitle}</h1>`}${subtitle ? `<div class="manager-print-subtitle">${escapePrintHtml(subtitle)}</div>` : ''}${body}${renderManagerPrintFooter({ label: footerLabel, printedAt })}</article></body></html>`;
 }

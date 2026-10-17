@@ -9,7 +9,6 @@ const htmlEntries = {
   ward: 'ward.html',
   manager: 'manager.html',
   maintenance: 'maintenance.html',
-  managerTemplate: 'manager-template.html',
   print: 'print.html',
 };
 

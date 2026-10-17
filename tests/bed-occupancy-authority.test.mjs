@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { calculateEmptyBeds, resolveReportEmptyBeds, displayEmptyBeds } from '../domain/bed-occupancy.js';
 import { validateReportPayload } from '../domain/report-validation.js';
 import { normalizeReportPayload, fullReportPayloadDefaults } from '../domain/report-model.js';
-import { buildManagerMemoDocument, formatManagerEmptyBeds } from '../domain/manager-memo.js';
+import { buildManagerMemoData, formatManagerEmptyBeds } from '../domain/manager-memo.js';
 import { renderWardMemoHtml } from '../ward-print.js';
 
 const ward = { id: 'w1', name: 'Ward A', empty_bed_gender_mode: 'male' };
@@ -52,10 +52,10 @@ test('Manager uses newest Night census, its capacity snapshot and signed empty-b
   const pm = report('pm', 30, 26, 4);
   const night = report('night', 30, 41, 0);
   const bundle = [{ ward, capacity: 100, pmReport: pm, nightReport: night, report: night }];
-  const document = buildManagerMemoDocument({ bundle });
-  assert.match(document.html, /<td>41<\/td>/);
-  assert.match(document.html, /<td>-11<\/td>/);
-  assert.match(document.html, /Ward A: -11/);
+  const document = buildManagerMemoData({ bundle });
+  assert.equal(document.mainTableRows[0].totalPatient, '41');
+  assert.equal(document.mainTableRows[0].emptyBed, '-11');
+  assert.match(document.emptyBedHtml, /Ward A: -11/);
   assert.equal(formatManagerEmptyBeds(ward, night, 100), '-11');
 });
 

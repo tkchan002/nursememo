@@ -3,7 +3,7 @@ import {
   getAllWards, getOperatingPeriods, getCapacityHistory, createWard, reorderWards,
   addOperatingPeriod, closeOperatingPeriod, saveWardConfiguration, getAccounts, adminAccount,
   getWardStaff, saveWardStaff, setStaffActive, getReportItems, saveReportItem, reorderReportItems, getAuditLog,
-  getMaintenanceWardsSnapshot, DB_MODE,
+  getMaintenanceWardsSnapshot, getNightMemoDocxLayout, saveNightMemoDocxLayout, DB_MODE,
 } from '../data/index.js';
 import { qs, qsa, esc } from '../core/dom.js';
 import { todayISO, toDisplayDate, formatDateTime } from '../core/dates.js';
@@ -17,6 +17,7 @@ import { editableCapacity, capacityNumber } from '../domain/capacity-history.js'
 import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
 import { loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
 import { validateMaintenancePassword, toStoredMaintenancePassword } from '../domain/maintenance-accounts.js';
+import { DEFAULT_DOCX_LAYOUT, normalizeDocxLayout } from '../documents/docx-layout.js';
 
 const $ = qs;
 const state = {
@@ -32,6 +33,7 @@ const state = {
   wardModalSequence: 0,
   capacityAtOpen: null,
   savingWard: false,
+  docxLayoutVersion: null,
   loaded: { wards: false, accounts: false, items: false },
   loading: {},
 };
@@ -70,6 +72,10 @@ function bind() {
   $('#addItemBtn').addEventListener('click', () => openItemModal());
   $('#itemForm').addEventListener('submit', saveItem);
   $('#refreshAudit').addEventListener('click', renderAudit);
+  $('#docxLayoutForm').addEventListener('submit', publishDocxLayout);
+  $('#docxResetBtn').addEventListener('click', () => fillDocxLayout(DEFAULT_DOCX_LAYOUT));
+  $('#docxReloadBtn').addEventListener('click', () => loadDocxLayout());
+  $('#docxSampleBtn').addEventListener('click', () => downloadDocxLayoutSample());
 }
 
 async function showPage(name) {
@@ -81,6 +87,7 @@ async function showPage(name) {
     if (name === 'staff') { await ensureWardsLoaded(); await renderMaintStaff(); }
     if (name === 'items') await ensureItemsLoaded();
     if (name === 'audit') await renderAudit();
+    if (name === 'docx') await loadDocxLayout();
     if (name === 'demo') await refreshGeneratedDemoBatches();
   } catch (error) {
     console.error(`Unable to load maintenance tab ${name}:`, error);
@@ -485,3 +492,65 @@ async function saveItem(event) {
   } catch (error) { flash(error.message || String(error), 'error', 7000); }
 }
 async function renderAudit() { const rows = await getAuditLog(200); $('#auditRows').innerHTML = rows.length ? rows.map(r => `<div class="audit-row"><b>${esc(formatDateTime(r.occurred_at))}</b> · <code>${esc(r.action)}</code> · ${esc(r.entity_type || '')} ${esc(r.entity_id || '')}<div class="muted">${esc(JSON.stringify(r.details || {}))}</div></div>`).join('') : '<div class="muted">No audit entries yet.</div>'; }
+
+// Maintenance-only DOCX master layout controls. Existing DOCX files are never
+// converted, rewritten, or stored here: publishing affects future creation.
+const layoutFields = Object.keys(DEFAULT_DOCX_LAYOUT);
+function readDocxLayoutForm() {
+  const form = $('#docxLayoutForm');
+  return normalizeDocxLayout(Object.fromEntries(layoutFields.map(key => [key, form.elements.namedItem(key).value])));
+}
+function fillDocxLayout(layout) {
+  const form = $('#docxLayoutForm');
+  for (const key of layoutFields) form.elements.namedItem(key).value = layout[key];
+}
+async function loadDocxLayout() {
+  const status = $('#docxLayoutStatus');
+  status.textContent = 'Loading document template settings…';
+  try {
+    const current = await getNightMemoDocxLayout();
+    state.docxLayoutVersion = current.version;
+    fillDocxLayout(current.layout);
+    status.textContent = `Published layout version ${current.version}. Edits affect new documents only.`;
+  } catch (error) {
+    state.docxLayoutVersion = null;
+    status.textContent = `Unable to load settings. Check the DOCX layout migration in Supabase: ${error.message || error}`;
+    throw error;
+  }
+}
+async function publishDocxLayout(event) {
+  event.preventDefault();
+  const status = $('#docxLayoutStatus');
+  if (state.docxLayoutVersion === null) { flash('Load the template before publishing.', 'error'); return; }
+  const button = $('#docxSaveBtn');
+  button.disabled = true;
+  try {
+    const saved = await saveNightMemoDocxLayout(readDocxLayoutForm(),state.docxLayoutVersion);
+    state.docxLayoutVersion = saved.version;
+    fillDocxLayout(saved.layout);
+    status.textContent = `Published version ${saved.version}. Reload Manager before starting a new draft to use this layout.`;
+    flash('DOCX layout published. Existing documents are unchanged.', 'success');
+  } catch (error) {
+    status.textContent = error.message || String(error);
+    flash(status.textContent,'error',7000);
+  } finally { button.disabled = false; }
+}
+async function downloadDocxLayoutSample() {
+  const button=$('#docxSampleBtn');
+  button.disabled=true;
+  try {
+    const layout=readDocxLayoutForm();
+    const { buildManagerDocxBytes } = await import('../documents/manager-docx.js');
+    const rows=[{ward:'C10',admissionEC:3,admissionCC:0,transferIn:0,discharge:3,transferOut:2,death:0,totalPatient:7,
+      emptyBed:'1D',ventilator:0,bipap:0,hfnc:0,staff:'3/3'}];
+    const bytes=await buildManagerDocxBytes({title:'Night Memo (Male)',
+      header:{fromName:'Sample APN',dectPhone:'2322',callTeam:'MC',date:'19/9/2025'},
+      mainTableRows:rows,infectionRows:[{ward:'C10',covid:0,cre:0,vre:0,mdra:0,cd:0,influenza:'1M (bed 1)',hdCapd:'HD: 0  CAPD: 0',remarks:''}],
+      earlyBirdHtml:'<div>C10: 1F (bed 5) to KH3B</div>',emptyBedHtml:'<div>C10: 1D room</div>',additionalReportHtml:'<div>No additional reports</div>',
+      ct:{maleGeneral:0,maleCohort:0,femaleGeneral:0,femaleCohort:0},signature:{name:'Sample APN',designation:'N.O./APN'}},layout);
+    const url=URL.createObjectURL(new Blob([bytes],{type:'application/vnd.openxmlformats-officedocument.wordprocessingml.document'}));
+    const a=document.createElement('a');a.href=url;a.download='Night-Memo-Template-Sample.docx';document.body.appendChild(a);a.click();a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),30000);
+  } catch (error) { flash(`Unable to generate sample: ${error.message || error}`,'error',7000); }
+  finally { button.disabled=false; }
+}

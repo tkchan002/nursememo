@@ -10,7 +10,7 @@ const read = file => readFile(path.join(root, file), 'utf8');
 const html = await read('manager.html');
 const page = await read('pages/manager-page.js');
 const tabs = await read('components/manager-tabs.js');
-const print = await read('manager-memo-print.js');
+const docx = await read('documents/manager-docx.js');
 const wardPrint = await read('ward-print.js');
 const ops = await read('pages/manager-night-operations.js');
 
@@ -26,7 +26,7 @@ test('Manager has four source-defined primary workspaces in the requested order'
 
 test('official Night Memo editor and print contract exclude Ward clinical/additional information', () => {
   assert.doesNotMatch(html, /id="memoClinicalNotes"|id="memoAdditionalItems"/);
-  assert.doesNotMatch(print, /Clinical \/ General Notes|Additional Report Items/);
+  assert.doesNotMatch(docx, /Clinical \/ General Notes|Additional Report Items/);
   assert.doesNotMatch(page, /_legacyClinical|_legacyAdditional/);
 });
 

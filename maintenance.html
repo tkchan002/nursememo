@@ -27,6 +27,7 @@
       <button type="button" class="tab" data-maint="accounts">Accounts</button>
       <button type="button" class="tab" data-maint="staff">Staff</button>
       <button type="button" class="tab" data-maint="items">Report Items</button>
+      <button type="button" class="tab" data-maint="docx">Document Template</button>
       <button type="button" class="tab" data-maint="audit">Audit Log</button>
       <button type="button" class="tab" data-maint="demo">Test Data</button>
     </div>
@@ -75,6 +76,30 @@
           <div class="section-title">Report Items &amp; Form Configuration</div>
           <p class="muted">Built-in items can be renamed, reordered, activated/deactivated and have options edited. Use Up / Down to change the form sequence; numeric order values are managed internally.</p>
           <div class="table-scroll"><table class="data-table"><thead><tr><th>Section</th><th>Label</th><th>Input</th><th>Effective</th><th>Status</th><th>Actions</th></tr></thead><tbody id="itemRows"></tbody></table></div>
+        </section>
+
+        <section class="maint-page" data-maint-page="docx">
+          <div class="section-title">Night Memo DOCX Template · A4 Landscape</div>
+          <p class="muted">These settings apply only when creating or regenerating a Night Memo. Saved DOCX drafts, final reports and history are not modified. Header columns have no visible borders; signature stays at the right immediately after CT Scan.</p>
+          <p id="docxLayoutStatus" role="status" aria-live="polite" class="muted">Open this tab to load the published layout.</p>
+          <form id="docxLayoutForm" class="docx-layout-form">
+            <div class="docx-layout-fields">
+              <div class="field"><label for="docxMargin">All page margins (mm)</label><input id="docxMargin" name="marginMm" type="number" min="8" max="20" step="1" required></div>
+              <div class="field"><label for="docxBodyFont">Paragraph font (pt)</label><input id="docxBodyFont" name="bodyFontPt" type="number" min="8" max="12" step="0.5" required></div>
+              <div class="field"><label for="docxTableFont">Table font (pt)</label><input id="docxTableFont" name="tableFontPt" type="number" min="7" max="11" step="0.5" required></div>
+              <div class="field"><label for="docxTitleFont">Title font (pt)</label><input id="docxTitleFont" name="titleFontPt" type="number" min="12" max="22" step="0.5" required></div>
+              <div class="field"><label for="docxSectionFont">Section heading font (pt)</label><input id="docxSectionFont" name="sectionFontPt" type="number" min="9" max="14" step="0.5" required></div>
+              <div class="field"><label for="docxCellPadding">Table cell padding (mm)</label><input id="docxCellPadding" name="cellPaddingMm" type="number" min="0.5" max="2.5" step="0.5" required></div>
+              <div class="field"><label for="docxHeaderSplit">Header left column (%)</label><input id="docxHeaderSplit" name="headerLeftPercent" type="number" min="50" max="75" step="1" required></div>
+              <div class="field"><label for="docxSignatureWidth">Signature block width (%)</label><input id="docxSignatureWidth" name="signatureWidthPercent" type="number" min="35" max="60" step="1" required></div>
+            </div>
+            <div class="right-actions docx-layout-actions">
+              <button class="btn secondary" id="docxResetBtn" type="button">Restore Defaults</button>
+              <button class="btn secondary" id="docxReloadBtn" type="button">Reload</button>
+              <button class="btn secondary" id="docxSampleBtn" type="button">Download Sample DOCX</button>
+              <button class="btn" id="docxSaveBtn" type="submit">Publish Layout</button>
+            </div>
+          </form>
         </section>
 
         <section class="maint-page" data-maint-page="audit">

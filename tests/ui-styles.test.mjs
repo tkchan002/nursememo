@@ -45,7 +45,7 @@ test('style resources have neutral filenames and all references resolve', () => 
   const expectedCss = [
     'empty-bed-reporting.css', 'legacy-shell.css', 'login.css',
     'maintenance.css', 'manager-document.css', 'manager-night-operations.css', 'manager.css',
-    'print-view.css', 'print.css', 'theme.css',
+    'print-view.css', 'theme.css',
     'ward-draft-submit.css', 'ward.css',
   ];
   assert.deepEqual([...cssFiles].sort(), expectedCss.sort());

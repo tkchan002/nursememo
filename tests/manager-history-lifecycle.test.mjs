@@ -39,11 +39,10 @@ test('autosave uses recovery path rather than history revision path', () => {
   assert.match(js, /saveManagerDocxRecovery/);
 });
 
-test('print renderer has no second app-level Print button', () => {
-  const js = read('manager-memo-print.js');
-  assert.doesNotMatch(js, /onclick="window\.print\(\)"/);
-  assert.match(js, /memo\.html/);
-  assert.match(js, /sanitizeManagerMemoHtml/);
+test('DOCX exports do not invoke retired HTML Manager print renderer', () => {
+  const js = read('pages/manager-page.js');
+  assert.doesNotMatch(js, /renderManagerMemoPrintHtml|onclick="window\.print\(\)"/);
+  assert.match(js, /finalPdf/);
 });
 
 test('migration creates immutable revision table and history RPCs', () => {

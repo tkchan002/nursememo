@@ -2,7 +2,6 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { renderNightStaffPrintHtml, renderNightRunnerPrintHtml } from '../night-roster-print.js';
-import { renderManagerMemoPrintHtml } from '../manager-memo-print.js';
 import { loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
 
 const read = filename => readFile(new URL(`../${filename}`, import.meta.url), 'utf8');
@@ -27,9 +26,6 @@ test('roster print documents share a safely escaped branded header without chang
   }
   assert.match(staff, /Night Staff List/);
   assert.match(runner, /Night Runner List/);
-  const nonRoster = renderManagerMemoPrintHtml({title:'Night Memo',header:{},mainTableRows:[],infectionRows:[]});
-  assert.doesNotMatch(nonRoster, /<img class="manager-print-logo"/);
-  assert.doesNotMatch(nonRoster, /--roster-font-size:/);
 });
 
 test('roster document font sizes are clamped; untrusted values cannot inject CSS or markup', () => {

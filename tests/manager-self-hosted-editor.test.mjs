@@ -4,7 +4,8 @@ import { readFileSync, mkdtempSync, mkdirSync, writeFileSync, existsSync, rmSync
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import { spawnSync } from 'node:child_process';
-import { brotliCompressSync } from 'node:zlib';
+import { brotliCompressSync, gunzipSync } from 'node:zlib';
+import { runInNewContext } from 'node:vm';
 const source=name=>readFileSync(new URL('../'+name,import.meta.url),'utf8');
 
 test('Patrol Night remains the visible Manager name and starts the actual self-hosted editor',()=>{
@@ -53,7 +54,7 @@ test('Pages deployment builds upstream and rejects missing self-hosted assets',(
   assert.doesNotMatch(workflow,/run: npm run verify \|\| true/);
 });
 
-test('Pages preparation preserves the ONLYOFFICE nested-index suffix and rewrites only site roots',()=>{
+test('Pages preparation preserves the ONLYOFFICE nested-index suffix and rewrites only site roots',async()=>{
   const tmp=mkdtempSync(join(tmpdir(),'nurse-selfhost-'));
   const sourceDist=join(tmp,'vendor','dist');
   const published=join(tmp,'release','office');
@@ -76,7 +77,8 @@ test('Pages preparation preserves the ONLYOFFICE nested-index suffix and rewrite
   const raw=Buffer.from([0,97,115,109,1,0,0,0]);
   writeFileSync(join(sourceDist,'sdkjs/common/wasm/x2t/x2t.wasm.br'),brotliCompressSync(raw));
   writeFileSync(join(sourceDist,'sdkjs/common/wasm/x2t/x2t_helper.js'),
-    `const wasm='/sdkjs/common/wasm/x2t/x2t.wasm.br';`);
+    `function X2TConverter(){this.WASM_PATH = '../../../../sdkjs/common/wasm/x2t/x2t.wasm.br';}
+X2TConverter.prototype.fetchWasmResponse=function(){var wasmPath = this.WASM_PATH;return fetch(wasmPath).then(function(response){if (response.ok) return response;throw new Error('bad status');});};`);
   try {
     for (const [siteBase, baseVar] of [['/nursememo/',''], ['/','/']]) {
       const result=spawnSync(process.execPath,['scripts/prepare-editor-site.mjs'],{
@@ -107,6 +109,30 @@ test('Pages preparation preserves the ONLYOFFICE nested-index suffix and rewrite
       assert.ok(helper.includes('x2t.wasm'));
       assert.ok(!helper.includes('x2t.wasm.br'));
       assert.deepEqual(readFileSync(join(published,'sdkjs/common/wasm/x2t/x2t.wasm')),raw);
+      assert.deepEqual(gunzipSync(readFileSync(join(published,'sdkjs/common/wasm/x2t/x2t.wasm.gz'))),raw);
+      assert.match(helper,/new DecompressionStream\('gzip'\)/);
+      assert.match(helper,/WASM_GZIP_PATH/);
+      assert.match(helper,/pipeThrough/);
+      // Exercise the actual patched fetch path: the browser must receive the
+      // ORIGINAL WASM bytes after native streaming decompression, and old
+      // browsers must still fetch the unchanged raw file.
+      for (const supportsGzip of [true, false]) {
+        const requested = [];
+        const X2TConverter = runInNewContext(`${helper}\nX2TConverter;`, {
+          Response,
+          DecompressionStream: supportsGzip ? DecompressionStream : undefined,
+          fetch: async url => {
+            requested.push(url);
+            return new Response(url.endsWith('.gz') ?
+              readFileSync(join(published,'sdkjs/common/wasm/x2t/x2t.wasm.gz')) : raw,
+              { status: 200 });
+          },
+        });
+        const response = await new X2TConverter().fetchWasmResponse();
+        assert.deepEqual(Buffer.from(await response.arrayBuffer()),raw);
+        assert.equal(requested.length,1);
+        assert.ok(requested[0].endsWith(supportsGzip ? '.wasm.gz' : '.wasm'));
+      }
       assert.ok(existsSync(join(published,'..','.nojekyll')));
       const meta=JSON.parse(readFileSync(join(published,'nurse-memo-editor-build.json'),'utf8'));
       assert.equal(meta.officeBase,officeBase);
@@ -127,4 +153,20 @@ test('CI pins the successfully tested upstream build and retains one combined si
   assert.match(workflow,/node scripts\/verify-pages-editor\.mjs/);
   const adapter=source('editor/manager-ranuts.js');
   assert.doesNotMatch(adapter,/nursememo-office/);
+});
+
+
+test('Background conversion keeps a single real-size editor and does not race foreground open', () => {
+  const page=source('pages/manager-page.js');
+  const css=source('css/manager-document.css');
+  assert.match(page,/document\.body\.appendChild\(area\)/);
+  assert.ok(page.indexOf('setMemoEditorWorkspaceVisible(false);') < page.indexOf('scheduleMemoEditorPreload();'), 'move the iframe container BEFORE setting its source');
+  assert.match(page,/area\.inert = true/);
+  assert.match(page,/memoPrewarmPromise = \(async \(\) =>/);
+  assert.match(page,/memoPrewarmed = \{ key, editor, bytes \}/);
+  assert.match(page,/if \(memoPrewarmPromise\) await memoPrewarmPromise/);
+  assert.match(page,/memoPrewarmed\?\.editor !== editor \|\| memoPrewarmed\.key !== desiredKey/);
+  assert.match(page,/memoPrewarmed = null/);
+  assert.match(css,/\.memo-editor-background\s*\{\s*opacity:0;\s*pointer-events:none;/);
+  assert.doesNotMatch(page,/new Worker\(/);
 });

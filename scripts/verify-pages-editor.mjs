@@ -1,11 +1,13 @@
 /** Fail CI if the combined Nurse Memo + editor Pages artifact is malformed. */
 import { existsSync, readFileSync, statSync } from 'node:fs';
+import { gunzipSync } from 'node:zlib';
 import { join } from 'node:path';
 
 const root = process.env.RANUTS_DEPLOY_DIR || 'dist/office';
 const files = [
   'index.html', 'editor.html', 'history.html', 'LICENSE', 'NOTICE',
   'sdkjs/common/wasm/x2t/x2t.wasm',
+  'sdkjs/common/wasm/x2t/x2t.wasm.gz',
   'web-apps/apps/documenteditor/main/index.html',
   'editor/index.html', 'history/index.html',
   'nurse-memo-editor-build.json',
@@ -27,6 +29,9 @@ if (!/^\/(?:[A-Za-z0-9_.~-]+\/)*office\/$/.test(meta.officeBase)) {
 }
 const wasm = readFileSync(join(root,'sdkjs/common/wasm/x2t/x2t.wasm'));
 if (wasm.toString('hex',0,4) !== '0061736d') throw new Error('Published WASM converter invalid.');
+if (!gunzipSync(readFileSync(join(root,'sdkjs/common/wasm/x2t/x2t.wasm.gz'))).equals(wasm)) throw new Error('Gzip converter does not match raw fallback.');
+const helper = readFileSync(join(root,'sdkjs/common/wasm/x2t/x2t_helper.js'),'utf8');
+if (!helper.includes("new DecompressionStream('gzip')") || !helper.includes('WASM_GZIP_PATH')) throw new Error('Missing gzip-streaming converter loader.');
 const html = readFileSync(join(root,'editor.html'),'utf8');
 if (!html.includes('assets/') && !html.includes('index-')) throw new Error('Editor HTML does not reference application scripts.');
 const sdkApi = join(root,'web-apps/apps/api/documents/api.js');

@@ -8,6 +8,7 @@ export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=
   const frame=document.querySelector(selector);
   if(!frame || frame.tagName!=='IFRAME')throw new Error('DOCX editor requires an iframe.');
   let ready=false, destroyed=false, current=null, count=0, readOnly=readonly;
+  const bootStart=performance.now();
   let readyResolve,readyReject;
   const readyPromise=new Promise((res,rej)=>{readyResolve=res;readyReject=rej;});
   const readyTimer=setTimeout(()=>readyReject(new Error('Word processor did not signal ready. Check the self-hosted editor deployment.')),45000);
@@ -17,7 +18,7 @@ export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=
   function onMessage(event) {
     if(destroyed||event.origin!==EDITOR_ORIGIN||event.source!==frame.contentWindow||!event.data?.type?.startsWith('document:'))return;
     const {type,id,payload={}}=event.data;
-    if(type==='document:ready'){ready=true;clearTimeout(readyTimer);readyResolve();return;}
+    if(type==='document:ready'){ready=true;clearTimeout(readyTimer);console.info(`[Nurse Memo performance] Editor iframe ready after ${Math.round(performance.now()-bootStart)} ms`);readyResolve();return;}
     if(type==='document:dirty-changed'){if(payload.dirty && !readOnly)onChange();return;}
     // An unsolicited export originates from ONLYOFFICE's own File > Download As
     // menu, not from an outstanding document:save request. Only our own iframe
@@ -31,7 +32,7 @@ export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=
     if(!current || current.id!==id)return;
     const request=current;current=null;clearTimeout(request.timer);
     if(type==='document:error'){request.reject(new Error(payload.message||'Word processor reported an error.'));return;}
-    if(request.type==='document:open-buffer' && type==='document:opened'){request.resolve(true);return;}
+    if(request.type==='document:open-buffer' && type==='document:opened'){console.info(`[Nurse Memo performance] DOCX document:opened after ${Math.round(performance.now()-request.startedAt)} ms`);request.resolve(true);return;}
     if(request.type==='document:save' && type==='document:saved'){
       const blob=payload.file;
       if(!(blob instanceof Blob)){request.reject(new Error('Editor returned no document file.'));return;}
@@ -55,7 +56,7 @@ export function createManagerDocumentEditor(selector,onChange=()=>{}, {readonly=
     return new Promise((resolve,reject)=>{
       const id=`nm-docx-${++count}`;
       const timer=setTimeout(()=>{if(current?.id===id)current=null;reject(new Error(`${type} timed out. Check editor connection.`));},TIMEOUT_MS);
-      current={id,type,resolve,reject,timer};
+      current={id,type,resolve,reject,timer,startedAt:performance.now()};
       frame.contentWindow.postMessage({id,type,payload},EDITOR_ORIGIN);
     });
   }

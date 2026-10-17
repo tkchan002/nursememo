@@ -108,3 +108,12 @@
 .manager-page #editorArea .memo-editor-load-error .memo-loading-spinner {display:none;}
 @keyframes memo-spin {to{transform:rotate(360deg)}}
 @media (prefers-reduced-motion:reduce) {.manager-page #editorArea .memo-loading-spinner {animation:none;}}
+
+/* Background import needs a real viewport, not display:none. A transparent,
+   inert, fixed-size editor can complete its conversion without appearing over
+   Patrol Night. It is the SAME iframe later shown to the user. */
+.manager-page #editorArea.memo-editor-background {
+  opacity:0;
+  pointer-events:none;
+  z-index:-1;
+}

@@ -5,7 +5,7 @@
   "type": "module",
   "scripts": {
     "check": "node ./scripts/check.mjs",
-    "test": "node --test ./tests/*.test.mjs",
+    "test": "node --test --test-concurrency=4 ./tests/*.test.mjs",
     "verify": "npm run check && npm run imports && npm test",
     "build": "vite build",
     "imports": "node ./scripts/check-imports.mjs"

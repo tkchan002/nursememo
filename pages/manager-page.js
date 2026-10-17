@@ -77,6 +77,9 @@ let managerTabs = null;
 let wardPrintModulePromise = null;
 let memoEditorInstance = null;
 let memoEditorLoading = null;
+let memoPrewarmPromise = null;
+let memoPrewarmKey = null;
+let memoPrewarmed = null;
 let archiveEditorInstance = null;
 
 bootstrap().catch(showFatal);
@@ -98,6 +101,12 @@ async function bootstrap() {
     mode: DB_MODE,
   });
 
+  // Relocate the still-empty iframe container BEFORE loading its source.
+  // Moving a live iframe can reset its browsing context and discard its editor.
+  setMemoEditorWorkspaceVisible(false);
+  // Editor resources can warm while ward data and workspace requests are pending.
+  // Never start before authorization is confirmed.
+  scheduleMemoEditorPreload();
   state.reportingDate = reportingNightDate();
   await refreshWardStatus({ initial: true });
   await loadWorkspace();
@@ -105,11 +114,9 @@ async function bootstrap() {
   renderWardInformation();
   renderWorkspace();
   clearStatus();
-  // Prewarm the SAME editor iframe, after Patrol Night is interactive.
-  // Do not preload on the login page, and do not create a second iframe.
-  // A failed background attempt is deliberately silent; opening Night Memo
-  // will display the error and allow an explicit retry.
-  scheduleMemoEditorPreload();
+  // When possible, also open the actual document invisibly in the SAME
+  // editor iframe. This moves conversion/WASM startup ahead of the user's click.
+  scheduleMemoDocumentPreopen();
 }
 
 function bindStaticControls() {
@@ -299,7 +306,15 @@ function renderWorkspace() {
 // DOCX editing is a dedicated full-viewport workspace. The surrounding Manager
 // tabs remain available once the Manager leaves the document editor.
 function setMemoEditorWorkspaceVisible(visible) {
-  $('#editorArea').hidden = !visible;
+  const area = $('#editorArea');
+  // A fixed editor nested inside a hidden Manager tab has zero layout size.
+  // Keep the sole iframe directly under body for full-size background import.
+  if (area.parentElement !== document.body) document.body.appendChild(area);
+  area.hidden = !visible;
+  area.classList.remove('memo-editor-background');
+  area.inert = !visible;
+  if (visible) area.removeAttribute('aria-hidden');
+  else area.setAttribute('aria-hidden', 'true');
   document.body.classList.toggle('docx-editor-active', Boolean(visible));
   const inlineStatus = $('#memoEditorStatus');
   const globalStatus = $('#managerStatus');
@@ -381,13 +396,84 @@ async function generateNewDocx(model) {
   return buildManagerDocxBytes(model);
 }
 
+// document:ready only means the UI is loaded. Cold document:opened must also
+// load and instantiate the x2t converter, which is the expensive second stage.
 function scheduleMemoEditorPreload() {
-  const start = () => { void ensureMemoEditor().catch(() => {}); };
+  const start = () => {
+    void ensureMemoEditor().catch(() => {});
+    // A browser HTTP cache entry for the small gzip file is useful even if a
+    // document cannot be opened until after workspace data finishes loading.
+    if (typeof window.DecompressionStream === 'function' && !navigator.connection?.saveData) {
+      const wasmUrl = new URL('../office/sdkjs/common/wasm/x2t/x2t.wasm.gz', import.meta.url);
+      void fetch(wasmUrl, { cache: 'force-cache', credentials: 'same-origin' })
+        .then(response => { if (!response.ok) throw new Error(`WASM prefetch: ${response.status}`); return response.blob(); })
+        .catch(() => {}); // Speed-up only; never block a real document open.
+    }
+  };
   if (typeof window.requestIdleCallback === 'function') {
     window.requestIdleCallback(start, { timeout: 1200 });
   } else {
     window.setTimeout(start, 80);
   }
+}
+
+function memoDocumentWarmKey() {
+  if (state.pendingDocxBytes) return `generated:${JSON.stringify(buildManagerMemoData({
+    bundle: state.bundle, items: state.items, reportingDate: state.reportingDate,
+  }))}`;
+  if (state.memo?.document?.document_id) return `saved:${state.memo.document.document_id}`;
+  if (state.memo && state.memo.document) return null; // Unknown saved document identity: do not guess.
+  return `generated:${JSON.stringify(buildManagerMemoData({
+    bundle: state.bundle, items: state.items, reportingDate: state.reportingDate,
+  }))}`;
+}
+
+function scheduleMemoDocumentPreopen() {
+  const start = () => { void preopenMemoInBackground().catch(() => {}); };
+  if (typeof window.requestIdleCallback === 'function') window.requestIdleCallback(start, { timeout: 1500 });
+  else window.setTimeout(start, 100);
+}
+
+async function preopenMemoInBackground() {
+  if (memoPrewarmPromise || state.editorOpen) return memoPrewarmPromise;
+  // Skip speculative 280+ MiB conversion on constrained devices. The normal
+  // foreground open still works without any background work.
+  if (navigator.connection?.saveData || (navigator.deviceMemory && navigator.deviceMemory < 4)) return;
+  const key = memoDocumentWarmKey();
+  if (!key) return;
+  const docRef = state.memo?.document?.document_id ? state.memo.document : null;
+  // Preserve correct viewport dimensions without showing an editor or
+  // allowing keyboard/pointer input before the Manager opens Night Memo.
+  const area = $('#editorArea');
+  if (area.parentElement !== document.body) document.body.appendChild(area);
+  area.classList.add('memo-editor-background');
+  area.inert = true;
+  area.setAttribute('aria-hidden', 'true');
+  area.hidden = false;
+  const startedAt = performance.now();
+  memoPrewarmKey = key;
+  memoPrewarmPromise = (async () => {
+    const [editor, bytes] = await Promise.all([
+      ensureMemoEditor(),
+      docRef ? getManagerDocxBytes(docRef) : generateNewDocx(buildManagerMemoData({
+        bundle: state.bundle, items: state.items, reportingDate: state.reportingDate,
+      })),
+    ]);
+    if (memoDocumentWarmKey() !== key) return;
+    await editor.open(bytes, { readonly: Boolean(state.conflicted || state.boundaryExpired) });
+    if (memoDocumentWarmKey() === key) {
+      memoPrewarmed = { key, editor, bytes };
+      console.info(`[Nurse Memo performance] Background document opened in ${Math.round(performance.now() - startedAt)} ms`);
+    }
+  })().catch(error => {
+    // The foreground path handles and displays errors with a Retry button.
+    console.info('[Nurse Memo performance] Background document preparation deferred:', error.message || error);
+  }).finally(() => {
+    // If no one has entered the editor, keep its real dimensions and its
+    // already-loaded document, but make it visually and interactively absent.
+    if (!state.editorOpen) area.classList.add('memo-editor-background');
+  });
+  return memoPrewarmPromise;
 }
 
 function setMemoOpeningState(stage, { error = false } = {}) {
@@ -432,19 +518,32 @@ async function renderEditor({keepDirty=false}={}) {
   state.rendering=true;
   const previousDirty=state.dirty;
   setMemoOpeningState('Preparing document editor…');
+  const userOpenStart = performance.now();
   try{
-    // Both operations run concurrently. Opening reuses the preloaded iframe.
-    const [editor, bytes] = await Promise.all([
-      ensureMemoEditor(),
-      state.pendingDocxBytes ? Promise.resolve(state.pendingDocxBytes) : getManagerDocxBytes(state.memo.document),
-    ]);
+    // Reuse the background document AND its source bytes, avoiding a second
+    // Supabase read while the conversion finishes. A stale or unsuccessful
+    // background job falls back to the original source read/open path.
+    const desiredKey = memoDocumentWarmKey();
+    const bytesPromise = state.pendingDocxBytes ? Promise.resolve(state.pendingDocxBytes) :
+      (memoPrewarmPromise && memoPrewarmKey === desiredKey) ?
+        memoPrewarmPromise.then(() => memoPrewarmed?.key === desiredKey ?
+          memoPrewarmed.bytes : getManagerDocxBytes(state.memo.document)) :
+        getManagerDocxBytes(state.memo.document);
+    const [editor, bytes] = await Promise.all([ensureMemoEditor(), bytesPromise]);
     setMemoOpeningState('Opening Night Memo…');
-    await editor.open(bytes,{readonly:state.conflicted||state.boundaryExpired||state.officialSaving||state.historyMode});
+    // Join an in-flight background import instead of racing it or converting
+    // the same DOCX a second time. A stale/failed import falls back to open().
+    if (memoPrewarmPromise) await memoPrewarmPromise;
+    if (memoPrewarmed?.editor !== editor || memoPrewarmed.key !== desiredKey) {
+      await editor.open(bytes,{readonly:state.conflicted||state.boundaryExpired||state.officialSaving||state.historyMode});
+    }
+    memoPrewarmed = null;
     setEditingEnabled(!state.conflicted&&!state.boundaryExpired&&!state.officialSaving&&!state.historyMode);
     state.dirty=keepDirty?previousDirty:false;
     if(!keepDirty){state.editGeneration=0;state.savedGeneration=0;}
     updateSaveState();
     clearMemoOpeningState();
+    console.info(`[Nurse Memo performance] Night Memo visible after ${Math.round(performance.now()-userOpenStart)} ms`);
   }catch(error){
     setMemoOpeningState(`Unable to open Night Memo: ${error.message||error}`,{error:true});
     setStatus(`Unable to open Night Memo DOCX: ${error.message||error}`,'error');

@@ -12,7 +12,7 @@
  */
 import { existsSync, promises as fs } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve } from 'node:path';
-import { brotliDecompressSync } from 'node:zlib';
+import { brotliDecompressSync, gzipSync, gunzipSync } from 'node:zlib';
 
 const source = resolve(process.env.RANUTS_DIST || '.upstream/ranuts-document/dist');
 const destination = resolve(process.env.RANUTS_DEPLOY_DIR || 'dist/office');
@@ -92,6 +92,32 @@ if (!existsSync(raw) || (await fs.readFile(raw)).subarray(0,4).toString('hex') !
   throw new Error('Missing or invalid raw x2t.wasm converter.');
 }
 
+// GitHub Pages cannot supply Content-Encoding for a precompressed .br asset.
+// Send a much smaller gzip download instead, and decompress via the browser's
+// native streaming DecompressionStream('gzip') before WASM instantiation.
+// Retain the raw .wasm path for browsers without DecompressionStream.
+const wasmBytes = await fs.readFile(raw);
+const gzipPath = `${raw}.gz`;
+const gzipped = gzipSync(wasmBytes, { level: 9 });
+if (!gunzipSync(gzipped).equals(wasmBytes)) throw new Error('Gzip converter round-trip failed.');
+await fs.writeFile(gzipPath, gzipped);
+
+const helperPath = join(destination, 'sdkjs/common/wasm/x2t/x2t_helper.js');
+const helper = await fs.readFile(helperPath, 'utf8');
+const wasmDeclaration = /(this\.WASM_PATH\s*=\s*['"][^'"\n]*x2t\.wasm['"]\s*;?)/g;
+const fetchDeclaration = /(var wasmPath = this\.WASM_PATH;)/g;
+const validResponse = /(if \(response\.ok\) return response;)/g;
+if ([...helper.matchAll(wasmDeclaration)].length !== 1 ||
+    [...helper.matchAll(fetchDeclaration)].length !== 1 ||
+    [...helper.matchAll(validResponse)].length !== 1) {
+  throw new Error('Pinned ONLYOFFICE x2t loader changed; refuse an unverified gzip patch.');
+}
+const patchedHelper = helper
+  .replace(wasmDeclaration, `$1\n        this.WASM_GZIP_PATH = this.WASM_PATH + '.gz';`)
+  .replace(fetchDeclaration, `var wasmPath = typeof DecompressionStream === 'function' ? this.WASM_GZIP_PATH : this.WASM_PATH;\n        var gzipResponse = wasmPath === this.WASM_GZIP_PATH;`)
+  .replace(validResponse, `if (response.ok) {\n                        if (!gzipResponse) return response;\n                        if (!response.body) throw new Error('x2t gzip response has no stream');\n                        return new Response(response.body.pipeThrough(new DecompressionStream('gzip')),\n                            { headers: { 'Content-Type': 'application/wasm' } });\n                    }`);
+await fs.writeFile(helperPath, patchedHelper);
+
 // GitHub Pages lacks an SPA fallback. Supply real static /office/editor/ and
 // /office/history/ routes while preserving query parameters.
 for (const route of ['editor','history']) {
@@ -120,7 +146,7 @@ if (existsSync(sdkApiPath)) {
   }
 }
 
-for (const item of ['editor.html','LICENSE','NOTICE','sdkjs/common/wasm/x2t/x2t.wasm']) {
+for (const item of ['editor.html','LICENSE','NOTICE','sdkjs/common/wasm/x2t/x2t.wasm','sdkjs/common/wasm/x2t/x2t.wasm.gz']) {
   if (!existsSync(join(destination,item))) throw new Error(`Self-hosted editor missing ${item}`);
 }
 // Without this, GitHub Pages/Jekyll can drop important _prefixed SDK assets.
@@ -130,6 +156,7 @@ const meta = {
   sourceRevision: process.env.RANUTS_REVISION || 'local-build',
   sourceUrl: 'https://github.com/ranuts/document', licence: 'AGPL-3.0',
   packagingFix: 'onlyoffice-nested-index-path-v2',
+  converterDelivery: 'gzip-streaming-with-raw-fallback',
   description: 'Nurse Memo and its self-hosted ranuts/document editor, in one GitHub Pages deployment.',
 };
 await fs.writeFile(join(destination,'nurse-memo-editor-build.json'),JSON.stringify(meta,null,2)+'\n');

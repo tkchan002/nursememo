@@ -43,8 +43,12 @@ Upstream is AGPL-3.0 and derives from ONLYOFFICE; licence and NOTICE are publish
 - The upstream bundle may approach GitHub Pages' site-size and monthly bandwidth soft limits. The deployment script fails rather than silently omitting SDK files if the site exceeds its conservative limit.
 - Background warm-up uses memory and bandwidth even if the Nursing Officer never opens Night Memo. It does not make cold-start CPU costs disappear.
 - If this workflow deploys from a branch, remember that GitHub Pages exposes one published site per repo. The `main` and `docx-editor-test` deployment workflows share the same Pages site.
-- The original editor's built-in PDF menu may still fail. The Nurse Memo **Preview/Print API** continues to be the supported export path.
+- The built-in **File → Download As → PDF** export previously discarded its output in embedded mode. Nurse Memo now applies a strict build-time upstream patch to send native exports back to its verified iframe host; PDF export opens the existing preview and attempts a download. The separate **Preview/Print** API remains available. Confirm the built-in menu in a deployed browser before treating this as end-to-end verified. See [NATIVE_EDITOR_DOWNLOAD_FIX.md](NATIVE_EDITOR_DOWNLOAD_FIX.md).
 
 ## Local test evidence
 
 All Nurse Memo source/tests can run without the upstream vendor. The preparation script has its own synthetic-asset test verifying subpath URL rewrite and Brotli-to-WASM conversion. Real production compilation and full renderer startup are explicitly **not** verified here.
+
+## Cold-start performance (2026-10-17)
+
+See [EDITOR_COLD_START_OPTIMIZATION.md](EDITOR_COLD_START_OPTIMIZATION.md) for compressed converter delivery, background document opening, performance measurements and browser validation guidance. This preserves the existing native PDF download fix.

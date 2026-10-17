@@ -45,8 +45,8 @@ test('clean schema contains each named repository RPC', () => {
   const index = read('data/index.js');
   assert.match(index, /getWardCycleReport/);
   for (const rpc of ['save_ward_cycle_draft', 'submit_ward_cycle_report',
-    'get_ward_cycle_draft', 'delete_ward_cycle_draft', 'save_manager_memo_revision',
-    'save_manager_memo_recovery', 'night_memo_visual_template_version', 'reorder_wards']) {
+    'get_ward_cycle_draft', 'delete_ward_cycle_draft', 'save_patrol_memo_revision',
+    'save_patrol_memo_recovery', 'night_memo_visual_template_version', 'reorder_wards']) {
     assert.ok(names.has(rpc), `missing ${rpc}`);
   }
 });

@@ -8,7 +8,7 @@ const theme = read('css/theme.css');
 for (const [page, cssFile] of [
   ['index.html', 'login.css'],
   ['ward.html', 'ward.css'],
-  ['manager.html', 'manager.css'],
+  ['patrol.html', 'patrol.css'],
   ['maintenance.html', 'maintenance.css'],
 ]) {
   test(`${page} loads one page stylesheet and the shared UI theme`, () => {
@@ -29,7 +29,7 @@ test('one neutral shared stylesheet owns screen tabs and buttons', () => {
   assert.match(theme, /height:\s*24px/);
   assert.match(theme, /font:\s*700 11px\/15px Tahoma/);
   assert.match(theme, /--ui-tab-on:\s*linear-gradient/);
-  assert.match(theme, /\.manager-primary-tab/);
+  assert.match(theme, /\.patrol-primary-tab/);
   assert.match(theme, /\.hd-tab/);
   assert.match(theme, /border-radius:\s*15px/);
   assert.match(theme, /font:\s*700 14px\/18px Arial/);
@@ -40,16 +40,16 @@ test('one neutral shared stylesheet owns screen tabs and buttons', () => {
 
 test('style resources have neutral filenames and all references resolve', () => {
   const cssFiles = new Set(readdirSync(new URL('../css/', import.meta.url)));
-  const required = ['theme.css', 'ward.css', 'manager.css', 'maintenance.css', 'login.css'];
+  const required = ['theme.css', 'ward.css', 'patrol.css', 'maintenance.css', 'login.css'];
   required.forEach(name => assert.ok(cssFiles.has(name), `Missing ${name}`));
   const expectedCss = [
     'empty-bed-reporting.css', 'legacy-shell.css', 'login.css',
-    'maintenance.css', 'manager-document.css', 'manager-night-operations.css', 'manager.css',
+    'maintenance.css', 'patrol-document.css', 'patrol-night-operations.css', 'patrol.css',
     'print-view.css', 'theme.css',
     'ward-draft-submit.css', 'ward.css',
   ];
   assert.deepEqual([...cssFiles].sort(), expectedCss.sort());
-  for (const page of ['index.html','ward.html','manager.html','maintenance.html','print.html']) {
+  for (const page of ['index.html','ward.html','patrol.html','maintenance.html','print.html']) {
     const html = read(page);
     for (const [, resource] of html.matchAll(/href="\.\/css\/([^"]+\.css)"/g)) {
       assert.ok(cssFiles.has(resource), `${page} references missing ${resource}`);
@@ -67,17 +67,17 @@ test('Ward sections and functional entrypoints remain intact', () => {
   assert.match(html, /class="legacy-window-title no-print ward-window-title"/);
 });
 
-test('Manager workspaces and document editor remain intact', () => {
-  const html = read('manager.html');
-  assert.equal((html.match(/data-manager-tab="(?:submission|ward-info|memo|staffing)"/g) ?? []).length, 4);
+test('Patrol workspaces and document editor remain intact', () => {
+  const html = read('patrol.html');
+  assert.equal((html.match(/data-patrol-tab="(?:submission|ward-info|memo|staffing)"/g) ?? []).length, 4);
   for (const id of ['memoEditor', 'saveMemoBtn']) assert.ok(html.includes(`id="${id}"`));
-  assert.match(html, /src="\.\/manager\.js"/);
-  assert.match(read('css/manager.css'), /\.memo-sheet \.official-table/);
+  assert.match(html, /src="\.\/patrol\.js"/);
+  assert.match(read('css/patrol.css'), /\.memo-sheet \.official-table/);
 });
 
 test('Shared theme and merged page additions remain screen-only', () => {
   assert.match(theme, /@media screen\s*\{/);
-  for (const cssFile of ['ward.css','manager.css','maintenance.css','login.css']) {
+  for (const cssFile of ['ward.css','patrol.css','maintenance.css','login.css']) {
     assert.match(read(`css/${cssFile}`), /\/\* Page-specific clinical interface styling\. \*\/\s*@media screen\s*\{/);
   }
   assert.doesNotMatch(read('ward.html'), /prototype-tag|fake-user/);

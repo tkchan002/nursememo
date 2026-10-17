@@ -7,8 +7,8 @@
  * that filename. Doing so produced .../documenteditor/main/nursememo/index.html
  * and a 404 when opening a DOCX. The fixed standalone editor demonstrated this.
  *
- * GitHub Pages cannot set Content-Encoding: br, so decode x2t.wasm.br to a raw
- * x2t.wasm and update references before uploading the static deployment.
+ * GitHub Pages cannot set Content-Encoding: br, so preserve a raw WASM fallback
+ * and supply a gzip-streaming loader that reduces cold converter transfer size.
  */
 import { existsSync, promises as fs } from 'node:fs';
 import { basename, dirname, extname, join, relative, resolve } from 'node:path';

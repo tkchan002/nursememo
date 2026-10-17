@@ -9,7 +9,7 @@ test('all roles use one reversible-in-practice, deterministic login-ID scheme', 
   assert.equal(ACCOUNT_EMAIL_DOMAIN, 'accounts.nightmemo.example.com');
   for (const [typed, expected] of [
     ['C10', 'c10'], ['c10', 'c10'], ['  E10 ', 'e10'],
-    ['G2', 'g2'], ['PatrolNight', 'patrolnight'], ['NightMaintenance', 'nightmaintenance'],
+    ['G2', 'g2'], ['patrol', 'patrol'], ['NightMaintenance', 'nightmaintenance'],
   ]) {
     assert.equal(loginIdToEmail(typed), `${expected}@${ACCOUNT_EMAIL_DOMAIN}`);
   }

@@ -15,16 +15,16 @@ export { getNightMemoTemplateMetadata, getNightMemoVisualTemplate, publishNightM
 export { getMaintenanceWardsSnapshot } from './repositories/bootstrap-repository.js';
 export { importGeneratedDemoBatch, listGeneratedDemoBatches, deleteGeneratedDemoBatch } from './repositories/demo-data-repository.js';
 export {
-  getManagerMemo,
-  saveManagerMemoRecovery,
-  saveManagerMemoRevision,
-  listManagerMemoRevisions,
-  getManagerMemoRevision,
-  listManagerMemoArchive,
-  createManagerMemoCheckpoint,
-  listManagerMemoCheckpoints,
-  getManagerMemoCheckpoint,
-} from './repositories/manager-memo-repository.js';
+  getPatrolMemo,
+  savePatrolMemoRecovery,
+  savePatrolMemoRevision,
+  listPatrolMemoRevisions,
+  getPatrolMemoRevision,
+  listPatrolMemoArchive,
+  createPatrolMemoCheckpoint,
+  listPatrolMemoCheckpoints,
+  getPatrolMemoCheckpoint,
+} from './repositories/patrol-memo-repository.js';
 // PM and Night are the only supported reporting types.
 export { getWardCycleReport, getCycleReports, submitWardCycleReport, getWardCycleDraft, saveWardCycleDraft, deleteWardCycleDraft } from './repositories/report-cycle-repository.js';
-export { getManagerDocxBytes, saveManagerDocxRecovery, saveManagerDocxRevision } from './repositories/manager-memo-repository.js';
+export { getPatrolDocxBytes, savePatrolDocxRecovery, savePatrolDocxRevision } from './repositories/patrol-memo-repository.js';

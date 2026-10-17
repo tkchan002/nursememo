@@ -7,7 +7,7 @@ const root = fileURLToPath(new URL('.', import.meta.url));
 const htmlEntries = {
   index: 'index.html',
   ward: 'ward.html',
-  manager: 'manager.html',
+  patrol: 'patrol.html',
   maintenance: 'maintenance.html',
   print: 'print.html',
 };

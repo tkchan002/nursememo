@@ -4,7 +4,7 @@ import {
   expandedTestPassword, passwordForSupabase,
 } from '../supabase/functions/_shared/login-identity.mjs';
 
-const ids = ['C10', 'E10', 'G2', 'F10', 'E6', 'C6', 'G10', 'G11', 'B10', 'H6', 'PatrolNight', 'NightMaintenance'];
+const ids = ['C10', 'E10', 'G2', 'F10', 'E6', 'C6', 'G10', 'G11', 'B10', 'H6', 'patrol', 'NightMaintenance'];
 
 test('all seeded accounts get deterministic Supabase passwords meeting 12-character minimum', () => {
   const storedPasswords = ids.map(expandedTestPassword);

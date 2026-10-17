@@ -84,7 +84,7 @@
 .account-rename-help{font-size:13px;color:#53565a;line-height:1.4;margin-top:4px}
 .account-rename-help[hidden]{display:none}
 
-/* The template editor is the SAME full DOCX editor as the Manager uses. */
+/* The template editor is the SAME full DOCX editor as the Patrol uses. */
 .docx-visual-actions{display:flex;gap:8px;flex-wrap:wrap;margin:12px 0}
 .docx-template-host{border:1px solid var(--ui-hairline,#aaa);height:min(77vh,850px);min-height:530px;background:#fff}
 .docx-template-host iframe{width:100%;height:100%;display:block;border:0}

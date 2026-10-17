@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { generateDemoDataBundle } from '../domain/demo-generator.js';
-import { formatManagerEmptyBeds } from '../domain/manager-memo.js';
+import { formatPatrolEmptyBeds } from '../domain/patrol-memo.js';
 import { validateReportPayload } from '../domain/report-validation.js';
 const ward = (name, enabled) => ({ id:name, name, active:true, display_order:name==='SD'?1:2,
   empty_bed_gender_mode:'mixed', single_double_reporting_enabled:enabled });
@@ -32,7 +32,7 @@ test('Test Data entries do not determine or reconcile with total',()=>{
  report.payload.emptyBeds.entries.push({quantity:99,designation:'M',remark:'TB'});
  assert.equal(validateReportPayload(report.payload,{capacity:40}).valid,true);
  assert.equal(report.payload.emptyBeds.count,before);
- assert.match(formatManagerEmptyBeds(wards[0],report,40),/99M \(TB\)/);
+ assert.match(formatPatrolEmptyBeds(wards[0],report,40),/99M \(TB\)/);
 });
 test('S/D demo coverage respects the current ward-level switch',()=>{
  const off=wards.map(w=>({...w,single_double_reporting_enabled:false}));

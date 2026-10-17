@@ -1,0 +1,49 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+
+const root = path.resolve(import.meta.dirname, '..');
+const read = relative => fs.readFileSync(path.join(root, relative), 'utf8');
+
+test('autosave tracks edit generations so a later edit is not marked saved by an older request', () => {
+  const js = read('pages/patrol-page.js');
+  assert.match(js, /state\.editGeneration \+= 1/);
+  assert.match(js, /const generation = state\.editGeneration/);
+  assert.match(js, /state\.savedGeneration = Math\.max\(state\.savedGeneration, generation\)/);
+  assert.match(js, /state\.dirty = state\.editGeneration > state\.savedGeneration/);
+  assert.match(js, /state\.saveTimer = setTimeout\(\(\) => saveRecoveryNow\(\)\.catch\(\(\) => \{\}\), 150\)/);
+});
+
+test('Save and Print serialize through one persistence queue and freeze editing', () => {
+  const js = read('pages/patrol-page.js');
+  assert.match(js, /let persistenceTail = Promise\.resolve\(\)/);
+  assert.match(js, /function enqueuePersistence\(task\)/);
+  assert.match(js, /state\.officialSaving = true;\s*setEditingEnabled\(false\)/s);
+  assert.match(js, /await flushRecovery\(\)/);
+  assert.match(js, /enqueuePersistence\(\(\) => savePatrolDocxRevision/);
+});
+
+test('Patrol warns before unload and blocks writes after reporting-night rollover', () => {
+  const js = read('pages/patrol-page.js');
+  assert.match(js, /beforeunload/);
+  assert.match(js, /function ensureReportingNightCurrent\(\)/);
+  assert.match(js, /reportingNightDate\(\)/);
+  assert.match(js, /New reporting night — reload required/);
+});
+
+test('database write boundary removes obsolete direct Patrol writes', () => {
+  const sql = read('supabase/schema.sql');
+  const repo = read('data/repositories/patrol-memo-repository.js');
+  const index = read('data/index.js');
+  assert.match(sql, /revoke all on public\.patrol_memos/i);
+  assert.doesNotMatch(sql, /create or replace function public\.save_patrol_memo\(/i);
+  assert.doesNotMatch(repo, /export async function savePatrolMemo\(/);
+  assert.doesNotMatch(index, /\bsavePatrolMemo,\s*$/m);
+});
+
+test('every lifecycle SECURITY DEFINER path requires an active Patrol', () => {
+  const sql = read('supabase/schema.sql');
+  const activeChecks = sql.match(/ua\.role = 'patrol'\s+and ua\.active = true/g) || [];
+  assert.ok(activeChecks.length >= 8, `expected active-patrol checks across lifecycle RPCs, found ${activeChecks.length}`);
+});

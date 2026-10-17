@@ -1,6 +1,5 @@
--- Clean pre-production beta baseline. Run ONCE in a NEW Supabase project.
--- Do not use this file as a migration for an existing database.
--- The existing beta records are not converted or preserved.
+-- Nurse Memo / Patrol Night canonical schema. Run once on an EMPTY dedicated project.
+-- This is not an in-place migration for an older project; see NEW_REPOSITORY_SETUP.md.
 begin;
 
 
@@ -50,7 +49,7 @@ create table if not exists public.user_access (
   auth_user_id uuid primary key references auth.users(id) on delete cascade,
   login_id text not null,
   display_name text,
-  role text not null check (role in ('ward','manager','maintenance')),
+  role text not null check (role in ('ward','patrol','maintenance')),
   ward_id uuid references public.wards(id) on delete restrict,
   active boolean not null default true,
   created_at timestamptz not null default now(),
@@ -95,7 +94,7 @@ create table if not exists public.report_items (
   effective_from date not null default current_date,
   effective_to date,
   builtin boolean not null default false,
-  manager_slot text,
+  patrol_slot text,
   config jsonb not null default '{"storage":"dynamicItems"}'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now(),
@@ -275,17 +274,17 @@ create policy items_maint_all on public.report_items for all to authenticated us
 drop policy if exists access_self_or_maint_read on public.user_access;
 create policy access_self_or_maint_read on public.user_access for select to authenticated using (auth_user_id=auth.uid() or public.app_role()='maintenance');
 
--- Ward staff: ward account sees/edits only its own colleagues. Manager and maintenance may read all; maintenance may edit all.
+-- Ward staff: ward account sees/edits only its own colleagues. Patrol and maintenance may read all; maintenance may edit all.
 drop policy if exists staff_read on public.ward_staff;
-create policy staff_read on public.ward_staff for select to authenticated using (ward_id=public.app_ward_id() or public.app_role() in ('manager','maintenance'));
+create policy staff_read on public.ward_staff for select to authenticated using (ward_id=public.app_ward_id() or public.app_role() in ('patrol','maintenance'));
 drop policy if exists staff_insert on public.ward_staff;
 create policy staff_insert on public.ward_staff for insert to authenticated with check (ward_id=public.app_ward_id() or public.app_role()='maintenance');
 drop policy if exists staff_update on public.ward_staff;
 create policy staff_update on public.ward_staff for update to authenticated using (ward_id=public.app_ward_id() or public.app_role()='maintenance') with check (ward_id=public.app_ward_id() or public.app_role()='maintenance');
 
--- Clinical reports: ward reads/writes only its own ward; manager reads all full reports. Maintenance does not get report access by default.
+-- Clinical reports: ward reads/writes only its own ward; patrol reads all full reports. Maintenance does not get report access by default.
 drop policy if exists reports_read on public.ward_reports;
-create policy reports_read on public.ward_reports for select to authenticated using (ward_id=public.app_ward_id() or public.app_role()='manager');
+create policy reports_read on public.ward_reports for select to authenticated using (ward_id=public.app_ward_id() or public.app_role()='patrol');
 drop policy if exists reports_insert on public.ward_reports;
 create policy reports_insert on public.ward_reports for insert to authenticated with check (public.app_role()='ward' and ward_id=public.app_ward_id() and public.ward_operational_on(ward_id,report_date));
 drop policy if exists reports_update on public.ward_reports;
@@ -350,8 +349,8 @@ alter table public.ward_cycle_drafts enable row level security;
 alter table public.ward_cycle_revisions enable row level security;
 revoke all on public.ward_cycle_drafts,public.ward_cycle_revisions from public,anon,authenticated;
 
--- Manager working document and immutable Save/Print history.
-create table public.manager_memos (
+-- Patrol working document and immutable Save/Print history.
+create table public.patrol_memos (
  id uuid primary key default gen_random_uuid(),
  reporting_date date not null unique,
  document jsonb not null default '{}'::jsonb,
@@ -365,9 +364,9 @@ create table public.manager_memos (
  created_at timestamptz not null default now(),
  updated_at timestamptz not null default now()
 );
-create table public.manager_memo_revisions (
+create table public.patrol_memo_revisions (
  id uuid primary key default gen_random_uuid(),
- memo_id uuid not null references public.manager_memos(id) on delete cascade,
+ memo_id uuid not null references public.patrol_memos(id) on delete cascade,
  revision_number integer not null,
  revision_type text not null check (revision_type in ('draft','final')),
  reason text not null default 'save',
@@ -378,10 +377,10 @@ create table public.manager_memo_revisions (
  created_by_label text,
  unique(memo_id,revision_number)
 );
-create index manager_memo_revisions_memo_created_idx on public.manager_memo_revisions(memo_id,created_at desc);
-create table public.manager_memo_recovery_snapshots (
+create index patrol_memo_revisions_memo_created_idx on public.patrol_memo_revisions(memo_id,created_at desc);
+create table public.patrol_memo_recovery_snapshots (
  id uuid primary key default gen_random_uuid(),
- memo_id uuid not null references public.manager_memos(id) on delete cascade,
+ memo_id uuid not null references public.patrol_memos(id) on delete cascade,
  reporting_date date not null,
  reason text not null default 'safety_checkpoint',
  document jsonb not null,
@@ -391,18 +390,18 @@ create table public.manager_memo_recovery_snapshots (
  created_by uuid default auth.uid(),
  created_by_label text
 );
-create index manager_memo_recovery_snapshots_memo_created_idx on public.manager_memo_recovery_snapshots(memo_id,created_at desc);
-create index manager_memo_recovery_snapshots_date_created_idx on public.manager_memo_recovery_snapshots(reporting_date desc,created_at desc);
-alter table public.manager_memos enable row level security;
-alter table public.manager_memo_revisions enable row level security;
-alter table public.manager_memo_recovery_snapshots enable row level security;
-create policy manager_memos_select_manager on public.manager_memos for select to authenticated using (public.app_role()='manager');
-create policy manager_revisions_select_manager on public.manager_memo_revisions for select to authenticated using (public.app_role()='manager');
-create policy manager_checkpoints_select_manager on public.manager_memo_recovery_snapshots for select to authenticated using (public.app_role()='manager');
-revoke all on public.manager_memos,public.manager_memo_revisions,public.manager_memo_recovery_snapshots from public,anon,authenticated;
-grant select on public.manager_memos,public.manager_memo_revisions,public.manager_memo_recovery_snapshots to authenticated;
+create index patrol_memo_recovery_snapshots_memo_created_idx on public.patrol_memo_recovery_snapshots(memo_id,created_at desc);
+create index patrol_memo_recovery_snapshots_date_created_idx on public.patrol_memo_recovery_snapshots(reporting_date desc,created_at desc);
+alter table public.patrol_memos enable row level security;
+alter table public.patrol_memo_revisions enable row level security;
+alter table public.patrol_memo_recovery_snapshots enable row level security;
+create policy patrol_memos_select_patrol on public.patrol_memos for select to authenticated using (public.app_role()='patrol');
+create policy patrol_revisions_select_patrol on public.patrol_memo_revisions for select to authenticated using (public.app_role()='patrol');
+create policy patrol_checkpoints_select_patrol on public.patrol_memo_recovery_snapshots for select to authenticated using (public.app_role()='patrol');
+revoke all on public.patrol_memos,public.patrol_memo_revisions,public.patrol_memo_recovery_snapshots from public,anon,authenticated;
+grant select on public.patrol_memos,public.patrol_memo_revisions,public.patrol_memo_recovery_snapshots to authenticated;
 
--- The editable Night Memo DOCX master is managed by Maintenance and read by Manager.
+-- The editable Night Memo DOCX master is managed by Maintenance and read by Patrol.
 -- Only template metadata can be queried by the application directly. The stored
 -- DOCX can only be read/written through role-checked RPC functions.
 create table public.night_memo_visual_templates (
@@ -439,7 +438,7 @@ create trigger trg_night_memo_visual_template_version
 
 alter table public.night_memo_visual_templates enable row level security;
 create policy visual_template_metadata_read on public.night_memo_visual_templates
- for select to authenticated using (public.app_role() in ('manager','maintenance'));
+ for select to authenticated using (public.app_role() in ('patrol','maintenance'));
 revoke all on public.night_memo_visual_templates from public,anon,authenticated;
 grant select(id,version,has_template) on public.night_memo_visual_templates to authenticated;
 
@@ -447,7 +446,7 @@ create or replace function public.read_night_memo_visual_template()
 returns text language plpgsql security definer set search_path = public,pg_temp as $$
 declare v_bytes bytea;
 begin
- if auth.uid() is null or public.app_role() not in ('manager','maintenance') then
+ if auth.uid() is null or public.app_role() not in ('patrol','maintenance') then
    raise exception 'Not permitted to read template' using errcode='42501';
  end if;
  select template_docx into v_bytes from public.night_memo_visual_templates where id=1;
@@ -495,7 +494,7 @@ create table public.night_roster_snapshots (
  primary key(ward_id,reporting_date,report_type)
 );
 alter table public.night_roster_snapshots enable row level security;
-create policy roster_read_manager on public.night_roster_snapshots for select to authenticated using(public.app_role()='manager');
+create policy roster_read_patrol on public.night_roster_snapshots for select to authenticated using(public.app_role()='patrol');
 grant select on public.night_roster_snapshots to authenticated;
 create index night_roster_recent_idx on public.night_roster_snapshots(updated_at desc);
 
@@ -715,7 +714,7 @@ grant execute on function public.get_maintenance_wards_snapshot() to authenticat
 
 
 
-create or replace function public.save_manager_memo_recovery(
+create or replace function public.save_patrol_memo_recovery(
   p_reporting_date date,
   p_document jsonb,
   p_source_snapshot jsonb,
@@ -728,28 +727,28 @@ set search_path = public, pg_temp
 as $$
 declare
   v_uid uuid := auth.uid();
-  v_memo public.manager_memos%rowtype;
+  v_memo public.patrol_memos%rowtype;
 begin
   if v_uid is null or not exists (
     select 1 from public.user_access ua
     where ua.auth_user_id = v_uid
-      and ua.role = 'manager'
+      and ua.role = 'patrol'
       and ua.active = true
   ) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
 
   select * into v_memo
-  from public.manager_memos
+  from public.patrol_memos
   where reporting_date = p_reporting_date
   for update;
 
   if not found then
     if coalesce(p_expected_revision, 0) <> 0 then
-      raise exception 'MANAGER_MEMO_CONFLICT';
+      raise exception 'PATROL_MEMO_CONFLICT';
     end if;
 
-    insert into public.manager_memos (
+    insert into public.patrol_memos (
       id, reporting_date, document, source_snapshot, status, revision,
       created_by, updated_by, created_at, updated_at, finalized_at
     ) values (
@@ -761,10 +760,10 @@ begin
     ) returning * into v_memo;
   else
     if coalesce(v_memo.revision, 0) <> coalesce(p_expected_revision, 0) then
-      raise exception 'MANAGER_MEMO_CONFLICT';
+      raise exception 'PATROL_MEMO_CONFLICT';
     end if;
 
-    update public.manager_memos
+    update public.patrol_memos
     set document = coalesce(p_document, '{}'::jsonb),
         source_snapshot = coalesce(p_source_snapshot, '[]'::jsonb),
         status = 'draft',
@@ -780,7 +779,7 @@ end;
 $$;
 
 
-create or replace function public.save_manager_memo_revision(
+create or replace function public.save_patrol_memo_revision(
   p_reporting_date date,
   p_document jsonb,
   p_source_snapshot jsonb,
@@ -796,35 +795,35 @@ set search_path = public, pg_temp
 as $$
 declare
   v_uid uuid := auth.uid();
-  v_memo public.manager_memos%rowtype;
-  v_revision public.manager_memo_revisions%rowtype;
+  v_memo public.patrol_memos%rowtype;
+  v_revision public.patrol_memo_revisions%rowtype;
   v_next_number integer;
   v_type text := lower(coalesce(p_revision_type, ''));
 begin
   if v_uid is null or not exists (
     select 1 from public.user_access ua
     where ua.auth_user_id = v_uid
-      and ua.role = 'manager'
+      and ua.role = 'patrol'
       and ua.active = true
   ) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
 
   if v_type not in ('draft', 'final') then
-    raise exception 'INVALID_MANAGER_MEMO_REVISION_TYPE';
+    raise exception 'INVALID_PATROL_MEMO_REVISION_TYPE';
   end if;
 
   select * into v_memo
-  from public.manager_memos
+  from public.patrol_memos
   where reporting_date = p_reporting_date
   for update;
 
   if not found then
     if coalesce(p_expected_revision, 0) <> 0 then
-      raise exception 'MANAGER_MEMO_CONFLICT';
+      raise exception 'PATROL_MEMO_CONFLICT';
     end if;
 
-    insert into public.manager_memos (
+    insert into public.patrol_memos (
       id, reporting_date, document, source_snapshot, status, revision,
       created_by, updated_by, finalized_by, finalized_at,
       created_at, updated_at
@@ -840,10 +839,10 @@ begin
     ) returning * into v_memo;
   else
     if coalesce(v_memo.revision, 0) <> coalesce(p_expected_revision, 0) then
-      raise exception 'MANAGER_MEMO_CONFLICT';
+      raise exception 'PATROL_MEMO_CONFLICT';
     end if;
 
-    update public.manager_memos
+    update public.patrol_memos
     set document = coalesce(p_document, '{}'::jsonb),
         source_snapshot = coalesce(p_source_snapshot, '[]'::jsonb),
         status = 'draft',
@@ -858,10 +857,10 @@ begin
 
   select coalesce(max(revision_number), 0) + 1
     into v_next_number
-  from public.manager_memo_revisions
+  from public.patrol_memo_revisions
   where memo_id = v_memo.id;
 
-  insert into public.manager_memo_revisions (
+  insert into public.patrol_memo_revisions (
     memo_id, revision_number, revision_type, reason,
     document, source_snapshot, created_at, created_by, created_by_label
   ) values (
@@ -882,7 +881,7 @@ end;
 $$;
 
 
-create or replace function public.list_manager_memo_revisions(p_reporting_date date)
+create or replace function public.list_patrol_memo_revisions(p_reporting_date date)
 returns jsonb
 language plpgsql
 security definer
@@ -895,18 +894,18 @@ begin
   if v_uid is null or not exists (
     select 1 from public.user_access ua
     where ua.auth_user_id = v_uid
-      and ua.role = 'manager'
+      and ua.role = 'patrol'
       and ua.active = true
   ) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
 
   select coalesce(jsonb_agg(to_jsonb(x) order by x.revision_number desc), '[]'::jsonb)
   into v_result
   from (
     select r.*
-    from public.manager_memo_revisions r
-    join public.manager_memos m on m.id = r.memo_id
+    from public.patrol_memo_revisions r
+    join public.patrol_memos m on m.id = r.memo_id
     where m.reporting_date = p_reporting_date
   ) x;
 
@@ -915,7 +914,7 @@ end;
 $$;
 
 
-create or replace function public.get_manager_memo_revision(p_revision_id uuid)
+create or replace function public.get_patrol_memo_revision(p_revision_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -923,20 +922,20 @@ set search_path = public, pg_temp
 as $$
 declare
   v_uid uuid := auth.uid();
-  v_revision public.manager_memo_revisions%rowtype;
+  v_revision public.patrol_memo_revisions%rowtype;
 begin
   if v_uid is null or not exists (
     select 1 from public.user_access ua
     where ua.auth_user_id = v_uid
-      and ua.role = 'manager'
+      and ua.role = 'patrol'
       and ua.active = true
   ) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
 
   select r.* into v_revision
-  from public.manager_memo_revisions r
-  join public.manager_memos m on m.id = r.memo_id
+  from public.patrol_memo_revisions r
+  join public.patrol_memos m on m.id = r.memo_id
   where r.id = p_revision_id;
 
   if not found then return null; end if;
@@ -945,7 +944,7 @@ end;
 $$;
 
 
-create or replace function public.list_manager_memo_archive()
+create or replace function public.list_patrol_memo_archive()
 returns jsonb
 language plpgsql
 security definer
@@ -958,10 +957,10 @@ begin
   if v_uid is null or not exists (
     select 1 from public.user_access ua
     where ua.auth_user_id = v_uid
-      and ua.role = 'manager'
+      and ua.role = 'patrol'
       and ua.active = true
   ) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
 
   select coalesce(jsonb_agg(to_jsonb(x) order by x.reporting_date desc), '[]'::jsonb)
@@ -972,9 +971,9 @@ begin
       m.reporting_date,
       m.updated_at as recovery_updated_at,
       m.revision as working_revision,
-      (select count(*)::integer from public.manager_memo_revisions r where r.memo_id = m.id) as revision_count,
-      exists(select 1 from public.manager_memo_revisions r where r.memo_id = m.id and r.revision_type = 'draft') as has_draft,
-      exists(select 1 from public.manager_memo_revisions r where r.memo_id = m.id and r.revision_type = 'final') as has_final,
+      (select count(*)::integer from public.patrol_memo_revisions r where r.memo_id = m.id) as revision_count,
+      exists(select 1 from public.patrol_memo_revisions r where r.memo_id = m.id and r.revision_type = 'draft') as has_draft,
+      exists(select 1 from public.patrol_memo_revisions r where r.memo_id = m.id and r.revision_type = 'final') as has_final,
       latest.id as latest_revision_id,
       latest.revision_number as latest_revision_number,
       latest.revision_type as latest_revision_type,
@@ -984,17 +983,17 @@ begin
       coalesce(final_rev.revision_number, latest.revision_number) as preferred_revision_number,
       coalesce(final_rev.revision_type, latest.revision_type) as preferred_revision_type,
       coalesce(final_rev.created_at, latest.created_at) as preferred_revision_created_at
-    from public.manager_memos m
+    from public.patrol_memos m
     left join lateral (
       select r.*
-      from public.manager_memo_revisions r
+      from public.patrol_memo_revisions r
       where r.memo_id = m.id
       order by r.revision_number desc
       limit 1
     ) latest on true
     left join lateral (
       select r.*
-      from public.manager_memo_revisions r
+      from public.patrol_memo_revisions r
       where r.memo_id = m.id and r.revision_type = 'final'
       order by r.revision_number desc
       limit 1
@@ -1006,7 +1005,7 @@ end;
 $$;
 
 
-create or replace function public.checkpoint_manager_memo(
+create or replace function public.checkpoint_patrol_memo(
   p_reporting_date date,
   p_reason text default 'safety_checkpoint',
   p_actor_label text default null
@@ -1018,26 +1017,26 @@ set search_path = public, pg_temp
 as $$
 declare
   v_uid uuid := auth.uid();
-  v_memo public.manager_memos%rowtype;
-  v_snapshot public.manager_memo_recovery_snapshots%rowtype;
+  v_memo public.patrol_memos%rowtype;
+  v_snapshot public.patrol_memo_recovery_snapshots%rowtype;
 begin
   if v_uid is null or not exists (
     select 1 from public.user_access ua
     where ua.auth_user_id = v_uid
-      and ua.role = 'manager'
+      and ua.role = 'patrol'
       and ua.active = true
   ) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
 
   select * into v_memo
-  from public.manager_memos
+  from public.patrol_memos
   where reporting_date = p_reporting_date
   for update;
 
   if not found then return null; end if;
 
-  insert into public.manager_memo_recovery_snapshots (
+  insert into public.patrol_memo_recovery_snapshots (
     memo_id, reporting_date, reason, document, source_snapshot,
     working_revision, created_at, created_by, created_by_label
   ) values (
@@ -1050,11 +1049,11 @@ begin
     now(), v_uid, nullif(trim(coalesce(p_actor_label, '')), '')
   ) returning * into v_snapshot;
 
-  delete from public.manager_memo_recovery_snapshots old
+  delete from public.patrol_memo_recovery_snapshots old
   where old.memo_id = v_memo.id
     and old.id in (
       select id
-      from public.manager_memo_recovery_snapshots
+      from public.patrol_memo_recovery_snapshots
       where memo_id = v_memo.id
       order by created_at desc, id desc
       offset 10
@@ -1065,7 +1064,7 @@ end;
 $$;
 
 
-create or replace function public.list_manager_memo_checkpoints(p_reporting_date date)
+create or replace function public.list_patrol_memo_checkpoints(p_reporting_date date)
 returns jsonb
 language plpgsql
 security definer
@@ -1078,17 +1077,17 @@ begin
   if v_uid is null or not exists (
     select 1 from public.user_access ua
     where ua.auth_user_id = v_uid
-      and ua.role = 'manager'
+      and ua.role = 'patrol'
       and ua.active = true
   ) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
 
   select coalesce(jsonb_agg(to_jsonb(x) order by x.created_at desc), '[]'::jsonb)
   into v_result
   from (
     select s.*
-    from public.manager_memo_recovery_snapshots s
+    from public.patrol_memo_recovery_snapshots s
     where s.reporting_date = p_reporting_date
   ) x;
 
@@ -1097,7 +1096,7 @@ end;
 $$;
 
 
-create or replace function public.get_manager_memo_checkpoint(p_checkpoint_id uuid)
+create or replace function public.get_patrol_memo_checkpoint(p_checkpoint_id uuid)
 returns jsonb
 language plpgsql
 security definer
@@ -1105,19 +1104,19 @@ set search_path = public, pg_temp
 as $$
 declare
   v_uid uuid := auth.uid();
-  v_snapshot public.manager_memo_recovery_snapshots%rowtype;
+  v_snapshot public.patrol_memo_recovery_snapshots%rowtype;
 begin
   if v_uid is null or not exists (
     select 1 from public.user_access ua
     where ua.auth_user_id = v_uid
-      and ua.role = 'manager'
+      and ua.role = 'patrol'
       and ua.active = true
   ) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
 
   select * into v_snapshot
-  from public.manager_memo_recovery_snapshots
+  from public.patrol_memo_recovery_snapshots
   where id = p_checkpoint_id;
 
   if not found then return null; end if;
@@ -1125,37 +1124,37 @@ begin
 end;
 $$;
 
-revoke all on function public.save_manager_memo_recovery(date, jsonb, jsonb, integer) from public;
+revoke all on function public.save_patrol_memo_recovery(date, jsonb, jsonb, integer) from public;
 
-revoke all on function public.save_manager_memo_revision(date, jsonb, jsonb, integer, text, text, text) from public;
+revoke all on function public.save_patrol_memo_revision(date, jsonb, jsonb, integer, text, text, text) from public;
 
-revoke all on function public.list_manager_memo_revisions(date) from public;
+revoke all on function public.list_patrol_memo_revisions(date) from public;
 
-revoke all on function public.get_manager_memo_revision(uuid) from public;
+revoke all on function public.get_patrol_memo_revision(uuid) from public;
 
-revoke all on function public.list_manager_memo_archive() from public;
+revoke all on function public.list_patrol_memo_archive() from public;
 
-revoke all on function public.checkpoint_manager_memo(date, text, text) from public;
+revoke all on function public.checkpoint_patrol_memo(date, text, text) from public;
 
-revoke all on function public.list_manager_memo_checkpoints(date) from public;
+revoke all on function public.list_patrol_memo_checkpoints(date) from public;
 
-revoke all on function public.get_manager_memo_checkpoint(uuid) from public;
+revoke all on function public.get_patrol_memo_checkpoint(uuid) from public;
 
-grant execute on function public.save_manager_memo_recovery(date, jsonb, jsonb, integer) to authenticated;
+grant execute on function public.save_patrol_memo_recovery(date, jsonb, jsonb, integer) to authenticated;
 
-grant execute on function public.save_manager_memo_revision(date, jsonb, jsonb, integer, text, text, text) to authenticated;
+grant execute on function public.save_patrol_memo_revision(date, jsonb, jsonb, integer, text, text, text) to authenticated;
 
-grant execute on function public.list_manager_memo_revisions(date) to authenticated;
+grant execute on function public.list_patrol_memo_revisions(date) to authenticated;
 
-grant execute on function public.get_manager_memo_revision(uuid) to authenticated;
+grant execute on function public.get_patrol_memo_revision(uuid) to authenticated;
 
-grant execute on function public.list_manager_memo_archive() to authenticated;
+grant execute on function public.list_patrol_memo_archive() to authenticated;
 
-grant execute on function public.checkpoint_manager_memo(date, text, text) to authenticated;
+grant execute on function public.checkpoint_patrol_memo(date, text, text) to authenticated;
 
-grant execute on function public.list_manager_memo_checkpoints(date) to authenticated;
+grant execute on function public.list_patrol_memo_checkpoints(date) to authenticated;
 
-grant execute on function public.get_manager_memo_checkpoint(uuid) to authenticated;
+grant execute on function public.get_patrol_memo_checkpoint(uuid) to authenticated;
 
 
 create or replace function public.assert_ward_cycle_access(p_ward_id uuid, p_date date, p_type text)
@@ -1845,7 +1844,7 @@ begin
   if p_action='create' then
     v_role:=p_account->>'role';
     v_ward:=nullif(p_account->>'ward_id','')::uuid;
-    if v_role not in ('ward','manager','maintenance') or v_role is null or
+    if v_role not in ('ward','patrol','maintenance') or v_role is null or
        (v_role='ward' and v_ward is null) or (v_role<>'ward' and v_ward is not null) then
       raise exception 'Invalid account role/ward' using errcode='22023';
     end if;
@@ -1863,7 +1862,7 @@ begin
       v_role:=p_account->>'role';
       v_ward:=nullif(p_account->>'ward_id','')::uuid;
       v_active:=(p_account->>'active')::boolean;
-      if v_role not in ('ward','manager','maintenance') or v_role is null or v_active is null or
+      if v_role not in ('ward','patrol','maintenance') or v_role is null or v_active is null or
          (v_role='ward' and v_ward is null) or (v_role<>'ward' and v_ward is not null) then
         raise exception 'Invalid account role/ward' using errcode='22023';
       end if;
@@ -1924,24 +1923,24 @@ create trigger trg_staff_config_audit after insert or update or delete on public
 
 
 commit;
--- Experimental branch: run ONCE in Supabase SQL Editor before deploying frontend.
--- Keep the existing manager_memos and manager_memo_revisions tables/RPCs.
+-- DOCX storage for Patrol Night memos.
+-- The memo and revision tables are defined earlier in this canonical schema.
 -- Store DOCX bytes as bytea and leave immutable UUID references inside their JSONB document fields.
-create table if not exists public.manager_memo_docx_documents (
+create table if not exists public.patrol_memo_docx_documents (
   id uuid primary key default gen_random_uuid(),
   data bytea not null,
   byte_count integer generated always as (octet_length(data)) stored,
   created_at timestamptz not null default now(),
   created_by uuid not null default auth.uid(),
-  constraint manager_docx_size_limit check (octet_length(data) between 100 and 3145728),
-  constraint manager_docx_zip_magic check (substring(data from 1 for 2) = decode('504b','hex'))
+  constraint patrol_docx_size_limit check (octet_length(data) between 100 and 3145728),
+  constraint patrol_docx_zip_magic check (substring(data from 1 for 2) = decode('504b','hex'))
 );
-create index if not exists manager_docx_created_idx on public.manager_memo_docx_documents(created_at);
-alter table public.manager_memo_docx_documents enable row level security;
-revoke all on public.manager_memo_docx_documents from public, anon, authenticated;
+create index if not exists patrol_docx_created_idx on public.patrol_memo_docx_documents(created_at);
+alter table public.patrol_memo_docx_documents enable row level security;
+revoke all on public.patrol_memo_docx_documents from public, anon, authenticated;
 
--- Atomic binary upload + manager recovery revision check, in one PostgreSQL transaction.
-create or replace function public.save_manager_memo_recovery_docx(
+-- Atomic binary upload + patrol recovery revision check, in one PostgreSQL transaction.
+create or replace function public.save_patrol_memo_recovery_docx(
   p_reporting_date date,
   p_docx_base64 text,
   p_source_snapshot jsonb,
@@ -1953,21 +1952,21 @@ declare
   v_id uuid;
   v_meta jsonb;
 begin
-  if v_uid is null or not exists (select 1 from public.user_access where auth_user_id=v_uid and role='manager' and active=true) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+  if v_uid is null or not exists (select 1 from public.user_access where auth_user_id=v_uid and role='patrol' and active=true) then
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
   if length(coalesce(p_docx_base64,'')) > 4200000 then raise exception 'DOCX_TOO_LARGE'; end if;
   v_binary := decode(p_docx_base64,'base64');
   if octet_length(v_binary) not between 100 and 3145728 or substring(v_binary from 1 for 2) <> decode('504b','hex') then
     raise exception 'INVALID_DOCX';
   end if;
-  insert into public.manager_memo_docx_documents(data,created_by) values (v_binary,v_uid) returning id into v_id;
+  insert into public.patrol_memo_docx_documents(data,created_by) values (v_binary,v_uid) returning id into v_id;
   v_meta := jsonb_build_object('version',5,'format','docx','document_id',v_id,'size_bytes',octet_length(v_binary));
-  return public.save_manager_memo_recovery(p_reporting_date,v_meta,p_source_snapshot,p_expected_revision);
+  return public.save_patrol_memo_recovery(p_reporting_date,v_meta,p_source_snapshot,p_expected_revision);
 end;
 $$;
 
-create or replace function public.save_manager_memo_revision_docx(
+create or replace function public.save_patrol_memo_revision_docx(
   p_reporting_date date,
   p_docx_base64 text,
   p_source_snapshot jsonb,
@@ -1982,44 +1981,44 @@ declare
   v_id uuid;
   v_meta jsonb;
 begin
-  if v_uid is null or not exists (select 1 from public.user_access where auth_user_id=v_uid and role='manager' and active=true) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+  if v_uid is null or not exists (select 1 from public.user_access where auth_user_id=v_uid and role='patrol' and active=true) then
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
   if length(coalesce(p_docx_base64,'')) > 4200000 then raise exception 'DOCX_TOO_LARGE'; end if;
   v_binary := decode(p_docx_base64,'base64');
   if octet_length(v_binary) not between 100 and 3145728 or substring(v_binary from 1 for 2) <> decode('504b','hex') then
     raise exception 'INVALID_DOCX';
   end if;
-  insert into public.manager_memo_docx_documents(data,created_by) values (v_binary,v_uid) returning id into v_id;
+  insert into public.patrol_memo_docx_documents(data,created_by) values (v_binary,v_uid) returning id into v_id;
   v_meta := jsonb_build_object('version',5,'format','docx','document_id',v_id,'size_bytes',octet_length(v_binary));
-  return public.save_manager_memo_revision(p_reporting_date,v_meta,p_source_snapshot,p_expected_revision,p_revision_type,p_reason,p_actor_label);
+  return public.save_patrol_memo_revision(p_reporting_date,v_meta,p_source_snapshot,p_expected_revision,p_revision_type,p_reason,p_actor_label);
 end;
 $$;
 
-create or replace function public.read_manager_memo_docx(p_document_id uuid)
+create or replace function public.read_patrol_memo_docx(p_document_id uuid)
 returns text language plpgsql security definer set search_path = public, pg_temp as $$
 declare v_data bytea;
 begin
-  if auth.uid() is null or not exists (select 1 from public.user_access where auth_user_id=auth.uid() and role='manager' and active=true) then
-    raise exception 'MANAGER_ACCESS_REQUIRED';
+  if auth.uid() is null or not exists (select 1 from public.user_access where auth_user_id=auth.uid() and role='patrol' and active=true) then
+    raise exception 'PATROL_ACCESS_REQUIRED';
   end if;
-  -- Reject guessing any doc not currently reachable through authorized Manager data.
+  -- Reject guessing any doc not currently reachable through authorized Patrol data.
   if not exists (
-    select 1 from public.manager_memos m where m.document->>'document_id'=p_document_id::text
-    union all select 1 from public.manager_memo_revisions r where r.document->>'document_id'=p_document_id::text
-    union all select 1 from public.manager_memo_recovery_snapshots s where s.document->>'document_id'=p_document_id::text
+    select 1 from public.patrol_memos m where m.document->>'document_id'=p_document_id::text
+    union all select 1 from public.patrol_memo_revisions r where r.document->>'document_id'=p_document_id::text
+    union all select 1 from public.patrol_memo_recovery_snapshots s where s.document->>'document_id'=p_document_id::text
   ) then raise exception 'DOCX_NOT_REFERENCED'; end if;
-  select data into v_data from public.manager_memo_docx_documents where id=p_document_id;
+  select data into v_data from public.patrol_memo_docx_documents where id=p_document_id;
   if not found then raise exception 'DOCX_NOT_FOUND'; end if;
   return encode(v_data,'base64');
 end;
 $$;
 
-revoke all on function public.save_manager_memo_recovery_docx(date,text,jsonb,integer) from public;
-revoke all on function public.save_manager_memo_revision_docx(date,text,jsonb,integer,text,text,text) from public;
-revoke all on function public.read_manager_memo_docx(uuid) from public;
-grant execute on function public.save_manager_memo_recovery_docx(date,text,jsonb,integer) to authenticated;
-grant execute on function public.save_manager_memo_revision_docx(date,text,jsonb,integer,text,text,text) to authenticated;
-grant execute on function public.read_manager_memo_docx(uuid) to authenticated;
+revoke all on function public.save_patrol_memo_recovery_docx(date,text,jsonb,integer) from public;
+revoke all on function public.save_patrol_memo_revision_docx(date,text,jsonb,integer,text,text,text) from public;
+revoke all on function public.read_patrol_memo_docx(uuid) from public;
+grant execute on function public.save_patrol_memo_recovery_docx(date,text,jsonb,integer) to authenticated;
+grant execute on function public.save_patrol_memo_revision_docx(date,text,jsonb,integer,text,text,text) to authenticated;
+grant execute on function public.read_patrol_memo_docx(uuid) to authenticated;
 
--- Experiment safety: leave legacy JSON save RPC grants unchanged.
+-- JSON recovery RPC permissions are defined with the canonical schema.

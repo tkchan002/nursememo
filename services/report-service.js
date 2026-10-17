@@ -30,7 +30,7 @@ export async function loadHistoricalReportContext(wardId, report) {
   return { report, capacity, items };
 }
 
-export async function loadManagerCurrent() {
+export async function loadPatrolCurrent() {
   const date = reportNightDate();
   // A reporting cycle has two explicit, independently submitted source records.
   const [allItems, allWards, reports] = await Promise.all([

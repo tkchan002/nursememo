@@ -1,10 +1,10 @@
 # Nurse Memo — Self-hosted ranuts/document test branch
 
-**Patrol Night is still the user-facing name of `manager.html`.** The document inside it is **Night Memo**.
+**Patrol Night is still the user-facing name of `patrol.html`.** The document inside it is **Night Memo**.
 
 ## What this complete source ZIP contains
 
-**Use [ONE_REPOSITORY_OFFICE_FIX.md](ONE_REPOSITORY_OFFICE_FIX.md) for the latest routing fix and deployment instructions.**
+**Use [NEW_REPOSITORY_SETUP.md](NEW_REPOSITORY_SETUP.md) for the current installation instructions.**
 
 - Nurse Memo application, Supabase DOCX/PostgreSQL storage logic, Ward/Maintenance/Staffing workflows and regression tests.
 - An iframe adapter pointing to `office/editor.html` on **your own GitHub Pages domain**. It no longer points to `edit.chaxus.com`.
@@ -14,16 +14,16 @@
 
 **The upstream binary editor is NOT inside the ZIP**; it is retrieved and built automatically by GitHub Actions. This keeps your Git repository small while making the deployed editor self-hosted. Uploading this ZIP does not itself prove the published editor works; the remote build and actual browser test are required.
 
-## Deploy to your existing test branch
+## Deploy to a newly created repository
 
-1. Stay on `docx-editor-test`. Upload/extract this **entire** ZIP at repository root, maintaining folder paths (especially `.github/workflows`, `documents`, `editor`, `scripts`, `supabase`). Delete obsolete root-level `manager-ranuts.js` if it is still there.
+1. Create a new repository with a fresh initial commit. Extract/upload this **entire** ZIP at repository root, maintaining folder paths (especially `.github/workflows`, `documents`, `editor`, `scripts`, `supabase`).
 2. Ensure **Settings → Pages → Build and deployment → Source = GitHub Actions**.
 3. Commit and inspect **Actions → Build and Deploy Nurse Memo (Self-Hosted Document)**.
 4. Allow more time than before: GitHub Actions must download and build a large upstream repository. The upstream static build may occupy several hundred MB of the approximately 1 GB published-site budget.
 5. Once deployed, verify `https://nursememo.app/office/nurse-memo-editor-build.json` reports `"officeBase": "/office/"` and `"packagingFix": "onlyoffice-nested-index-path-v2"` (for a custom-domain root). The actual editor is `office/editor.html`; the embedded-mode page alone is not a functional opening test. Open Night Memo from Patrol Night and verify the real document pages display.
 6. Open Patrol Night. Immediately test Night Memo for the loading screen, edit/save/reopen a Draft, Preview/PDF, Print Final, and History read-only view. Repeat after a cold browser start and measure load times.
 
-No further Supabase SQL changes are introduced by **this** hosting update. It assumes the existing DOCX/PostgreSQL migration was already applied in your testing branch.
+Supabase uses the canonical clean-install `supabase/schema.sql`; see `NEW_REPOSITORY_SETUP.md`.
 
 ## Custom domain / GitHub user-root site
 
@@ -42,7 +42,7 @@ Upstream is AGPL-3.0 and derives from ONLYOFFICE; licence and NOTICE are publish
 - GitHub Pages does **not** implement Cloudflare `_headers`, and upstream recently moved its GitHub Pages workflow to a redirect rather than the complete application. The route-fix version now reproduces and prevents the previously observed nested `/index.html` bug using synthetic vendor fixtures. The complete upstream build **could not be downloaded or browser-tested in this environment**; runtime startup and PDF export still require a Pages browser test.
 - The upstream bundle may approach GitHub Pages' site-size and monthly bandwidth soft limits. The deployment script fails rather than silently omitting SDK files if the site exceeds its conservative limit.
 - Background warm-up uses memory and bandwidth even if the Nursing Officer never opens Night Memo. It does not make cold-start CPU costs disappear.
-- If this workflow deploys from a branch, remember that GitHub Pages exposes one published site per repo. The `main` and `docx-editor-test` deployment workflows share the same Pages site.
+- The release workflow deploys from `main`; only that branch should publish Pages.
 - The built-in **File → Download As → PDF** export previously discarded its output in embedded mode. Nurse Memo now applies a strict build-time upstream patch to send native exports back to its verified iframe host; PDF export opens the existing preview and attempts a download. The separate **Preview/Print** API remains available. Confirm the built-in menu in a deployed browser before treating this as end-to-end verified. See [NATIVE_EDITOR_DOWNLOAD_FIX.md](NATIVE_EDITOR_DOWNLOAD_FIX.md).
 
 ## Local test evidence

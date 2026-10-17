@@ -4,7 +4,7 @@
 import Docxtemplater from 'docxtemplater';
 import PizZip from 'pizzip';
 import { assertDocxBytes } from './docx-bytes.js';
-import { buildManagerDocxBytes } from './manager-docx.js';
+import { buildPatrolDocxBytes } from './patrol-docx.js';
 
 const mainFields = ['ward','admissionEC','admissionCC','transferIn','discharge','transferOut','death','totalPatient','emptyBed','ventilator','bipap','hfnc','staff'];
 const infectionFields = ['ward','covid','cre','vre','mdra','cd','influenza','hdCapd','remarks'];
@@ -89,5 +89,5 @@ export async function buildEditableTemplateSample() {
       femaleGeneral:'{femaleGeneral}',femaleCohort:'{femaleCohort}'},
     signature:{name:'{signatureName}',designation:'{signatureDesignation}'},
   };
-  return buildManagerDocxBytes(sample);
+  return buildPatrolDocxBytes(sample);
 }

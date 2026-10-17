@@ -4,7 +4,7 @@ import { readFile } from 'node:fs/promises';
 import { calculateEmptyBeds, resolveReportEmptyBeds, displayEmptyBeds } from '../domain/bed-occupancy.js';
 import { validateReportPayload } from '../domain/report-validation.js';
 import { normalizeReportPayload, fullReportPayloadDefaults } from '../domain/report-model.js';
-import { buildManagerMemoData, formatManagerEmptyBeds } from '../domain/manager-memo.js';
+import { buildPatrolMemoData, formatPatrolEmptyBeds } from '../domain/patrol-memo.js';
 import { renderWardMemoHtml } from '../ward-print.js';
 
 const ward = { id: 'w1', name: 'Ward A', empty_bed_gender_mode: 'male' };
@@ -48,15 +48,15 @@ test('save-boundary validation derives the same negative count before persistenc
   assert.ok(warnings.some(w => w.includes('greater than')));
 });
 
-test('Manager uses newest Night census, its capacity snapshot and signed empty-bed count', () => {
+test('Patrol uses newest Night census, its capacity snapshot and signed empty-bed count', () => {
   const pm = report('pm', 30, 26, 4);
   const night = report('night', 30, 41, 0);
   const bundle = [{ ward, capacity: 100, pmReport: pm, nightReport: night, report: night }];
-  const document = buildManagerMemoData({ bundle });
+  const document = buildPatrolMemoData({ bundle });
   assert.equal(document.mainTableRows[0].totalPatient, '41');
   assert.equal(document.mainTableRows[0].emptyBed, '-11');
   assert.match(document.emptyBedHtml, /Ward A: -11/);
-  assert.equal(formatManagerEmptyBeds(ward, night, 100), '-11');
+  assert.equal(formatPatrolEmptyBeds(ward, night, 100), '-11');
 });
 
 test('Ward printable report shows the same signed value, without any zero clamp', () => {
@@ -66,11 +66,11 @@ test('Ward printable report shows the same signed value, without any zero clamp'
   assert.doesNotMatch(html, /Empty Bed: M 0/);
 });
 
-test('Ward, Manager, history and print consumers delegate to the domain calculation', async () => {
+test('Ward, Patrol, history and print consumers delegate to the domain calculation', async () => {
   for (const [name, marker] of [
     ['pages/ward-page.js', 'calculateEmptyBeds('],
     ['pages/ward-page.js', 'resolveReportEmptyBeds('],
-    ['domain/manager-memo.js', 'resolveReportEmptyBeds('],
+    ['domain/patrol-memo.js', 'resolveReportEmptyBeds('],
     ['ward-print.js', 'resolveReportEmptyBeds('],
     ['domain/report-validation.js', 'calculateEmptyBeds('],
   ]) {

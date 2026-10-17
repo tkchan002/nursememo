@@ -31,7 +31,7 @@ test('index.html is the only login document', () => {
   assert.match(indexHtml, /class="login-role-grid"/);
   assert.equal((indexHtml.match(/class="login-option login-role-card"/g) || []).length, 3);
   assert.match(indexHtml, /data-role="ward"/);
-  assert.match(indexHtml, /data-role="manager"/);
+  assert.match(indexHtml, /data-role="patrol"/);
   assert.match(indexHtml, /data-role="maintenance"/);
 });
 
@@ -76,10 +76,10 @@ test('runtime/build source contains no login.html route', () => {
 
 test('role selection and successful authentication routes remain explicit', () => {
   assert.match(loginPage, /ward:\s*'Ward Login'/);
-  assert.match(loginPage, /manager:\s*'Patrol Night Login'/);
+  assert.match(loginPage, /patrol:\s*'Patrol Night Login'/);
   assert.match(loginPage, /maintenance:\s*`\$\{CONFIG\.APP_NAME\} Maintenance`/);
   assert.match(loginPage, /await signIn\(qs\('#loginId'\)\.value, qs\('#password'\)\.value, role\)/);
   assert.match(loginPage, /'\.\/ward\.html'/);
-  assert.match(loginPage, /'\.\/manager\.html'/);
+  assert.match(loginPage, /'\.\/patrol\.html'/);
   assert.match(loginPage, /'\.\/maintenance\.html'/);
 });

@@ -6,17 +6,17 @@ import { modeBadge } from '../components/app-shell.js';
 const DB_MODE = APP_RUNTIME.mode;
 const titles = {
   ward: 'Ward Login',
-  manager: 'Patrol Night Login',
+  patrol: 'Patrol Night Login',
   maintenance: `${CONFIG.APP_NAME} Maintenance`,
 };
 const defaults = {
   ward: 'C10',
-  manager: 'patrol',
+  patrol: 'patrol',
   maintenance: 'NightMaintenance',
 };
 const destinations = {
   ward: './ward.html',
-  manager: './manager.html',
+  patrol: './patrol.html',
   maintenance: './maintenance.html',
 };
 

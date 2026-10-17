@@ -39,7 +39,7 @@ test('Live form version remains the registered version 1', () => {
   assert.doesNotMatch(service, /form_version:\s*2/);
 });
 
-test('Repository exposes draft persistence without changing Manager recent-submission query', () => {
+test('Repository exposes draft persistence without changing Patrol recent-submission query', () => {
   assert.match(repo, /export async function saveWardCycleDraft/);
   assert.match(repo, /export async function getWardCycleReport/);
   assert.match(repo, /report_type/);

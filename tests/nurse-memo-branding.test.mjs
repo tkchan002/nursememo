@@ -15,10 +15,10 @@ test('all entry points show Nurse Memo product branding', () => {
   assert.equal(CONFIG.APP_NAME, 'Nurse Memo');
   for (const [file, context] of [
     ['index.html', 'Login'], ['ward.html','Ward'],
-    ['manager.html','Patrol Night'], ['maintenance.html','Maintenance'],
+    ['patrol.html','Patrol Night'], ['maintenance.html','Maintenance'],
     ['print.html','Print'],
   ]) assert.match(read(file), new RegExp(String.raw`<title>Nurse Memo \| ${context}<\/title>`));
-  for (const page of ['index.html', 'manager.html','maintenance.html']) {
+  for (const page of ['index.html', 'patrol.html','maintenance.html']) {
     assert.match(read(page), /class="legacy-title-text"[^>]*>Nurse Memo<\/div>/);
   }
   assert.equal(JSON.parse(read('package.json')).name, 'nurse-memo');
@@ -48,5 +48,5 @@ test('report formats and audit namespace are unchanged by branding', () => {
 test('PM Memo and Night Memo remain distinct report names', () => {
   assert.deepEqual(MEMO_LABELS, {pm:'PM Memo', night:'Night Memo'});
   assert.match(read('ward.html'), /<option value="night">Night Memo<\/option>/);
-  assert.match(read('manager.html'), /data-manager-tab="memo"[^>]*>Night Memo<\/button>/);
+  assert.match(read('patrol.html'), /data-patrol-tab="memo"[^>]*>Night Memo<\/button>/);
 });

@@ -3,7 +3,7 @@
  * Negative results are valid (patients can exceed nominal bed capacity).
  * Unknown values must never be converted to zero.
  *
- * Keep this dependency-free so Ward, Manager, history, validation and printing
+ * Keep this dependency-free so Ward, Patrol, history, validation and printing
  * use exactly the same calculation.
  */
 function wholeNumber(value, { allowNegative = false } = {}) {

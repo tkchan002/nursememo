@@ -36,9 +36,9 @@ test('roster document font sizes are clamped; untrusted values cannot inject CSS
   assert.doesNotMatch(large, /src="" onerror="x"/);
 });
 
-test('Manager exposes a modal preview instead of navigating immediately from roster buttons', async () => {
-  const html = await read('manager.html');
-  const js = await read('pages/manager-night-operations.js');
+test('Patrol exposes a modal preview instead of navigating immediately from roster buttons', async () => {
+  const html = await read('patrol.html');
+  const js = await read('pages/patrol-night-operations.js');
   for (const id of ['rosterPreviewModal','rosterPreviewFrame','rosterPreviewFontSize',
     'rosterPreviewPrintBtn','rosterPreviewCloseBtn','rosterPreviewResetBtn']) {
     assert.match(html, new RegExp(`id="${id}"`));
@@ -53,10 +53,10 @@ test('Manager exposes a modal preview instead of navigating immediately from ros
 
 test('screen typography is enhanced without altering print-sheet sizes', async () => {
   const theme = await read('css/theme.css');
-  assert.match(theme, /body\.legacy-page\.ward-page, body\.legacy-page\.manager-page,/);
+  assert.match(theme, /body\.legacy-page\.ward-page, body\.legacy-page\.patrol-page,/);
   assert.match(theme, /font-size:14px; line-height:1\.43/);
   assert.match(theme, /font-size:13px; line-height:18px; min-height:28px; height:28px/);
-  assert.match(theme, /\.manager-print-page/);
+  assert.match(theme, /\.patrol-print-page/);
 });
 
 test('Maintenance previews the generated Auth email and retains its existing authorized rename', async () => {
@@ -69,11 +69,12 @@ test('Maintenance previews the generated Auth email and retains its existing aut
   assert.doesNotMatch(html, /id="accountLogin"[^>]*placeholder=/);
 });
 
-test('manager accepts the shorter demo login without changing the existing Supabase identity', async () => {
+test('Patrol Night uses its canonical account with no transitional login aliases', async () => {
   const auth = await read('services/auth-service.js');
   const entry = await read('pages/login-page.js');
-  assert.match(entry, /manager: 'patrol'/);
-  assert.match(auth, /expectedRole === 'manager' && account\.toLowerCase\(\) === 'patrol'/);
-  assert.match(auth, /loginIdToEmail\('PatrolNight'\)/);
-  assert.match(auth, /INSECURE_TEST_PASSWORDS && expectedRole === 'manager'/);
+  const bootstrap = await read('scripts/bootstrap-accounts.mjs');
+  assert.match(entry, /patrol: 'patrol'/);
+  assert.match(bootstrap, /\['patrol', 'patrol'\]/);
+  assert.doesNotMatch(auth, /oldDemoPatrol|legacyPassword/);
+  assert.match(auth, /loginIdToEmail\(account\)/);
 });

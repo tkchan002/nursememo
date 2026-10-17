@@ -21,13 +21,13 @@ test('account creation requires valid short ID, sufficiently long password and w
     action: 'create', login_id: 'C10', role: 'ward', password: '12345678',
   }), InputError);
   assert.throws(() => parseAdminCommand({
-    action: 'create', login_id: 'C10', role: 'manager', password: 'weak',
+    action: 'create', login_id: 'C10', role: 'patrol', password: 'weak',
   }), InputError);
 });
 
 test('non-ward accounts never retain an extraneous ward assignment', () => {
-  const result = parseAdminCommand({ action: 'create', login_id: 'PatrolNight',
-    role: 'manager', ward_id: ward, password: '12345678' });
+  const result = parseAdminCommand({ action: 'create', login_id: 'patrol',
+    role: 'patrol', ward_id: ward, password: '12345678' });
   assert.equal(result.ward_id, null);
 });
 

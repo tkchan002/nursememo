@@ -1,6 +1,6 @@
 /*
  * Nurse Memo clinical UI - independently authored from clinical UI reference.
- * Source of truth for shared SCREEN controls across Ward, Manager and Maintenance.
+ * Source of truth for shared SCREEN controls across Ward, Patrol and Maintenance.
  * The application retains its original HTML IDs, JavaScript, persistence, and
  * dedicated print-document styles. No CMS stylesheets, scripts or assets used.
  *
@@ -34,14 +34,14 @@
     --panel-bg2: var(--ui-paper);
   }
   body.legacy-page.ward-page,
-  body.legacy-page.manager-page,
+  body.legacy-page.patrol-page,
   body.legacy-page.maintenance-page {
     background: var(--ui-page);
     color: #232323;
     font: 13px/1.38 Tahoma, Verdana, Arial, sans-serif;
   }
 
-  /* Shared clinical title bar; Ward adds the same component used by Manager. */
+  /* Shared clinical title bar; Ward adds the same component used by Patrol. */
   .legacy-window-title {
     min-height: 44px;
     padding: 5px 11px;
@@ -59,7 +59,7 @@
   }
 
   /* Compact grey clinical interface. All navigation tabs share one component. */
-  :is(.tab-strip, .legacy-tabs, .hd-tab-strip, .manager-primary-tabs) {
+  :is(.tab-strip, .legacy-tabs, .hd-tab-strip, .patrol-primary-tabs) {
     display: flex;
     flex-wrap: nowrap;
     align-items: flex-end;
@@ -76,7 +76,7 @@
     scrollbar-width: thin;
     position: relative;
   }
-  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab) {
+  :is(.tab, .legacy-tab, .hd-tab, .patrol-primary-tab) {
     appearance: none;
     box-sizing: border-box;
     flex: 0 0 auto;
@@ -101,11 +101,11 @@
     top: auto;
     white-space: nowrap;
   }
-  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab):hover:not(.active):not(:disabled) {
+  :is(.tab, .legacy-tab, .hd-tab, .patrol-primary-tab):hover:not(.active):not(:disabled) {
     background: linear-gradient(to bottom, #fff, #f0f0f0);
     color: #333;
   }
-  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab).active {
+  :is(.tab, .legacy-tab, .hd-tab, .patrol-primary-tab).active {
     bottom: -1px;
     top: auto;
     z-index: 3;
@@ -116,11 +116,11 @@
     border-bottom: 1px solid #eaeaea;
     box-shadow: none;
   }
-  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab):focus-visible {
+  :is(.tab, .legacy-tab, .hd-tab, .patrol-primary-tab):focus-visible {
     outline: 2px solid var(--ui-focus);
     outline-offset: -2px;
   }
-  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab):disabled {
+  :is(.tab, .legacy-tab, .hd-tab, .patrol-primary-tab):disabled {
     opacity: .45; cursor: default;
   }
 
@@ -198,12 +198,12 @@
   }
 
   /* Clinical surfaces / table headers: no coloured yellow outline. */
-  :is(.main-panel, .legacy-panel, .manager-tab-panel) {
+  :is(.main-panel, .legacy-panel, .patrol-tab-panel) {
     background: var(--ui-paper);
     border: 1px solid #d0d0d0;
     box-shadow: none;
   }
-  .manager-tab-panel {padding: 12px}
+  .patrol-tab-panel {padding: 12px}
   :is(.legacy-panel-body, .legacy-page-view) {padding: 13px 16px}
   :is(.legacy-section-title, .section-title, .sec-title) {
     color: var(--ui-title);
@@ -265,7 +265,7 @@
   }
 
   /* Modal surfaces without introducing alternate UI frameworks. */
-  :is(.modal-card, .manager-modal-card) {
+  :is(.modal-card, .patrol-modal-card) {
     background: var(--ui-paper);
     border: 2px solid #6d819e;
     border-radius: 2px;
@@ -371,13 +371,13 @@
 
 /* Readable screen typography: preserve print-document and Night Memo sheet sizes. */
 @media screen {
-  body.legacy-page.ward-page, body.legacy-page.manager-page,
+  body.legacy-page.ward-page, body.legacy-page.patrol-page,
   body.legacy-page.maintenance-page { font-size:14px; line-height:1.43; }
-  :is(.tab, .legacy-tab, .hd-tab, .manager-primary-tab) {
+  :is(.tab, .legacy-tab, .hd-tab, .patrol-primary-tab) {
     font-size:13px; line-height:18px; min-height:28px; height:28px;
     padding:4px 10px;
   }
-  :is(.tab-strip, .legacy-tabs, .hd-tab-strip, .manager-primary-tabs) {
+  :is(.tab-strip, .legacy-tabs, .hd-tab-strip, .patrol-primary-tabs) {
     height:31px; min-height:31px;
   }
   :is(.data-table, .legacy-table, .report-table, .dt, .submission-table,
@@ -391,13 +391,13 @@
   .ward-page .fl, .ward-page .fc, .ward-page .fc label,
   .ward-page .ro-fl, .ward-page .ro-fc,
   .maintenance-page .field label, .maintenance-page .maintenance-description,
-  .manager-page .manager-archive-meta, .manager-page .manager-history-night-meta {font-size:14px}
+  .patrol-page .patrol-archive-meta, .patrol-page .patrol-history-night-meta {font-size:14px}
   .ward-page .ro-tbl, .ward-page #gdTable {font-size:14px}
   .ward-page #gdTable th, .ward-page .ro-tbl th {font-size:13px}
   .legacy-window-title .legacy-subtitle,
   .legacy-user-badge, .user-badge, .mode-badge {font-size:12px}
   .ward-page .ward-window-title .legacy-subtitle {font-size:12px}
   .maintenance-page .account-auth-email {font-size:12px}
-  /* Intentionally no global font overrides of .memo-sheet, .manager-print-page,
+  /* Intentionally no global font overrides of .memo-sheet, .patrol-print-page,
      .pdf-preview, iframe content, or @media print. */
 }

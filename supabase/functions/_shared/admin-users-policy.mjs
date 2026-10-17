@@ -6,7 +6,7 @@ export class InputError extends Error {
   constructor(message) { super(message); this.name = 'InputError'; }
 }
 
-const ROLES = new Set(['ward', 'manager', 'maintenance']);
+const ROLES = new Set(['ward', 'patrol', 'maintenance']);
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function text(value, name, maxLength, required = true) {

@@ -4,7 +4,7 @@ import { test } from 'node:test';
 
 const read = relativePath => readFileSync(new URL(`../${relativePath}`, import.meta.url), 'utf8');
 
-for (const page of ['index.html', 'ward.html', 'manager.html', 'maintenance.html', 'print.html']) {
+for (const page of ['index.html', 'ward.html', 'patrol.html', 'maintenance.html', 'print.html']) {
   test(`${page} contains no inline presentation or event attributes`, () => {
     const html = read(page);
     assert.doesNotMatch(html, /\sstyle\s*=/i);
@@ -27,7 +27,7 @@ test('Ward commands are declarative and bound once through the page module', () 
 });
 
 test('Other screens use registered event listeners instead of overwriting event properties', () => {
-  for (const file of ['pages/login-page.js', 'pages/manager-page.js', 'pages/maintenance-page.js', 'pages/maintenance-test-data.js']) {
+  for (const file of ['pages/login-page.js', 'pages/patrol-page.js', 'pages/maintenance-page.js', 'pages/maintenance-test-data.js']) {
     assert.doesNotMatch(read(file), /\.on(?:click|change|input|submit)\s*=/, `${file} contains an event-property assignment`);
     assert.match(read(file), /\.addEventListener\(/);
   }
@@ -53,6 +53,6 @@ test('shared UI design controls login and print chrome without modifying report 
   assert.match(read('css/login.css'), /login-role-card/);
   assert.match(read('css/print-view.css'), /\.print-view-toolbar \.print-view-button:hover/);
   assert.doesNotMatch(read('print.js'), /installShellOverrides|style\.textContent/);
-  assert.match(read('css/manager.css'), /\.formatting-tools button:active/);
+  assert.match(read('css/patrol.css'), /\.formatting-tools button:active/);
   assert.match(read('css/theme.css'), /font:\s*700 11px\/15px Tahoma/);
 });

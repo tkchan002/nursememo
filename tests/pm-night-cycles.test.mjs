@@ -6,9 +6,9 @@ import {
   combinedMovementValue, missingMemoTypes, selectLatestCensus,
 } from '../domain/report-cycle.js';
 import {
-  buildManagerMemoData,
+  buildPatrolMemoData,
   sourceSnapshotFromBundle, sourceSnapshotSignature,
-} from '../domain/manager-memo.js';
+} from '../domain/patrol-memo.js';
 import { normalizeReportPayload } from '../domain/report-model.js';
 
 const pm = { id: 'pm-1', ward_id: 'w1', report_type: 'pm', submitted_at: '2026-10-12T13:12:00Z', payload: {
@@ -33,7 +33,7 @@ test('reporting-night identity is the same at 9PM and following 4AM in Hong Kong
 });
 
 test('non-overlapping PM and Night movements are added, never latest-only', () => {
-  const row = buildManagerMemoData({ bundle, reportingDate: '2026-10-12' }).mainTableRows[0];
+  const row = buildPatrolMemoData({ bundle, reportingDate: '2026-10-12' }).mainTableRows[0];
   assert.equal(row.admissionEC,'5');
   assert.equal(row.admissionCC,'1');
   assert.equal(row.transferIn,'1');
@@ -43,7 +43,7 @@ test('non-overlapping PM and Night movements are added, never latest-only', () =
 });
 
 test('4AM census is latest and not the sum of PM + Night', () => {
-  const row = buildManagerMemoData({ bundle }).mainTableRows[0];
+  const row = buildPatrolMemoData({ bundle }).mainTableRows[0];
   assert.equal(row.totalPatient,'27');
   assert.match(row.emptyBed,/3 \(1ISO \(TB\)\)/);
   assert.equal(selectLatestCensus(pm, night), night);
@@ -54,12 +54,12 @@ test('missing memo is visible to callers rather than treated as completed zero',
   assert.deepEqual(missingMemoTypes(null, night), ['pm']);
   assert.deepEqual(missingMemoTypes(null, null), ['pm', 'night']);
   assert.equal(combinedMovementValue(null, null, 'admissionEC'), '');
-  const partial = buildManagerMemoData({ bundle: [{ ward, capacity: 30, pmReport: pm, nightReport: null, report: pm }] }).mainTableRows[0];
+  const partial = buildPatrolMemoData({ bundle: [{ ward, capacity: 30, pmReport: pm, nightReport: null, report: pm }] }).mainTableRows[0];
   assert.equal(partial.admissionEC,'3');
   assert.equal(partial.totalPatient,'26');
 });
 
-test('manager source snapshot records both original source report IDs and their type', () => {
+test('patrol source snapshot records both original source report IDs and their type', () => {
   const snapshot = sourceSnapshotFromBundle(bundle);
   assert.equal(snapshot.length, 2);
   assert.deepEqual(snapshot.map(x => [x.memo_type, x.report_id]), [['night', 'night-1'], ['pm', 'pm-1']]);
@@ -67,8 +67,8 @@ test('manager source snapshot records both original source report IDs and their 
 });
 
 test('regeneration source data is independent of existing edited DOCX bytes',()=>{
-  const initial=buildManagerMemoData({bundle});
-  const regenerated=buildManagerMemoData({bundle:[{ward,capacity:30,pmReport:null,nightReport:night,report:night}]});
+  const initial=buildPatrolMemoData({bundle});
+  const regenerated=buildPatrolMemoData({bundle:[{ward,capacity:30,pmReport:null,nightReport:night,report:night}]});
   assert.notEqual(initial.mainTableRows[0].admissionEC,regenerated.mainTableRows[0].admissionEC);
   assert.ok(Object.hasOwn(regenerated,'additionalReportHtml'));
 });

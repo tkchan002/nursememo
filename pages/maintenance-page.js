@@ -18,6 +18,7 @@ import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
 import { loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
 import { validateMaintenancePassword, toStoredMaintenancePassword } from '../domain/maintenance-accounts.js';
 import { assertDocxBytes } from '../documents/docx-bytes.js';
+import { roleDisplayName } from '../core/role-labels.js';
 
 const $ = qs;
 const state = {
@@ -342,7 +343,7 @@ function renderAccounts() {
         : '<span class="tag">Confirmed</span>';
     const lastLogin = a.auth_last_sign_in_at ? esc(formatDateTime(a.auth_last_sign_in_at)) : '—';
     const disabled = exists ? '' : ' disabled title="No Supabase Authentication account"';
-    return `<tr><td>${esc(a.login_id)}${a.auth_email ? `<div class="muted account-auth-email">${esc(a.auth_email)}</div>` : ''}</td><td>${esc(a.role)}</td><td>${esc(a.wards?.name || '—')}</td><td>${a.active ? '<span class="tag">Active</span>' : '<span class="tag subtle">Disabled</span>'}</td><td>${authStatus}</td><td>${lastLogin}</td><td><div class="inline-actions"><button class="btn secondary small" data-edit-account="${esc(a.auth_user_id)}"${disabled}>Edit</button><button class="btn secondary small" data-password="${esc(a.auth_user_id)}"${disabled}>Set Password</button></div></td></tr>`;
+    return `<tr><td>${esc(a.login_id)}${a.auth_email ? `<div class="muted account-auth-email">${esc(a.auth_email)}</div>` : ''}</td><td>${esc(roleDisplayName(a.role))}</td><td>${esc(a.wards?.name || '—')}</td><td>${a.active ? '<span class="tag">Active</span>' : '<span class="tag subtle">Disabled</span>'}</td><td>${authStatus}</td><td>${lastLogin}</td><td><div class="inline-actions"><button class="btn secondary small" data-edit-account="${esc(a.auth_user_id)}"${disabled}>Edit</button><button class="btn secondary small" data-password="${esc(a.auth_user_id)}"${disabled}>Set Password</button></div></td></tr>`;
   }).join('') : '<tr><td colspan="7" class="muted">No accounts. Create accounts using Maintenance or run the account bootstrap.</td></tr>';
   qsa('[data-edit-account]').forEach(b => {
     b.addEventListener('click', () => openAccountModal(accounts.find(a => a.auth_user_id === b.dataset.editAccount)));
@@ -488,7 +489,7 @@ async function saveItem(event) {
   event.preventDefault();
   try {
     const old = state.editingItem;
-    await saveReportItem({ id: old?.id || undefined, key: $('#itemKey').value.trim(), label: $('#itemLabel').value.trim(), section: $('#itemSection').value, input_type: old?.builtin ? old.input_type : $('#itemType').value, options: $('#itemOptions').value.split(',').map(x => x.trim()).filter(Boolean), active: $('#itemActive').value === 'true', effective_from: $('#itemFrom').value || todayISO(), effective_to: $('#itemTo').value || null, builtin: old?.builtin || false, manager_slot: old?.manager_slot || null, config: old?.config || { storage: 'dynamicItems' } });
+    await saveReportItem({ id: old?.id || undefined, key: $('#itemKey').value.trim(), label: $('#itemLabel').value.trim(), section: $('#itemSection').value, input_type: old?.builtin ? old.input_type : $('#itemType').value, options: $('#itemOptions').value.split(',').map(x => x.trim()).filter(Boolean), active: $('#itemActive').value === 'true', effective_from: $('#itemFrom').value || todayISO(), effective_to: $('#itemTo').value || null, builtin: old?.builtin || false, patrol_slot: old?.patrol_slot || null, config: old?.config || { storage: 'dynamicItems' } });
     closeModal('#itemModal'); flash('Report item saved.', 'success'); await ensureItemsLoaded(true);
   } catch (error) { flash(error.message || String(error), 'error', 7000); }
 }
@@ -500,8 +501,8 @@ async function renderAudit() { const rows = await getAuditLog(200); $('#auditRow
 async function ensureVisualEditor() {
   if (state.visualEditor) return state.visualEditor;
   if (state.visualLoading) return state.visualLoading;
-  const {createManagerDocumentEditor}=await import('../editor/manager-ranuts.js');
-  const editor=createManagerDocumentEditor('#docxTemplateEditor', () => {
+  const {createPatrolDocumentEditor}=await import('../editor/patrol-ranuts.js');
+  const editor=createPatrolDocumentEditor('#docxTemplateEditor', () => {
     state.templateDirty=true;
     $('#docxTemplateStatus').textContent='Unpublished template changes. Click Publish This Template to make them available to new memos.';
   });

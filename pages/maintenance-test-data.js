@@ -184,7 +184,7 @@ async function commitPreparedBatch() {
   if (!state.prepared) return;
   const bundle = state.prepared;
   const count = bundle.reports.length;
-  if (!confirm(`Import ${count} generated reports into the normal ward_reports table? Manager, Ward History and printing will treat them as ordinary submissions.`)) return;
+  if (!confirm(`Import ${count} generated reports into the normal ward_reports table? Patrol Night, Ward History and printing will treat them as ordinary submissions.`)) return;
   const button = $('#demoImportBtn');
   button.disabled = true;
   setStatus('Importing generated reports into Supabase...');
@@ -200,7 +200,7 @@ async function commitPreparedBatch() {
       current_submissions: bundle.meta.current_submissions,
     });
     flash(`${result?.report_count ?? count} generated PM/Night Memo reports imported.`, 'success', 8000);
-    setStatus('Import complete. Manager, Ward History and printing can now read the generated reports.', 'success');
+    setStatus('Import complete. Patrol Night, Ward History and printing can now read the generated reports.', 'success');
     state.prepared = null;
     $('#demoImportPreview').innerHTML = '';
     await refreshGeneratedDemoBatches();

@@ -16,8 +16,8 @@ The application already has a separate Preview/Print PDF export, but this does n
 
 - GitHub Actions checks out the same pinned upstream source and installs dependencies, then runs `node scripts/patch-editor-embedded-downloads.mjs` **before** building the upstream editor. The script replaces only the identified embed-mode native-export discard branch and refuses to proceed if that branch has changed. The editor remains self-hosted; no binary distribution is added to this repo.
 - The converted `File` is sent to the **explicit `embedOrigin`**, never the wildcard `*`, in a `document:exported` iframe message. Outstanding programmatic `document:save` requests retain their original route and behavior.
-- `editor/manager-ranuts.js` accepts only events from the expected iframe window and origin, verifies the payload contains a `Blob`, and invokes Nurse Memo's native-export callback. This does not consume any pending `document:save` response.
-- `pages/manager-page.js` handles exports in both the working Night Memo and the separate History viewer. A PDF must begin with `%PDF-`. Nurse Memo shows the existing PDF preview **and attempts the browser download** using its download link. If the browser blocks the automatic download, the modal's **Download PDF** link remains available. Other recognized document formats download as files.
+- `editor/patrol-ranuts.js` accepts only events from the expected iframe window and origin, verifies the payload contains a `Blob`, and invokes Nurse Memo's native-export callback. This does not consume any pending `document:save` response.
+- `pages/patrol-page.js` handles exports in both the working Night Memo and the separate History viewer. A PDF must begin with `%PDF-`. Nurse Memo shows the existing PDF preview **and attempts the browser download** using its download link. If the browser blocks the automatic download, the modal's **Download PDF** link remains available. Other recognized document formats download as files.
 - The editor background warm-up, DOCX saving, recovery, Draft/Final, history storage, and Supabase are unchanged.
 
 ## Deployment and browser test
@@ -25,7 +25,7 @@ The application already has a separate Preview/Print PDF export, but this does n
 1. Upload the full changed repository, including `.github/`, `editor/`, `pages/`, `scripts/`, and `tests/`. Do not upload ONLYOFFICE binaries separately.
 2. Make sure the upstream override `RANUTS_REF`, if set, refers to the pinned upstream commit. The patch deliberately fails the build if a changed source has no expected target.
 3. Allow **Build and Deploy Nurse Memo (Self-Hosted Document)** to run. The new workflow step should report `Patched pinned ranuts native document exports for the Nurse Memo embed host.` before compiling the editor.
-4. From the deployed Patrol Night Manager page, open Night Memo and choose the vendor's **File → Download As → PDF**. Verify that a valid `Night-Memo-<date>.pdf` downloads, or that the preview opens and its manual **Download PDF** link works.
+4. From the deployed Patrol Night page, open Night Memo and choose the vendor's **File → Download As → PDF**. Verify that a valid `Night-Memo-<date>.pdf` downloads, or that the preview opens and its manual **Download PDF** link works.
 5. Check the separate Nurse Memo **Preview**, **Save Draft**, and **Print Final** actions still work; also test History's read-only viewer. A browser that blocks asynchronous automatic downloads may still require clicking the preview's download link.
 
 ## Verification and limits

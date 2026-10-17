@@ -1,7 +1,7 @@
 import { DB_MODE } from './client.js';
 import { DEMO_WARDS, DEMO_REPORT_ITEMS, DEMO_STAFF, DEMO_REPORTS, DEMO_ACCOUNTS } from '../demo-data.js';
 
-const DEMO_KEY = 'nightMemoBetaCleanV1';
+const DEMO_KEY = 'nurseMemoPatrolV1';
 export const uid = (prefix = 'id') => `${prefix}-${crypto.randomUUID ? crypto.randomUUID() : Math.random().toString(36).slice(2)}`;
 
 function seedDemoState() {
@@ -13,7 +13,7 @@ function seedDemoState() {
     const ward = wards.find(w => w.name === staff.ward_name);
     return { ...staff, id: uid('staff'), ward_id: ward.id, created_at: now, updated_at: now };
   });
-  const report_items = DEMO_REPORT_ITEMS.map(item => ({ ...item, id: uid('item'), active: true, effective_from: '2026-01-01', effective_to: null, manager_slot: null, created_at: now, updated_at: now }));
+  const report_items = DEMO_REPORT_ITEMS.map(item => ({ ...item, id: uid('item'), active: true, effective_from: '2026-01-01', effective_to: null, patrol_slot: null, created_at: now, updated_at: now }));
   const ward_reports = DEMO_REPORTS.map(report => {
     const ward = wards.find(w => w.name === report.ward_name);
     return { ...report, report_type: report.report_type || 'night', submitted_at: report.submitted_at || now, id: uid('report'), ward_id: ward.id, created_at: now, updated_at: now };

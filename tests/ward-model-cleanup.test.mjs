@@ -49,12 +49,12 @@ test('runtime sources contain no legacy ward_code, ward.code, or dynamic gender 
     'pages/maintenance-page.js',
     'pages/maintenance-test-data.js',
     'pages/ward-page.js',
-    'pages/manager-page.js',
-    'pages/manager-night-operations.js',
+    'pages/patrol-page.js',
+    'pages/patrol-night-operations.js',
     'components/app-shell.js',
     'components/report-view.js',
     'domain/demo-generator.js',
-    'domain/manager-memo.js',
+    'domain/patrol-memo.js',
     'domain/night-roster.js',
     'data/repositories/ward-repository.js',
     'data/repositories/access-repository.js',
@@ -65,7 +65,7 @@ test('runtime sources contain no legacy ward_code, ward.code, or dynamic gender 
     'scripts/bootstrap-accounts.mjs',
   ];
   const combined = runtimeFiles.map(file => `\n// ${file}\n${read(file)}`).join('\n');
-  assert.doesNotMatch(combined, /\bward_code\b|ward\??\.code|\bw\.code\b|mWardCode|manager_section|mWardSection|value="dynamic"|empty_bed_gender_mode\s*===\s*['"]dynamic['"]/);
+  assert.doesNotMatch(combined, /\bward_code\b|ward\??\.code|\bw\.code\b|mWardCode|patrol_section|mWardSection|value="dynamic"|empty_bed_gender_mode\s*===\s*['"]dynamic['"]/);
 });
 
 test('schema and live migration own the canonical Ward model', () => {

@@ -56,7 +56,7 @@ const el = selector => {
   if (!nodes.has(selector)) nodes.set(selector, new FakeElement());
   return nodes.get(selector);
 };
-const roleButtons = ['ward', 'manager', 'maintenance'].map(role => {
+const roleButtons = ['ward', 'patrol', 'maintenance'].map(role => {
   const button = new FakeElement();
   button.dataset.role = role;
   return button;

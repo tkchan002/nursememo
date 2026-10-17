@@ -48,12 +48,14 @@ test('account administration has explicit user-auth and Maintenance-role boundar
   assert.match(sql, /p_actor uuid, p_action text, p_account jsonb/);
 });
 
-test('original project and domain cannot be implicitly reused', () => {
+test('existing public Supabase configuration is explicitly reused without secret keys', () => {
   assert.match(read('config.js'), /FORCE_DEMO_MODE:\s*(?:true|false)/);
   assert.match(read('data/client.js'), /export const DB_MODE = APP_RUNTIME\.mode;/);
   assert.match(read('pages/login-page.js'), /const DB_MODE = APP_RUNTIME\.mode;/);
   assert.match(read('data/client.js'), /if \(\!APP_RUNTIME\.ready\)/);
-  assert.match(read('config.js'), /YOUR-PROJECT/);
+  assert.match(read('config.js'), /SUPABASE_URL:\s*'https:\/\/[a-z0-9-]+\.supabase\.co'/);
+  assert.match(read('config.js'), /SUPABASE_PUBLISHABLE_KEY:\s*'sb_publishable_[A-Za-z0-9_-]+'/);
+  assert.doesNotMatch(read('config.js'), /SUPABASE_URL:\s*'https:\/\/YOUR-PROJECT/);
   assert.doesNotMatch(read('config.js'), /night-memo\.eu\.cc/);
   assert.equal(existsSync(new URL('../CNAME', import.meta.url)), false);
   assert.equal(existsSync(new URL('../public/CNAME', import.meta.url)), false);

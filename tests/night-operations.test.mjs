@@ -39,14 +39,14 @@ const runnerHtml = renderNightRunnerPrintHtml({ reportingDate: '2026-09-29', run
 assert.match(runnerHtml, /Night Runner List/);
 assert.match(runnerHtml, />B</);
 
-const managerEntry = fs.readFileSync(path.join(root, 'manager.js'), 'utf8');
-assert.match(managerEntry, /manager-page\.js/);
-assert.match(managerEntry, /manager-night-operations\.js/);
+const patrolEntry = fs.readFileSync(path.join(root, 'patrol.js'), 'utf8');
+assert.match(patrolEntry, /patrol-page\.js/);
+assert.match(patrolEntry, /patrol-night-operations\.js/);
 
 const allNewText = [
-  fs.readFileSync(path.join(root, 'pages/manager-night-operations.js'), 'utf8'),
+  fs.readFileSync(path.join(root, 'pages/patrol-night-operations.js'), 'utf8'),
   fs.readFileSync(path.join(root, 'domain/night-roster.js'), 'utf8'),
-  fs.readFileSync(path.join(root, 'css/manager-night-operations.css'), 'utf8'),
+  fs.readFileSync(path.join(root, 'css/patrol-night-operations.css'), 'utf8'),
 ].join('\n').toLowerCase();
 assert.doesNotMatch(allNewText, /deployable/);
 

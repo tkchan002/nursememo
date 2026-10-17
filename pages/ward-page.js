@@ -16,7 +16,6 @@ import { formatEmptyBedEntries } from '../domain/empty-bed-reporting.js';
 import { calculateEmptyBeds, resolveReportEmptyBeds, displayEmptyBeds } from '../domain/bed-occupancy.js';
 import { loadHistoricalReportContext, loadWardReportContext, loadWardSubmissionStatus, saveWardDraft, submitWardReport } from '../services/report-service.js';
 import { reportNightDate, defaultMemoType, MEMO_LABELS } from '../domain/report-cycle.js';
-import { openPrintView } from '../services/print-job-service.js';
 import { emptyBedEntryMarkup, bindEmptyBedType } from '../components/empty-bed-entry.js';
 
 const $ = qs;
@@ -452,7 +451,7 @@ async function saveEntry() {
     state.draft = draft;
     state.dirty = state.editVersion !== savingVersion;
     renderSubmissionBanner();
-    showStatus(state.dirty || warnings.length ? 'warning' : 'success', state.dirty ? 'Draft saved, but edits made during saving are still unsaved.' : warnings.length ? `Draft saved with warning: ${warnings.join(' ')}` : 'Draft saved. It has NOT been submitted to Manager.');
+    showStatus(state.dirty || warnings.length ? 'warning' : 'success', state.dirty ? 'Draft saved, but edits made during saving are still unsaved.' : warnings.length ? `Draft saved with warning: ${warnings.join(' ')}` : 'Draft saved. It has NOT been submitted to Patrol Night.');
     return draft;
   } catch (error) {
     showStatus('error', error.message || String(error));
@@ -468,7 +467,7 @@ async function submitEntry() {
   if (!state.operational) { showStatus('error', 'This ward is not operational on the selected date.'); return null; }
   const date = $('#memoDate').value;
   if (!date || date !== state.loadedDate) { showStatus('error', 'Wait for the selected date to finish loading before submitting.'); return null; }
-  if (!confirm(`Submit ${MEMO_LABELS[state.memoType]} for ${toDisplayDate(date)} to Manager? Saved drafts are not visible until submitted.`)) return null;
+  if (!confirm(`Submit ${MEMO_LABELS[state.memoType]} for ${toDisplayDate(date)} to Patrol Night? Saved drafts are not visible until submitted.`)) return null;
   const submittingVersion = state.editVersion;
   state.submitting = true;
   disableSave(true);
@@ -724,7 +723,7 @@ function closePdfSettings() { clearTimeout(pdfDebounceTimer); $('#pdfSettingsMod
 function updatePdfPreviewDebounced() { clearTimeout(pdfDebounceTimer); pdfDebounceTimer = setTimeout(updatePdfPreview, 250); }
 async function updatePdfPreview() { const mod = await getPrintModule(); pdfSettings = mod.saveWardPrintSettings(readPrintControls()); await previewCurrentMemo(); }
 async function resetPdfSettings() { if (!confirm('Reset all font sizes to the default Ward memo settings?')) return; const mod = await getPrintModule(); pdfSettings = mod.resetWardPrintSettings(); loadPrintControls(); await previewCurrentMemo(); }
-async function printPdf() { const mod = await getPrintModule(); openPrintView({ html: mod.renderWardMemoHtml(printContext({ report_type: state.memoType, report_date: $('#memoDate').value, payload: collectPayload() }, state.items, state.capacity)), title: MEMO_LABELS[state.memoType], kind: 'ward-memo' }); }
+async function printPdf() { const mod = await getPrintModule(); return mod.printWardMemo(printContext({ report_type: state.memoType, report_date: $('#memoDate').value, payload: collectPayload() }, state.items, state.capacity)); }
 async function applyPdfSettings() { const mod = await getPrintModule(); pdfSettings = mod.saveWardPrintSettings(readPrintControls()); showStatus('loading', 'Choose “Save as PDF” in the print dialog.'); printPdf(); }
 
 // All Ward screen actions are module-local and bound by bindWardActions().

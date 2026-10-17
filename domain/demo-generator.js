@@ -412,7 +412,7 @@ function createReport({ ward, reportDate, submittedAt, submittedMinutesAgo, payl
     report_date: reportDate,
     report_type: session === 'previous' ? 'pm' : 'night',
     // submitted_at is used for preview only. During import the server recomputes
-    // submitted_at from submitted_minutes_ago so Manager and the importer share
+    // submitted_at from submitted_minutes_ago so Patrol and the importer share
     // the same clock and timezone reference.
     submitted_at: submittedAt.toISOString(),
     submitted_minutes_ago: Number(submittedMinutesAgo),

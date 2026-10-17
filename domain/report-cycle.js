@@ -3,6 +3,12 @@ import { todayISO, addDaysISO, REPORT_TIME_ZONE } from '../core/dates.js';
 
 export const MEMO_TYPES = Object.freeze(['pm', 'night']);
 export const MEMO_LABELS = Object.freeze({ pm: 'PM Memo', night: 'Night Memo' });
+
+/** Printable heading derived from the report record, not the time of day.
+ * Older untyped report snapshots retain their historical Night Memo heading. */
+export function wardMemoPrintHeading(report) {
+  return MEMO_LABELS[report?.report_type] || MEMO_LABELS.night;
+}
 export const REPORTING_CONFIG = Object.freeze({
   timeZone: REPORT_TIME_ZONE,
   expectedTimes: Object.freeze({ pm: '21:00', night: '04:00' }),

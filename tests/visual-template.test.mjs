@@ -11,10 +11,10 @@ test('sample master exposes both repeatable ward tables and all required fields'
  assert.match(source,/validateVisualTemplate/);
  assert.match(source,/doc\.render\(sample\)/);
 });
-test('Manager honors published DOCX and preserves default generator fallback',()=>{
- const page=read('pages/manager-page.js');
+test('Patrol honors published DOCX and preserves default generator fallback',()=>{
+ const page=read('pages/patrol-page.js');
  assert.match(page,/state\.docxTemplatePublished/);
  assert.match(page,/renderVisualTemplate\(bytes, model\)/);
- assert.match(page,/buildManagerDocxBytes\(model\)/);
+ assert.match(page,/buildPatrolDocxBytes\(model\)/);
  assert.match(page,/publishedMasterPromise/);
 });

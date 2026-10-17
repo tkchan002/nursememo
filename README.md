@@ -1,40 +1,42 @@
-# Nurse Memo — Self-hosted document editor test branch
+> **Existing Supabase demo:** Use [REUSE_EXISTING_SUPABASE.md](REUSE_EXISTING_SUPABASE.md). Your current accounts and passwords are preserved; no project reset is required.
 
-**The Manager application is called Patrol Night.** Its editable document is called **Night Memo**.
+# Nurse Memo — Patrol Night
 
-This is a complete source repository for the Nurse Memo `docx-editor-test` branch. It includes Ward, Maintenance, Night Staffing, reporting, authentication, Manager history and PostgreSQL DOCX persistence, plus a GitHub Actions workflow that builds and self-hosts ranuts/document (a browser-only ONLYOFFICE-derived editor) in the published GitHub Pages artifact.
+Nurse Memo is a synthetic-data demonstration app with three workspaces: **Ward**, **Patrol Night**, and **Maintenance**. The Patrol Night workspace lives at `patrol.html`. Its report document is called **Night Memo**.
 
-**Start with [ONE_REPOSITORY_OFFICE_FIX.md](ONE_REPOSITORY_OFFICE_FIX.md) and [SELF_HOSTED_DOCUMENT_SETUP.md](SELF_HOSTED_DOCUMENT_SETUP.md)** for installation, hosting requirements and known risks. The source archive is deliberately small because GitHub Actions downloads/builds the upstream engine separately; the engine is not fetched by the user at runtime from `edit.chaxus.com` after a successful deployment.
+This source distribution is a **clean-break repository**. It uses `patrol` consistently for application roles, database objects, CSS identifiers, modules, tests, and GitHub Pages entrypoints. It has no compatibility layer for previously deployed naming. Create a NEW GitHub repository, rather than uploading the archive into an older repository with historical commits.
 
-## Key features
+## Start here — reuse your existing Supabase project
 
-- Patrol Night dashboard remains functional while the editor silently preloads after manager authentication.
-- Opening Night Memo shows a real loading message and animation until the DOCX is rendered; errors show a Retry button. No dashboard 'editor ready' status is shown.
-- The same iframe is reused for editing. The document editor opens in a nearly full-screen workspace.
-- A4 landscape DOCX and API PDF export retain their existing workflow. Documents are stored as PostgreSQL binary data (`bytea`) and referenced by the Manager history tables.
-- No new database migration is required **if the existing DOCX-branch migration was applied already**. First-time installation needs `supabase/patches/20261016_manager_docx_database.sql`.
-- The deployment workflow checks the Nurse Memo source, builds Nurse Memo with Vite, checks out ranuts/document, builds that upstream project, adapts it to the chosen GitHub Pages project or custom-domain root path and preserves nested ONLYOFFICE index URLs and copies the complete editor assets to `/office/`.
+**[REUSE_EXISTING_SUPABASE.md](REUSE_EXISTING_SUPABASE.md)** gives the intended installation procedure. This edition keeps the public Supabase connection already supplied for the earlier demo. A separately downloaded one-time SQL Editor script upgrades the existing database **without removing Auth users or resetting passwords**. The SQL script must **not** be committed into the new GitHub repository.
 
-**Visual template upgrade for the existing Supabase demo:** see [DEMO_VISUAL_TEMPLATE_INSTALL.md](DEMO_VISUAL_TEMPLATE_INSTALL.md). It uses one SQL script and does not require the retired numeric template migrations.
+Do **not** run `supabase/schema.sql` or `supabase/seed.sql` in the existing database. They describe a clean installation, not an in-place upgrade. There is intentionally no database reset script in this package.
 
-## Build and verification
+For a brand new GitHub repository, upload the root contents of this source ZIP including `.github/`, then enable GitHub Actions for Pages. Deploy the updated `admin-users` Edge Function to the **same** Supabase project for ongoing account administration. Existing login account IDs remain unchanged after migration, including the Patrol Night login.
 
-Run `npm run verify` in a Node.js environment to test the locally available code. The real GitHub Pages deployment additionally requires `npm install`, `npm run build`, an upstream pnpm build and `node scripts/prepare-editor-site.mjs`. This build runs automatically in GitHub Actions; you do not need npm or pnpm on your Mac.
+## Major components
 
-**Build warning:** Upstream now ships a very large static bundle (its own comments describe roughly 616 MB of assets). GitHub Pages normally limits published sites to 1 GB and applies usage/bandwidth policies. Since upstream no longer publishes the whole application via its own GitHub Pages workflow, and GitHub Pages cannot set the Brotli response header required by its compressed converter, this repository provides special handling that **still requires real-world deployment validation**. Source tests do not prove editor runtime compatibility.
+- `patrol.html`, `patrol.js`, `pages/patrol-page.js`: Patrol Night dashboard, Night Memo, History, Ward status, and Night Staffing.
+- `editor/patrol-ranuts.js`: same-origin integration with the self-hosted ONLYOFFICE-derived ranuts/document editor.
+- `documents/patrol-docx.js`, `documents/visual-template.js`: A4 landscape DOCX generation and data-placeholders used by the visual DOCX template designer.
+- `pages/maintenance-page.js`: accounts, Ward settings, and publishable visual DOCX template.
+- `supabase/schema.sql`, `supabase/seed.sql`: complete, clean-install Supabase contract and synthetic seed rows.
+- `supabase/functions/admin-users`: privileged account operations, with role checking.
+- `scripts/prepare-editor-site.mjs`: self-hosted browser editor packaging and compressed converter delivery.
+- `.github/workflows/`: source checks, GitHub Pages build and pinned upstream editor build.
 
-## Repository boundaries
+The old HTML-only Patrol memo template is absent. Ward and Night Staffing printing through `print.html` remains supported and must not be removed.
 
-- `pages/manager-page.js`: Patrol Night orchestration, recovery, Draft/Final, History and print lifecycle.
-- `editor/manager-ranuts.js`: origin-validated iframe bridge using same-origin `office/editor.html`.
-- `documents/`: DOCX generator and binary codec.
-- `data/`, `supabase/`: existing database and authorisation contract.
-- `scripts/prepare-editor-site.mjs`: self-hosted vendor staging, site-root asset adaptation, the nested ONLYOFFICE routing fix, page-route aliases, and converter decompression.
-- `scripts/verify-pages-editor.mjs`: presence/integrity checks of published editor assets, including the nested ONLYOFFICE document frame.
-- `.github/workflows/deploy-pages.yml`: composite deployment of Nurse Memo and the upstream editor.
+## Ward memo print headings
 
-The legacy design/change notes elsewhere in this repo describe earlier Jodit or remote ranuts trials and are retained for historical context only. They should not override this README and `SELF_HOSTED_DOCUMENT_SETUP.md`.
+In `ward.html`, choosing **PM Memo** prints **PM Memo** as the document heading; choosing **Night Memo** prints **Night Memo**. Both the PDF/print view and the preview use the report type stored with the Ward memo, including when reprinting historical submissions. They share the same report layout. This is an application-only change: no extra Supabase schema or migration is necessary.
 
-## Licensing and scope
+## Testing
 
-Nurse Memo is a fictional-data demo. `ranuts/document` is AGPL-3.0 and derived from ONLYOFFICE. The editor's `LICENSE` and `NOTICE` are kept in the published `/office/` folder; the upstream source revision is recorded in `office/nurse-memo-editor-build.json`. Follow the applicable obligations and conduct a security review before processing any actual patient information.
+Run `npm install --no-audit --no-fund`, then `npm run verify` and `npm run build`. GitHub Actions does the same and additionally builds the pinned upstream editor with pnpm. The full editor bundle is **not** included in this source ZIP. Final DOCX appearance, live Supabase access, native PDF export and editor startup require a real browser deployment test.
+
+The automated audit blocks reintroduction of the previous protected title across repository files and paths. It does not remove historical references outside the newly created repository (for example, in old public repositories or independent archives).
+
+## Licensing and safety
+
+The pinned `ranuts/document` editor is ONLYOFFICE-derived and AGPL-3.0 licensed. Its notices and licence are preserved in the generated `/office/` directory. Review licensing, security and hospital policy before using any real patient information. **This repository and test credentials are only for synthetic demo data.**

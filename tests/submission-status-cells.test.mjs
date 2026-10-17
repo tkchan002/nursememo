@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
-import { wardSubmissionStates, managerSubmissionStatus } from '../domain/submission-status.js';
+import { wardSubmissionStates, patrolSubmissionStatus } from '../domain/submission-status.js';
 
 const pm = { id: 'pm', submitted_at: '2026-10-12T15:40:00Z' };
 const night = { id: 'night', submitted_at: '2026-10-12T20:02:00Z' };
@@ -20,12 +20,12 @@ test('complete and wholly missing wards are distinct; status uses source not tim
   assert.equal(wardSubmissionStates({ pmReport: pm, nightReport: night }).completeness, 'complete');
   assert.equal(wardSubmissionStates({}).completeness, 'missing');
   assert.deepEqual(wardSubmissionStates({}).missingTypes, ['pm','night']);
-  assert.equal(managerSubmissionStatus(pm).state, 'submitted');
+  assert.equal(patrolSubmissionStatus(pm).state, 'submitted');
 });
 
-test('Manager renders independent status classes and no row-wide warning colours', async () => {
-  const css = await readFile(new URL('../css/manager.css', import.meta.url), 'utf8');
-  const page = await readFile(new URL('../pages/manager-page.js', import.meta.url), 'utf8');
+test('Patrol renders independent status classes and no row-wide warning colours', async () => {
+  const css = await readFile(new URL('../css/patrol.css', import.meta.url), 'utf8');
+  const page = await readFile(new URL('../pages/patrol-page.js', import.meta.url), 'utf8');
   assert.match(page, /wardSubmissionStates\(entry\)/);
   assert.match(page, /statusCell\(status\.pm, 'PM'\)/);
   assert.match(page, /statusCell\(status\.night, 'Night'\)/);

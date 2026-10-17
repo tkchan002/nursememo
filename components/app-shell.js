@@ -1,4 +1,5 @@
 import { qs } from '../core/dom.js';
+import { roleAccountLabel } from '../core/role-labels.js';
 
 export function modeBadge(mode) {
   return mode === 'demo'
@@ -16,7 +17,7 @@ export function setAppHeader({ title, subtitle = '', access = null, mode = 'live
   if (userEl && access) {
     userEl.textContent = access.role === 'ward'
       ? (access.wards?.name || access.login_id)
-      : (access.display_name || access.login_id);
+      : roleAccountLabel(access);
   }
   if (modeEl) modeEl.innerHTML = modeBadge(mode);
 }

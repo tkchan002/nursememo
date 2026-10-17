@@ -1,0 +1,235 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Nurse Memo | Patrol Night</title>
+  <link rel="stylesheet" href="./css/legacy-shell.css">
+  <link rel="stylesheet" href="./css/patrol.css">
+  <link rel="stylesheet" href="./css/patrol-night-operations.css">
+  <link rel="stylesheet" href="./css/patrol-document.css">
+  <link rel="stylesheet" href="./css/theme.css">
+</head>
+<body class="legacy-page patrol-page">
+  <div class="legacy-shell patrol-workspace">
+    <header class="legacy-window-title no-print">
+      <div>
+        <div class="legacy-title-text" id="appTitle">Nurse Memo</div>
+        <div class="legacy-subtitle" id="appSubtitle">Patrol Night · Night operations and memo workspace</div>
+      </div>
+      <div class="legacy-spacer"></div>
+      <div id="modeBadge"></div>
+      <span class="legacy-user-badge" id="userBadge"></span>
+      <button type="button" class="pill" id="patrolGlobalHistoryBtn">History</button>
+      <button type="button" class="pill" id="logoutBtn">Logout</button>
+    </header>
+
+    <main class="patrol-main">
+      <div id="patrolStatus" class="patrol-status no-print" hidden></div>
+      <div class="patrol-history-layout">
+        <aside id="patrolHistorySidebar" class="patrol-history-sidebar no-print" hidden aria-labelledby="patrolHistorySidebarTitle">
+          <div class="patrol-history-sidebar-head">
+            <div>
+              <strong id="patrolHistorySidebarTitle">History</strong>
+              <span>All Night Memos</span>
+            </div>
+            <button type="button" class="pill" id="closePatrolHistoryBtn">Close</button>
+          </div>
+          <div id="patrolHistoryNightList" class="patrol-history-night-list">
+            <div class="patrol-history-empty">Loading memo archive…</div>
+          </div>
+        </aside>
+
+        <div id="patrolPrimaryContent" class="patrol-primary-content">
+          <section id="patrolTabsShell" class="patrol-tabs-shell no-print">
+            <nav class="patrol-primary-tabs" role="tablist" aria-label="Nurse Memo Patrol Night workspaces">
+              <button type="button" class="patrol-primary-tab active" data-patrol-tab="submission" aria-selected="true">Submission Status</button>
+              <button type="button" class="patrol-primary-tab" data-patrol-tab="ward-info" aria-selected="false">Ward Information</button>
+              <button type="button" class="patrol-primary-tab" data-patrol-tab="memo" aria-selected="false">Night Memo</button>
+              <button type="button" class="patrol-primary-tab" data-patrol-tab="staffing" aria-selected="false">Night Staffing</button>
+            </nav>
+
+            <section class="patrol-tab-panel" data-patrol-tab-panel="submission" aria-labelledby="submissionHeading">
+              <section class="submission-panel">
+                <div class="submission-panel-head">
+                  <div>
+                    <h1 id="submissionHeading">Ward Submission Status</h1>
+                    <div class="submission-window" id="submissionWindowLabel">Loading current submissions…</div>
+                  </div>
+                  <div class="submission-actions">
+                    <span class="submission-count" id="submissionCount">—</span>
+                    <button type="button" class="pill" id="refreshStatusBtn">Refresh Status</button>
+                  </div>
+                </div>
+                <div id="sourceChangeNotice" class="source-change-notice" hidden>
+                  Newer ward submissions are available. Your Night Memo has not been changed.
+                  <button type="button" class="pill" id="regenerateBtn">Regenerate Ward Sections</button>
+                </div>
+                <div class="submission-table-wrap">
+                  <table class="submission-table">
+                    <thead><tr><th>Ward</th><th>PM Memo</th><th>Night Memo</th><th>Reporting source</th><th>Patrol Night document</th><th>Ward memos</th></tr></thead>
+                    <tbody id="submissionRows"><tr><td colspan="6">Loading…</td></tr></tbody>
+                  </table>
+                </div>
+              </section>
+            </section>
+
+            <section class="patrol-tab-panel" data-patrol-tab-panel="ward-info" hidden aria-labelledby="wardInformationHeading">
+              <section class="ward-information-panel">
+                <div class="patrol-section-head">
+                  <div>
+                    <h1 id="wardInformationHeading">Ward Information</h1>
+                    <p>Current Ward Patient List, Consultation and Intubation, plus any configured additional items. These are read-only Ward-source records and are not part of the official Night Memo printout.</p>
+                  </div>
+                  <button type="button" class="pill" id="refreshWardInformationBtn">Refresh Ward Data</button>
+                </div>
+                <div id="wardInformationList" class="ward-information-list">
+                  <div class="patrol-empty-state">Loading Ward information…</div>
+                </div>
+              </section>
+            </section>
+
+            <section class="patrol-tab-panel" data-patrol-tab-panel="memo" hidden aria-labelledby="workspaceHeading">
+              <section id="memoWorkspacePanel" class="memo-workspace-panel" aria-labelledby="workspaceHeading">
+                <div class="memo-workspace-head">
+                  <div>
+                    <h1 id="workspaceHeading">Night Memo</h1>
+                    <div id="workspaceDate" class="workspace-date"></div>
+                  </div>
+                  <button type="button" class="pill" id="workspaceHistoryBtn">History</button>
+                </div>
+                <div id="workspaceSummary" class="workspace-summary">Loading Night Memo workspace…</div>
+                <div class="workspace-actions">
+                  <button type="button" class="pill primary-pill" id="continueDraftBtn" hidden>Continue Draft</button>
+                  <button type="button" class="pill" id="startNewBtn">Start Night Memo</button>
+                </div>
+              </section>
+
+              <section id="editorArea" hidden>
+                <section class="editor-toolbar" aria-label="Night Memo editor toolbar">
+                  <div class="toolbar-group">
+                    <button type="button" class="pill" id="backWorkspaceBtn" aria-label="Back to Patrol Night">Back to Patrol Night</button>
+                    <strong>Night Memo Editor</strong><span class="memo-orientation">A4 landscape</span>
+                    <span id="memoStateBadge" class="memo-state-badge draft">Draft</span>
+                    <span id="saveState" class="save-state">Ready</span>
+                  </div>
+                  <div class="toolbar-group toolbar-actions">
+                    <button type="button" class="pill" id="saveMemoBtn">Save</button>
+                    <button type="button" class="pill" id="historyBtn">History</button>
+                    <button type="button" class="pill" id="previewMemoBtn">Preview</button>
+                    <button type="button" class="pill primary-pill" id="printMemoBtn">Print</button>
+                  </div>
+                </section>
+                <div id="memoEditorStatus" class="memo-editor-status" role="status" aria-live="polite" hidden></div>
+                <section class="memo-canvas-wrap">
+                  <iframe id="memoEditor" title="Editable Night Memo DOCX document" allow="clipboard-read; clipboard-write" referrerpolicy="strict-origin-when-cross-origin"></iframe>
+                  <div id="memoEditorLoading" class="memo-editor-loading" role="status" aria-live="polite" hidden>
+                    <div class="memo-loading-spinner" aria-hidden="true"></div>
+                    <strong>Opening Night Memo</strong>
+                    <p id="memoEditorLoadingText">Preparing document editor…</p>
+                    <button id="retryMemoEditorBtn" type="button" class="pill primary-pill" hidden>Retry opening</button>
+                  </div>
+                </section>
+              </section>
+            </section>
+
+            <section class="patrol-tab-panel" data-patrol-tab-panel="staffing" hidden aria-labelledby="nightStaffingHeading">
+              <section id="nightOperationsPanel" class="night-operations-panel">
+                <div class="patrol-section-head">
+                  <div>
+                    <h1 id="nightStaffingHeading">Night Staffing</h1>
+                    <div class="night-operations-date" id="nightOperationsDate">Reporting night: —</div>
+                  </div>
+                  <div class="night-operations-actions">
+                    <button type="button" class="pill" id="refreshNightOperationsBtn">Refresh Staff</button>
+                    <button type="button" class="pill" id="printNightStaffBtn">Print Ward List</button>
+                    <button type="button" class="pill" id="printNightRunnerBtn">Print Runner List</button>
+                  </div>
+                </div>
+                <div class="night-operations-summary" aria-label="Night staffing summary">
+                  <div class="night-ops-stat"><strong id="nightNurseCount">—</strong><span>night nurses</span></div>
+                  <div class="night-ops-stat"><strong id="nightRunnerCount">—</strong><span>night runners</span></div>
+                  <div class="night-ops-stat"><strong id="nightRosterWardCount">—</strong><span>wards with roster</span></div>
+                </div>
+
+                <section class="night-staffing-section" aria-labelledby="nightWardStaffHeading">
+                  <div class="night-staffing-title"><h2 id="nightWardStaffHeading">All Ward Night Nurses</h2><span id="nightWardListSummary">Loading…</span></div>
+                  <div class="night-table-wrap">
+                    <table class="night-staffing-table">
+                      <thead><tr><th>Ward</th><th>Rank</th><th>Name</th><th>Appointment Date</th><th>Runner</th><th>Roster updated</th></tr></thead>
+                      <tbody id="nightWardStaffRows"><tr><td colspan="6">Loading night staff…</td></tr></tbody>
+                    </table>
+                  </div>
+                </section>
+
+                <section class="night-staffing-section" aria-labelledby="nightRunnerHeading">
+                  <div class="night-staffing-title"><h2 id="nightRunnerHeading">Night Runners</h2><span id="nightRunnerListSummary">Loading…</span></div>
+                  <div class="night-table-wrap">
+                    <table class="night-staffing-table night-runner-table">
+                      <thead><tr><th>Ward</th><th>Rank</th><th>Name</th><th>Appointment Date</th></tr></thead>
+                      <tbody id="nightRunnerRows"><tr><td colspan="4">Loading Night Runners…</td></tr></tbody>
+                    </table>
+                  </div>
+                </section>
+              </section>
+            </section>
+          </section>
+
+          <section id="patrolArchiveViewer" class="patrol-archive-viewer" hidden aria-labelledby="archiveMemoTitle">
+            <div class="patrol-archive-head no-print">
+              <div><h2 id="archiveMemoTitle">Night Memo History</h2><div id="archiveMemoMeta" class="patrol-archive-meta"></div></div>
+              <button type="button" class="pill" id="archiveUseAsDraftBtn" hidden>Use as Current Draft</button>
+            </div>
+            <div id="archiveRevisionList" class="patrol-archive-revisions no-print"></div>
+            <iframe id="archiveMemoFrame" class="patrol-archive-frame" title="Historical Night Memo"></iframe>
+            <details id="archiveRecoveryDetails" class="patrol-recovery-details no-print" hidden>
+              <summary>Safety recovery checkpoints</summary>
+              <div id="archiveCheckpointList" class="patrol-checkpoint-list"></div>
+            </details>
+          </section>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <div class="patrol-modal no-print" id="wardMemoPreviewModal" hidden>
+    <div class="patrol-modal-card ward-memo-preview-card">
+      <div class="modal-head">
+        <div><strong id="wardMemoPreviewTitle">Ward Night Memo</strong><div id="wardMemoPreviewMeta" class="modal-subtitle"></div></div>
+        <div class="modal-actions"><button type="button" class="pill" id="printWardMemoBtn">Print Ward Memo</button><button type="button" class="pill" data-close-modal="wardMemoPreviewModal">Close</button></div>
+      </div>
+      <iframe id="wardMemoPreviewFrame" title="Ward Night Memo paper preview"></iframe>
+    </div>
+  </div>
+
+  <div class="patrol-modal no-print" id="rosterPreviewModal" hidden role="presentation">
+    <div class="patrol-modal-card roster-preview-card" role="dialog" aria-modal="true" aria-labelledby="rosterPreviewTitle" tabindex="-1">
+      <div class="modal-head roster-preview-head">
+        <strong id="rosterPreviewTitle">Night Staff List Preview</strong>
+        <div class="roster-preview-actions">
+          <button type="button" class="pill" id="rosterPreviewPrintBtn">Print / PDF</button>
+          <button type="button" class="pill" id="rosterPreviewCloseBtn">Close</button>
+        </div>
+      </div>
+      <div class="roster-preview-body">
+        <aside class="roster-preview-controls">
+          <label for="rosterPreviewFontSize">Document font size (pt)</label>
+          <input type="number" id="rosterPreviewFontSize" min="8" max="14" step="1" value="10">
+          <p>Changes affect this list only. Review the A4 preview before printing.</p>
+          <button type="button" class="pill" id="rosterPreviewResetBtn">Reset to Defaults</button>
+        </aside>
+        <div class="roster-preview-frame-wrap"><iframe id="rosterPreviewFrame" title="Night staffing A4 print preview"></iframe></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="patrol-modal no-print" id="printPreviewModal" hidden>
+    <div class="patrol-modal-card print-preview-card">
+      <div class="modal-head"><strong id="printPreviewTitle">Night Memo Preview</strong><button type="button" class="pill" data-close-modal="printPreviewModal">Close</button></div>
+      <iframe id="printPreviewFrame" title="Night Memo PDF preview"></iframe><div class="docx-pdf-actions"><a class="pill" id="downloadMemoPdfBtn" download="Night-Memo.pdf" href="#">Download PDF</a><span>Use the PDF viewer’s print control to print.</span></div>
+    </div>
+  </div>
+
+  <script type="module" src="./patrol.js"></script>
+</body>
+</html>

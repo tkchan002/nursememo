@@ -41,7 +41,7 @@ if (existsSync(sdkApi)) {
     throw new Error('ONLYOFFICE nested main/index.html suffix has been incorrectly rebased.');
   }
 }
-const adapter = readFileSync('editor/manager-ranuts.js','utf8');
+const adapter = readFileSync('editor/patrol-ranuts.js','utf8');
 if (!adapter.includes("new URL('../office/editor.html', import.meta.url)")) {
   throw new Error('Nurse Memo is not connected to its own bundled office/editor.html.');
 }

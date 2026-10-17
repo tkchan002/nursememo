@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { formatEmptyBedEntries, parseEmptyBedLabel, validateEmptyBedEntries } from '../domain/empty-bed-reporting.js';
-import { formatManagerEmptyBeds } from '../domain/manager-memo.js';
+import { formatPatrolEmptyBeds } from '../domain/patrol-memo.js';
 import { normalizeReportPayload } from '../domain/report-model.js';
 import { validateReportPayload } from '../domain/report-validation.js';
-import { buildManagerWardInformation } from '../domain/manager-ward-information.js';
+import { buildPatrolWardInformation } from '../domain/patrol-ward-information.js';
 import { emptyBedEntryMarkup } from '../components/empty-bed-entry.js';
 
 const entries = [
@@ -30,10 +30,10 @@ test('invalid entries are not silently converted to valid ones', () => {
   assert.ok(validateEmptyBedEntries([{quantity:1,designation:'X',remark:''}]).length);
 });
 
-test('Manager formats unified entries without aggregating or calculating', () => {
+test('Patrol formats unified entries without aggregating or calculating', () => {
   const payload = normalizeReportPayload({ totalPatientM:'35', emptyBeds:{count:5,entries} });
   assert.equal(payload.emptyBeds.count,5);
-  assert.equal(formatManagerEmptyBeds({empty_bed_gender_mode:'male'}, {payload},40), '5 (1M (TB), 1M (HZV), 1D, 1S)');
+  assert.equal(formatPatrolEmptyBeds({empty_bed_gender_mode:'male'}, {payload},40), '5 (1M (TB), 1M (HZV), 1D, 1S)');
   assert.equal(validateReportPayload(payload,{capacity:40}).valid,true);
   const copy = structuredClone(payload);
   copy.emptyBeds.entries[2].quantity=88;
@@ -42,31 +42,31 @@ test('Manager formats unified entries without aggregating or calculating', () =>
 });
 
 test('empty modern entries do not infer an M/F classification from the calculated total', () => {
-  assert.equal(formatManagerEmptyBeds({empty_bed_gender_mode:'male'}, {payload:{emptyBeds:{count:5, entries:[]}}},40), '—');
+  assert.equal(formatPatrolEmptyBeds({empty_bed_gender_mode:'male'}, {payload:{emptyBeds:{count:5, entries:[]}}},40), '—');
 });
 
 test('obsolete manual fields are ignored instead of being converted', () => {
  const obsolete={count:5,reported:{male:2},details:[{location:'12',gender:'M',remark:'TB'}]};
  assert.deepEqual(normalizeReportPayload({emptyBeds:obsolete}).emptyBeds,{count:5,entries:[]});
- assert.equal(formatManagerEmptyBeds({empty_bed_gender_mode:'male'}, {payload:{emptyBeds:obsolete}},40),'—');
+ assert.equal(formatPatrolEmptyBeds({empty_bed_gender_mode:'male'}, {payload:{emptyBeds:obsolete}},40),'—');
 });
 
-test('Manager additional items include only genuine additional-category definitions', () => {
+test('Patrol additional items include only genuine additional-category definitions', () => {
   const ward={id:'w1',name:'C5'};
   const report={payload:{dynamicItems:{custom_inf:'Covid',custom_add:'Remarks'}},report_item_snapshot:[
     {key:'custom_inf',label:'Infection item',section:'infection',sort_order:1,builtin:false},
     {key:'custom_add',label:'Other item',section:'additional',sort_order:2,builtin:false},
   ]};
-  const rows=buildManagerWardInformation({wards:[ward],bundle:[{ward,report}]});
+  const rows=buildPatrolWardInformation({wards:[ward],bundle:[{ward,report}]});
   assert.deepEqual(rows[0].additionalItems.map(x=>x.label), ['Other item']);
-  const onlyInfection=buildManagerWardInformation({wards:[ward],bundle:[{ward,report:{...report,report_item_snapshot:[report.report_item_snapshot[0]]}}]});
+  const onlyInfection=buildPatrolWardInformation({wards:[ward],bundle:[{ward,report:{...report,report_item_snapshot:[report.report_item_snapshot[0]]}}]});
   assert.equal(onlyInfection[0].additionalItems.length,0);
 });
 
-test('Ward reuses original row controls and Manager hides unconfigured additional section',async()=>{
+test('Ward reuses original row controls and Patrol hides unconfigured additional section',async()=>{
   const html=await readFile(new URL('../ward.html',import.meta.url),'utf8');
   const ward=await readFile(new URL('../pages/ward-page.js',import.meta.url),'utf8');
-  const manager=await readFile(new URL('../pages/manager-page.js',import.meta.url),'utf8');
+  const patrol=await readFile(new URL('../pages/patrol-page.js',import.meta.url),'utf8');
   assert.match(html,/Optional Bed \/ Location Remarks/);
   assert.doesNotMatch(html,/id="emptyManualBlock"|id="ebReportM"/);
   assert.match(html,/class="btn-s" type="button" data-ward-action="addEmptyDetail"/);
@@ -75,8 +75,8 @@ test('Ward reuses original row controls and Manager hides unconfigured additiona
   assert.match(ward, /emptyBedEntryMarkup\(\{ value, ward: state\.ward/);
   assert.match(ward, /\$\('\.btn-x', row\)\.addEventListener\('click', \(\) => \{ row\.remove\(\); markDirty\(\); \}\)/);
   assert.match(ward,/availableEmptyBedDesignations|emptyBedEntryMarkup/);
-  assert.match(manager,/\$\{additional \? renderWardInfoSection\('Additional Report Items'/);
-  assert.doesNotMatch(manager,/No configured Additional Report Items/);
+  assert.match(patrol,/\$\{additional \? renderWardInfoSection\('Additional Report Items'/);
+  assert.doesNotMatch(patrol,/No configured Additional Report Items/);
 });
 
 test('Ward print contains the same consecutive entries with HTML escaping',async()=>{

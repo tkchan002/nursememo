@@ -2,7 +2,7 @@ import { REPORT_TIME_ZONE } from '../core/dates.js';
 import { reportSubmittedAt } from './report-session.js';
 
 /** Independent status for each memo, not a ward-wide colour or row state. */
-export function managerSubmissionStatus(report) {
+export function patrolSubmissionStatus(report) {
   if (!report) return { state: 'missing', label: 'Not submitted', time: '' };
   const stamp = reportSubmittedAt(report);
   if (!stamp) return { state: 'submitted', label: 'Submitted', time: '' };
@@ -13,8 +13,8 @@ export function managerSubmissionStatus(report) {
 }
 
 export function wardSubmissionStates({ pmReport = null, nightReport = null } = {}) {
-  const pm = managerSubmissionStatus(pmReport);
-  const night = managerSubmissionStatus(nightReport);
+  const pm = patrolSubmissionStatus(pmReport);
+  const night = patrolSubmissionStatus(nightReport);
   const submitted = [pm, night].filter(state => state.state === 'submitted').length;
   return {
     pm,

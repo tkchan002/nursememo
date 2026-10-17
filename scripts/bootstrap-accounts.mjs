@@ -44,7 +44,7 @@ const desired = wards.map(ward => {
   names.add(canonical);
   return { loginId, displayName: loginId, role: 'ward', wardId: ward.id };
 });
-for (const [loginId, role] of [['PatrolNight', 'manager'], ['NightMaintenance', 'maintenance']]) {
+for (const [loginId, role] of [['patrol', 'patrol'], ['NightMaintenance', 'maintenance']]) {
   if (names.has(loginId.toLowerCase())) throw new Error(`Account ID collision: ${loginId}`);
   names.add(loginId.toLowerCase());
   desired.push({ loginId, displayName: loginId, role, wardId: null });

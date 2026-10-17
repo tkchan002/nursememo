@@ -16,7 +16,7 @@ export async function getNightMemoTemplateMetadata() {
 }
 
 // Template DOCX is fetched on demand. Never put megabytes of base64 on the
-// Manager dashboard critical path (only has_template/version is loaded there).
+// Patrol dashboard critical path (only has_template/version is loaded there).
 export async function getNightMemoVisualTemplate() {
   if (DB_MODE === 'demo') {
     const saved=demoTemplate(demoRead());

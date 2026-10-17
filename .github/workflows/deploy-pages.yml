@@ -79,8 +79,8 @@ jobs:
       - name: Prepare corrected self-hosted editor for GitHub Pages
         env:
           RANUTS_REVISION: ${{ steps.ranuts-version.outputs.commit }}
-          # For nursememo.app (custom-domain root), set the Actions variable
-          # PAGES_BASE_PATH=/; leave empty only for tkchan002.github.io/nursememo/.
+          # Set PAGES_BASE_PATH=/ for a custom domain. For ordinary project Pages
+          # leave empty to derive /<new-repository-name>/ automatically.
           PAGES_BASE_PATH: ${{ vars.PAGES_BASE_PATH }}
         run: node scripts/prepare-editor-site.mjs
 

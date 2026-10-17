@@ -76,6 +76,6 @@ export const DEMO_REPORTS = DEMO_WARDS.map((ward, i) => ({ward_name:ward.name, r
 
 export const DEMO_ACCOUNTS = [
   ...DEMO_WARDS.map(w => ({login_id:w.name, role:'ward', ward_name:w.name, active:true})),
-  {login_id:'PatrolNight', role:'manager', ward_name:null, active:true},
+  {login_id:'patrol', role:'patrol', ward_name:null, active:true},
   {login_id:'NightMaintenance', role:'maintenance', ward_name:null, active:true},
 ];

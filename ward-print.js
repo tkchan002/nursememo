@@ -4,6 +4,7 @@
 import { formatEmptyBedEntries } from './domain/empty-bed-reporting.js';
 import { openPrintView } from './services/print-job-service.js';
 import { resolveReportEmptyBeds, displayEmptyBeds } from './domain/bed-occupancy.js';
+import { wardMemoPrintHeading } from './domain/report-cycle.js';
 const STORAGE_KEY = 'nightMemoPdfSettingsV1';
 
 export const DEFAULT_WARD_PRINT_SETTINGS = Object.freeze({
@@ -281,7 +282,7 @@ export function renderWardMemoHtml({ward,report,capacity,items=[],settings,logoU
   // A typed memo can contain opposite-sex admissions even in a fixed-sex ward.
   // A historical male-ward memo retains its old labels for fidelity.
   const flowPrefix=D.admissionBySex ? '' : legacyFlowGenderPrefix(ward);
-  const typeLabel=report?.report_type==='pm'?'PM Memo':'Night Memo';
+  const typeLabel=wardMemoPrintHeading(report);
   // The print table uses the hospital's original five columns. Never append
   // the M/F breakdown inline: the narrow T/I column would overflow into CRE.
   // Old reports without a sex breakdown keep showing their original totals.
@@ -411,6 +412,6 @@ export function writeWardMemoToIframe(iframe,context,afterLoad){
 
 export async function printWardMemo(context) {
   // Top-level dedicated print page works on desktop and mobile; preview iframe is read-only.
-  const title = context?.report?.report_type === 'pm' ? 'PM Memo' : 'Night Memo';
+  const title = wardMemoPrintHeading(context?.report);
   return openPrintView({ html: renderWardMemoHtml(context), title, kind: 'ward-memo' });
 }

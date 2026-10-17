@@ -118,7 +118,7 @@ await run();
 assert.equal(createdCount,12);
 assert.equal(access.length,12);
 assert.equal(access.filter(a => a.role==='ward').length,10);
-assert.equal(access.filter(a => a.role==='manager').length,1);
+assert.equal(access.filter(a => a.role==='patrol').length,1);
 assert.equal(access.filter(a => a.role==='maintenance').length,1);
 for(const row of access) {
   const user=users.find(u=>u.id===row.auth_user_id);

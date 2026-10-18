@@ -28,7 +28,7 @@ const wardTabs = initWardTabs();
 const INF_MAP = { iCRE: 'i_CRE', iVRE: 'i_VRE', iCOV: 'i_COVID', iMDR: 'i_MDRA', iCD: 'i_CD', iInf: 'i_Inf', iCA: 'i_CA' };
 const DEV_MAP = { dMV: 'd_MV', dNIV: 'd_NIV', dHF: 'd_HFNC', dHD: 'd_HD', dCA: 'd_CAPD' };
 const FALLBACK_WARD_PRINT_SETTINGS = Object.freeze({ topTitle: 19, topContent: 13, boxTitle: 15, boxContent: 12, lineHeader: 9, lineContent: 11, consHeader: 10, consContent: 10, intubHeader: 9, intubContent: 10, nurseTitle: 9, nurseContent: 11, sigContent: 11, infLabel: 12, infValue: 12, devLabel: 12, devValue: 12 });
-const state = { access: null, ward: null, capacity: null, items: [], allItems: [], staff: [], report: null, draft: null, submissionStatus: null, memoType: 'night', history: [], currentHist: null, operational: true, historyMode: false, staffMode: false, gdTab: null, gdPrev: null, loadedDate: null, editVersion: 0, dirty: false, saving: false, submitting: false };
+const state = { access: null, ward: null, capacity: null, items: [], allItems: [], staff: [], report: null, draft: null, submissionStatus: null, memoType: 'night', history: [], currentHist: null, operational: true, loading: false, historyMode: false, staffMode: false, gdTab: null, gdPrev: null, loadedDate: null, editVersion: 0, dirty: false, saving: false, submitting: false };
 let printModulePromise = null;
 let nurseCounter = 0;
 let pdfSettings = { ...FALLBACK_WARD_PRINT_SETTINGS };
@@ -108,7 +108,7 @@ function bindWardActions() {
     addIt, addNR, addStaffRow, saveEntry, submitEntry, handleGen,
     openPdfSettings, closePdfSettings, printPdf, resetPdfSettings,
     toggleHistory, toggleStaffList, histReprint, histDeleteCurrent, resumeHistoryDraft,
-    reload: () => location.reload(),
+    resetForm,
   };
   document.addEventListener('click', event => {
     const button = event.target.closest('[data-ward-action]');
@@ -204,6 +204,7 @@ function apptToISO(value) { const s = String(value || '').trim(); if (!s) return
 async function loadForDate(date) {
   if (!date) return;
   const requestId = loadRequests.begin();
+  state.loading = true;
   showStatus('loading', 'Loading ward data...');
   disableSave(true);
   try {
@@ -225,12 +226,15 @@ async function loadForDate(date) {
     showStatus('error', error.message || String(error));
     return false;
   } finally {
-    if (loadRequests.isCurrent(requestId)) disableSave(false);
+    if (loadRequests.isCurrent(requestId)) {
+      state.loading = false;
+      disableSave(false);
+    }
   }
 }
 
 function disableSave(on) {
-  const disabled = on || state.saving || state.submitting || !state.operational;
+  const disabled = on || state.loading || state.saving || state.submitting || !state.operational;
   if ($('#saveBtn')) $('#saveBtn').disabled = disabled;
   if ($('#submitBtn')) $('#submitBtn').disabled = disabled;
 }
@@ -293,7 +297,7 @@ function makeDeviceWidget(containerId, key) {
 function devWrap(key) { return $(`[data-dev-key="${CSS.escape(key)}"]`); }
 function setDeviceMode(key, mode) { const wrap = devWrap(key); if (!wrap) return; const bedMode = mode !== 'count'; $$('[data-mode]', wrap).forEach(b => b.classList.toggle('active', b.dataset.mode === (bedMode ? 'beds' : 'count'))); $('[data-dev-beds]', wrap).hidden = !bedMode; $('[data-dev-count-wrap]', wrap).hidden = bedMode; wrap.dataset.mode = bedMode ? 'beds' : 'count'; }
 function getDeviceValue(key) { const wrap = devWrap(key); if (!wrap) return normalizeDevice(null); if (wrap.dataset.mode === 'count') return normalizeDevice({ mode: 'count', count: $('[data-dev-count]', wrap).value }); return normalizeDevice({ mode: 'beds', beds: getBeds(`${key}__beds`) }); }
-function setDeviceValue(key, value) { const wrap = devWrap(key); if (!wrap) return; const device = normalizeDevice(value); setDeviceMode(key, device.mode); if (device.mode === 'count') $('[data-dev-count]', wrap).value = device.count || 0; else setBeds(`${key}__beds`, device.beds); }
+function setDeviceValue(key, value) { const wrap = devWrap(key); if (!wrap) return; const device = normalizeDevice(value); setDeviceMode(key, device.mode); $('[data-dev-count]', wrap).value = device.mode === 'count' ? device.count : 0; setBeds(`${key}__beds`, device.mode === 'beds' ? device.beds : []); }
 
 function renderDynamicItems() {
   const dynamic = state.items.filter(i => !i.builtin);
@@ -419,6 +423,31 @@ function fillPayload(raw) {
   toggleNilIntub();
   calcEmpty();
   state.dirty = false;
+}
+
+// Reset only the current on-screen report; persistence is changed only by Save Draft or Submit.
+function resetForm() {
+  if (state.loading || state.saving || state.submitting) {
+    showStatus('warning', 'Wait for the current report operation to finish before resetting.');
+    return;
+  }
+  if (state.historyMode || state.staffMode || !state.loadedDate || $('#memoDate').value !== state.loadedDate) {
+    showStatus('warning', 'Open a reporting date before resetting its form.');
+    return;
+  }
+  if (!state.operational) {
+    showStatus('error', 'This ward is not operational on the selected reporting date.');
+    return;
+  }
+  if (!confirm(`Clear all entries for ${MEMO_LABELS[state.memoType]} on ${toDisplayDate(state.loadedDate)}?\n\n`
+    + 'This only clears the on-screen form. Existing saved drafts and submitted memos remain unchanged. '
+    + 'Choosing Save Draft afterward will overwrite the saved draft for this reporting date.')) return;
+
+  // Reuse the same defaults and field setters as a new memo. This also clears
+  // nil/runner/dynamic checkboxes, bed selections, tables, devices and text.
+  fillPayload(fullReportPayloadDefaults());
+  markDirty();
+  showStatus('warning', 'Form cleared on screen only. Changes are not saved. Use Save Draft to save the cleared form.');
 }
 
 function collectTableRows(tbody, count) { return $$('tr', $(tbody)).map(row => $$('input,select', row).slice(0, count).map(x => x.value.trim())).filter(row => row.some(Boolean)); }

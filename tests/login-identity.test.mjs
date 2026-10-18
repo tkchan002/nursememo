@@ -21,7 +21,7 @@ test('malformed ID and email input are rejected; cannot inject an arbitrary emai
   }
 });
 
-test('maintenance account create and rename use the same short-ID contract', () => {
+test('maintenance account creation uses short ID, while app editing never renames Auth identity', () => {
   const create = parseAdminCommand({ action:'create', login_id:'C10', role:'ward', ward_id:ward, password:'StrongPassword123' });
   assert.equal(loginIdToEmail(create.login_id), 'c10@accounts.nightmemo.example.com');
   const rename = parseAdminCommand({action:'rename_login', auth_user_id:'12345678-1234-4234-a234-1234567890ab',login_id:'G2'});

@@ -4,7 +4,6 @@ import { readFileSync } from 'node:fs';
 import { fetchAllAuthUsers, reconcileAccountDirectory, loadAccountDirectory } from '../supabase/functions/_shared/account-directory.mjs';
 import { InputError, parseAdminCommand } from '../supabase/functions/_shared/admin-users-policy.mjs';
 import { toStoredMaintenancePassword, validateMaintenancePassword } from '../domain/maintenance-accounts.js';
-import { expandedTestPassword } from '../supabase/functions/_shared/login-identity.mjs';
 
 const id = '12345678-1234-4234-a234-1234567890ab';
 const record = { auth_user_id: id, login_id: 'C10', role: 'ward', display_name: 'Test Ward', active: true, ward_id: 'ward-10', wards: { id: 'ward-10', name: 'C10' }, created_at: '2026-10-15', updated_at: '2026-10-15' };
@@ -32,7 +31,7 @@ test('deleted and mismatched Supabase accounts are reported accurately', () => {
   assert.equal(missing.auth_login_matches, false);
   const [mismatch] = reconcileAccountDirectory([record], [{...user, email:'someone@else.test'}]);
   assert.equal(mismatch.auth_exists, true);
-  assert.equal(mismatch.auth_login_matches, false);
+  assert.equal(mismatch.auth_login_matches, true, 'Auth email is independent of app login');
 });
 
 test('Auth directory requests handle pagination, failures and excessive pages', async () => {
@@ -71,10 +70,10 @@ test('list_accounts command accepts only explicitly named read-only action', () 
 
 test('matching short password is allowed only with explicit test mode', () => {
   assert.equal(validateMaintenancePassword('C10', 'c10', true), true);
-  assert.equal(toStoredMaintenancePassword('C10', 'c10', true), expandedTestPassword('C10'));
+  assert.equal(toStoredMaintenancePassword('C10', 'c10', true), 'c10');
   assert.equal(toStoredMaintenancePassword('C10', 'c10', true, 'demo'), 'c10');
   assert.throws(() => validateMaintenancePassword('C10', 'c10', false), /8 characters/);
-  assert.throws(() => toStoredMaintenancePassword('C10', 'e10', true), /8 characters/);
+  assert.equal(toStoredMaintenancePassword('C10', 'e10', true), 'e10');
   assert.equal(toStoredMaintenancePassword('C10','abcdefgh',false),'abcdefgh');
 });
 

@@ -8,6 +8,6 @@ The existing project's publicly distributable URL and publishable key are alread
 
 A separate one-time SQL Editor migration file accompanies the repository as a separate download. Keep that file out of GitHub. It renames application objects and converts the reporting role to `patrol` without altering Supabase Auth users or their passwords. Back up first.
 
-The updated `supabase/functions/admin-users` Edge Function must eventually be deployed to the same project if you want Maintenance to manage accounts. It is not needed for logins of already-existing accounts.
+The updated `supabase/functions/admin-users` Edge Function must eventually be deployed to the same project if you want Maintenance to manage accounts. For the unified login you must also deploy `user-login` and run the additive SQL script; follow `ACCOUNT_LOGIN_UPGRADE.md`.
 
 For GitHub Pages, enable **Settings → Pages → GitHub Actions** in your new empty repository. Then run the workflows, open the deployed site, and check login, Ward submission, Patrol Night reports, Night Memo/History and PDF printing.

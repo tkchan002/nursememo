@@ -64,8 +64,9 @@ const roleButtons = ['ward', 'patrol', 'maintenance'].map(role => {
 let createClientCalls = 0;
 let capturedLogin = null;
 const client = {
+  functions:{invoke:async(name,config)=>{ assert.equal(name,'user-login');capturedLogin=config.body;return {data:{access_token:'test-access',refresh_token:'test-refresh'},error:null}; }},
   auth: {
-    signInWithPassword: async credentials => { capturedLogin = credentials; return { data: { user: { id: 'test-user' }, session: { user: { id: 'test-user' } } }, error: null }; },
+    setSession: async tokens => { assert.equal(tokens.access_token,'test-access'); assert.equal(tokens.refresh_token,'test-refresh'); return { data: { user: {id:'test-user'},session:{user:{id:'test-user'}} },error:null }; },
     getSession: async () => ({ data: { session: { user: { id: 'test-user' } } }, error: null }),
     signOut: async () => {},
   },
@@ -198,15 +199,14 @@ if (scenario === 'missing') {
   loginId.value = 'c10';
   password.value = 'example-test-password';
   await el('#loginForm').fire('submit', { preventDefault: () => {} });
-  assert.equal(capturedLogin?.email, 'c10@accounts.nightmemo.example.com');
+  assert.equal(capturedLogin?.login_id, 'c10');
   assert.equal(capturedLogin?.password, 'example-test-password');
-  // Real login module converts a short test password only on explicit opt-in.
   const auth = await entry('services/auth-service.js');
   await auth.signIn('C10', 'c10', 'ward');
-  assert.equal(capturedLogin?.email, 'c10@accounts.nightmemo.example.com');
-  assert.equal(capturedLogin?.password, scenario === 'secure' ? 'c10' : 'NM-DEMO-c10-Aa1!');
+  assert.equal(capturedLogin?.login_id, 'C10');
+  assert.equal(capturedLogin?.password, 'c10', 'application password is never converted in browser');
   await auth.signIn('E10', 'wrong', 'ward');
-  assert.equal(capturedLogin?.password, 'wrong', 'incorrect credentials must not be normalized');
+  assert.equal(capturedLogin?.password, 'wrong');
   assert.equal(ctx.location.target, './ward.html');
 }
 console.log(`Runtime integration ${scenario}: passed`);

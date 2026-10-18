@@ -1,4 +1,5 @@
 import { deletePrintJob, purgeExpiredPrintJobs, readPrintJob } from './services/print-job-service.js';
+import { positionWardMemoCrosses } from './services/ward-memo-crosses.js';
 
 const params = new URLSearchParams(location.search);
 const jobId = params.get('job');
@@ -41,6 +42,8 @@ function renderJob(printJob) {
   document.getElementById('printDocumentHost').append(...Array.from(parsed.body.childNodes).map(node => node.cloneNode(true)));
 
   document.getElementById('printActionBtn').addEventListener('click', () => {
+    resetPreviewScale();
+    positionWardMemoCrosses(document);
     window.print();
   });
   document.getElementById('printBackBtn').addEventListener('click', () => {
@@ -51,8 +54,16 @@ function renderJob(printJob) {
   fitPreview();
   window.addEventListener('resize', fitPreview, { passive: true });
   window.addEventListener('orientationchange', fitPreview, { passive: true });
-  window.addEventListener('beforeprint', resetPreviewScale);
+  window.addEventListener('beforeprint', () => {
+    resetPreviewScale();
+    positionWardMemoCrosses(document);
+  });
   window.addEventListener('afterprint', fitPreview);
+  // Image and web-font loading can change row heights after the first paint.
+  document.fonts?.ready?.then(fitPreview);
+  document.getElementById('printDocumentHost').addEventListener('load', event => {
+    if (event.target?.tagName === 'IMG') fitPreview();
+  }, true);
 }
 
 function fitPreview() {
@@ -63,6 +74,7 @@ function fitPreview() {
 
   host.style.transform = 'none';
   stage.style.height = 'auto';
+  positionWardMemoCrosses(document);
   const available = Math.max(240, viewport.clientWidth - 20);
   const naturalWidth = Math.max(host.scrollWidth, host.getBoundingClientRect().width);
   const scale = naturalWidth > available ? Math.max(0.35, available / naturalWidth) : 1;

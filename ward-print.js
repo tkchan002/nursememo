@@ -5,6 +5,7 @@ import { formatEmptyBedEntries } from './domain/empty-bed-reporting.js';
 import { openPrintView } from './services/print-job-service.js';
 import { resolveReportEmptyBeds, displayEmptyBeds } from './domain/bed-occupancy.js';
 import { wardMemoPrintHeading } from './domain/report-cycle.js';
+import { positionWardMemoCrosses } from './services/ward-memo-crosses.js';
 const STORAGE_KEY = 'nightMemoPdfSettingsV1';
 
 export const DEFAULT_WARD_PRINT_SETTINGS = Object.freeze({
@@ -379,21 +380,7 @@ export function renderWardMemoHtml({ward,report,capacity,items=[],settings,logoU
 }
 
 export function positionMemoCrosses(frame){
-  const doc=frame?.contentDocument;
-  if(!doc)return false;
-  const boxes=doc.querySelectorAll('.memo-table-box.crossed');
-  const win=frame.contentWindow;
-  for(const box of boxes){
-    const table=box.querySelector('table'),cross=box.querySelector('.memo-cross-body');
-    if(!table||!cross)continue;
-    const tbody=table.tBodies?.[0];
-    if(!tbody||!tbody.rows.length){cross.style.display='none';continue;}
-    const theadHeight=table.tHead?table.tHead.offsetHeight:0;
-    const mt=win?parseFloat(win.getComputedStyle(table).marginTop)||0:0;
-    cross.style.top=(theadHeight+mt)+'px';
-    cross.style.height=tbody.offsetHeight+'px';
-  }
-  return true;
+  return positionWardMemoCrosses(frame?.contentDocument);
 }
 
 export function writeWardMemoToIframe(iframe,context,afterLoad){

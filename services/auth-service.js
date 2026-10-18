@@ -1,8 +1,6 @@
 import { DB_MODE, supabase } from '../data/client.js';
 import { ensureDemoState } from '../data/demo-state.js';
 import { getCurrentAccess } from '../data/repositories/access-repository.js';
-import { loginIdToEmail, passwordForSupabase } from '../supabase/functions/_shared/login-identity.mjs';
-import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
 
 const LOGIN_PAGE = './index.html';
 
@@ -53,20 +51,26 @@ export async function signIn(account, password, expectedRole = null) {
     return demoAccount;
   }
 
-  // Users enter their short Night Memo ID. Supabase Auth still expects email.
-  // Conversion is deterministic and does not expose a username lookup endpoint.
-  let { data, error } = await supabase.auth.signInWithPassword({
-    email: loginIdToEmail(account),
-    password: passwordForSupabase(account, password, INSECURE_TEST_PASSWORDS),
+  // The separate Nurse Memo credential is verified by a privileged Edge
+  // Function; the user's existing Supabase Auth password is never changed.
+  const { data, error } = await supabase.functions.invoke('user-login', {
+    body: {login_id: account,password},
   });
-  if (error) throw error;
-  if (!data?.user || !data?.session) {
-    throw new Error('Login succeeded but no session was returned.');
+  if (error || data?.error || !data?.access_token || !data?.refresh_token) {
+    let message = data?.error || 'Unable to sign in.';
+    try { const body = await error?.context?.json?.(); if (body?.error) message = body.error; }
+    catch { /* Transport errors have no response JSON. */ }
+    throw new Error(message);
   }
+  const {data: sessionData,error:sessionError} = await supabase.auth.setSession({
+    access_token:data.access_token,refresh_token:data.refresh_token,
+  });
+  if (sessionError || !sessionData?.session || !sessionData?.user)
+    throw new Error('Login succeeded but no session was returned.');
 
   // Do not query user_access here. The destination page performs the single
   // authoritative access/role lookup through requireRole().
-  return data.user;
+  return sessionData.user;
 }
 
 export async function signOut() {

@@ -19,7 +19,15 @@ const users = [];
 const authPasswords = new Map();
 const access = [];
 let createdCount = 0;
+const appPasswords = new Map();
 const client = {
+  rpc: async (name,args) => {
+    assert.equal(name,'app_login_set_password');
+    assert.equal(args.p_actor,null);
+    assert.ok(access.some(a=>a.auth_user_id === args.p_user_id));
+    appPasswords.set(args.p_user_id,args.p_password);
+    return {data:true,error:null};
+  },
   from(table) {
     if (table === 'wards') return { select: () => ({ eq: () => ({ order: async () => ({ data: wards, error: null }) }) }) };
     if (table === 'user_access') return {
@@ -117,6 +125,7 @@ if (scenario === 'missing-ack') {
 await run();
 assert.equal(createdCount,12);
 assert.equal(access.length,12);
+assert.equal(appPasswords.size,12);
 assert.equal(access.filter(a => a.role==='ward').length,10);
 assert.equal(access.filter(a => a.role==='patrol').length,1);
 assert.equal(access.filter(a => a.role==='maintenance').length,1);

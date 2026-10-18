@@ -21,10 +21,11 @@ function functionBody(source, name) {
 
 test('Supabase signIn authenticates credentials without duplicating the access query', () => {
   const body = functionBody(auth, 'signIn');
-  assert.match(body, /supabase\.auth\.signInWithPassword/);
-  const supabaseBranch = body.slice(body.indexOf('supabase.auth.signInWithPassword'));
-  assert.doesNotMatch(supabaseBranch, /getCurrentAccess\(/);
-  assert.match(supabaseBranch, /return data\.user/);
+  assert.match(body, /functions\.invoke\('user-login'/);
+  assert.match(body, /supabase\.auth\.setSession/);
+  assert.doesNotMatch(body, /signInWithPassword/);
+  assert.doesNotMatch(body, /getCurrentAccess\(/);
+  assert.match(body, /return sessionData\.user/);
 });
 
 test('destination requireRole performs one authoritative access lookup using the known session user', () => {

@@ -59,12 +59,12 @@ test('screen typography is enhanced without altering print-sheet sizes', async (
   assert.match(theme, /\.patrol-print-page/);
 });
 
-test('Maintenance previews the generated Auth email and retains its existing authorized rename', async () => {
+test('Maintenance keeps Auth email unchanged during a unified account edit', async () => {
   const html = await read('maintenance.html');
   const js = await read('pages/maintenance-page.js');
   assert.match(html, /accountAuthEmailPreview/);
-  assert.match(js, /loginIdToEmail\(entered\)/);
-  assert.match(js, /adminAccount\('rename_login'/);
+  assert.match(js, /normalizeLoginId\(entered\)/);
+  assert.match(js, /adminAccount\('update_account'/);
   assert.equal(loginIdToEmail('patrol'), 'patrol@accounts.nightmemo.example.com');
   assert.doesNotMatch(html, /id="accountLogin"[^>]*placeholder=/);
 });
@@ -76,5 +76,5 @@ test('Patrol Night uses its canonical account with no transitional login aliases
   assert.match(entry, /patrol: 'patrol'/);
   assert.match(bootstrap, /\['patrol', 'patrol'\]/);
   assert.doesNotMatch(auth, /oldDemoPatrol|legacyPassword/);
-  assert.match(auth, /loginIdToEmail\(account\)/);
+  assert.match(auth, /functions\.invoke\('user-login'/);
 });

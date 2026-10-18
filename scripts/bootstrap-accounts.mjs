@@ -152,6 +152,13 @@ try {
       const { error: rollbackError } = await client.auth.admin.deleteUser(created.user.id);
       throw new Error(`Creating role for ${account.loginId} failed: ${accessError.message}. Auth rollback ${rollbackError ? 'FAILED; inspect Supabase Auth' : 'succeeded'}.`);
     }
+    const { error: appPasswordError } = await client.rpc('app_login_set_password', {
+      p_actor: null, p_user_id: created.user.id, p_password: typedPassword,
+    });
+    if (appPasswordError) {
+      const { error: rollbackError } = await client.auth.admin.deleteUser(created.user.id);
+      throw new Error(`Configuring application password failed: ${appPasswordError.message}. Auth rollback ${rollbackError ? 'FAILED' : 'succeeded'}.`);
+    }
     await output.appendFile(`${account.loginId},${account.role},${typedPassword}\n`);
     await output.sync();
     console.log(`Created ${account.loginId} (${account.role})`);

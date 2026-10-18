@@ -29,6 +29,11 @@ export async function adminAccount(action, payload) {
     if (!account) throw new Error('Account not found.');
     if (action === 'reset_password') account.demo_password = payload.password;
     if (action === 'rename_login') { account.login_id = payload.login_id; account.display_name = payload.display_name || account.display_name; }
+    if (action === 'update_account') {
+      const {auth_user_id,...updates} = payload;
+      if (updates.login_id && state.accounts.some(a => a !== account && a.login_id.toLowerCase() === updates.login_id.toLowerCase())) throw new Error('Account already exists.');
+      Object.assign(account,updates);
+    }
     if (action === 'update_access') Object.assign(account, { role: payload.role, ward_id: payload.role === 'ward' ? (payload.ward_id || null) : null, active: payload.active, display_name: payload.display_name || account.display_name });
     account.updated_at = new Date().toISOString();
     demoWrite(state);

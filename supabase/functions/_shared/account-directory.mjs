@@ -1,5 +1,3 @@
-import { loginIdToEmail } from './login-identity.mjs';
-
 /** Combine Night Memo access rows with actual Supabase Auth users.
  * This is a pure projection: NEVER serialize Auth's password/hash, provider
  * secrets, refresh tokens, or other unrelated user metadata to the browser.
@@ -22,7 +20,7 @@ export function reconcileAccountDirectory(accessRows, authUsers) {
       auth_email: auth?.email || null,
       auth_last_sign_in_at: auth?.last_sign_in_at || null,
       auth_email_confirmed: Boolean(auth?.email_confirmed_at),
-      auth_login_matches: Boolean(auth && auth.email?.toLowerCase() === loginIdToEmail(access.login_id)),
+      auth_login_matches: Boolean(auth), // Auth email intentionally stays fixed across app login renames.
     };
   }).sort((a, b) => a.login_id.localeCompare(b.login_id));
 }

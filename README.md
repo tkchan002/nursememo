@@ -1,4 +1,4 @@
-> **Existing Supabase demo:** Use [REUSE_EXISTING_SUPABASE.md](REUSE_EXISTING_SUPABASE.md). Your current accounts and passwords are preserved; no project reset is required.
+> **Existing Supabase demo:** Use [REUSE_EXISTING_SUPABASE.md](REUSE_EXISTING_SUPABASE.md). Your current Supabase Auth accounts and passwords are preserved. The separate Nurse Memo login credentials are initialized using the existing account IDs; no project reset is required.
 
 # Nurse Memo — Patrol Night
 
@@ -12,7 +12,7 @@ This source distribution is a **clean-break repository**. It uses `patrol` consi
 
 Do **not** run `supabase/schema.sql` or `supabase/seed.sql` in the existing database. They describe a clean installation, not an in-place upgrade. There is intentionally no database reset script in this package.
 
-For a brand new GitHub repository, upload the root contents of this source ZIP including `.github/`, then enable GitHub Actions for Pages. Deploy the updated `admin-users` Edge Function to the **same** Supabase project for ongoing account administration. Existing login account IDs remain unchanged after migration, including the Patrol Night login.
+For a brand new GitHub repository, upload the root contents of this source ZIP including `.github/`, then enable GitHub Actions for Pages. Deploy the updated `admin-users` Edge Function to the **same** Supabase project for ongoing account administration. Account IDs remain unchanged; follow `ACCOUNT_LOGIN_UPGRADE.md` for the separate app passwords and BOTH Edge Functions.
 
 ## Major components
 
@@ -40,3 +40,7 @@ The automated audit blocks reintroduction of the previous protected title across
 ## Licensing and safety
 
 The pinned `ranuts/document` editor is ONLYOFFICE-derived and AGPL-3.0 licensed. Its notices and licence are preserved in the generated `/office/` directory. Review licensing, security and hospital policy before using any real patient information. **This repository and test credentials are only for synthetic demo data.**
+
+## Existing Supabase: unified Nurse Memo login (demo)
+
+See `ACCOUNT_LOGIN_UPGRADE.md`. The additive SQL `supabase/EXISTING_PROJECT_LOGIN_UPGRADE.sql` creates separate hashed Nurse Memo passwords for existing users. It does not change Supabase Auth emails, passwords, user UUIDs, roles, or reports. Deploy **both** `user-login` and `admin-users` Edge Functions before uploading this frontend.

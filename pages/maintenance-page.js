@@ -15,7 +15,7 @@ import { moveOrderedItem, sortByOrder } from '../domain/ordering.js';
 import { emptyBedGenderLabel, validateWardName } from '../domain/ward.js';
 import { editableCapacity, capacityNumber } from '../domain/capacity-history.js';
 import { INSECURE_TEST_PASSWORDS } from '../core/test-password-mode.js';
-import { loginIdToEmail } from '../supabase/functions/_shared/login-identity.mjs';
+import { normalizeLoginId } from '../supabase/functions/_shared/login-identity.mjs';
 import { validateMaintenancePassword, toStoredMaintenancePassword } from '../domain/maintenance-accounts.js';
 import { assertDocxBytes } from '../documents/docx-bytes.js';
 import { roleDisplayName } from '../core/role-labels.js';
@@ -327,8 +327,8 @@ function openPasswordModal(account) {
   $('#newPassword').type = 'password';
   $('#confirmNewPassword').type = 'password';
   $('#passwordInstructions').textContent = INSECURE_TEST_PASSWORDS
-    ? `Test-only: enter ${account.login_id.toLowerCase()} in both fields for matching demo credentials, or use at least 8 characters. This replaces the real Supabase password; the previous password cannot be retrieved.`
-    : 'Enter at least 8 characters. The new password replaces the real Supabase password; the previous password cannot be retrieved.';
+    ? 'Demo login password (2–128 characters). The Supabase Authentication password is never changed.'
+    : 'Choose an application password of at least 8 characters. Supabase Authentication password remains unchanged.';
   openModal('#passwordModal');
 }
 
@@ -338,9 +338,7 @@ function renderAccounts() {
     const exists = a.auth_exists !== false;
     const authStatus = !exists
       ? '<span class="tag subtle">Missing in Auth</span>'
-      : a.auth_login_matches === false
-        ? '<span class="tag subtle">Login ID mismatch</span>'
-        : '<span class="tag">Confirmed</span>';
+      : '<span class="tag">Linked</span>';
     const lastLogin = a.auth_last_sign_in_at ? esc(formatDateTime(a.auth_last_sign_in_at)) : '—';
     const disabled = exists ? '' : ' disabled title="No Supabase Authentication account"';
     return `<tr><td>${esc(a.login_id)}${a.auth_email ? `<div class="muted account-auth-email">${esc(a.auth_email)}</div>` : ''}</td><td>${esc(roleDisplayName(a.role))}</td><td>${esc(a.wards?.name || '—')}</td><td>${a.active ? '<span class="tag">Active</span>' : '<span class="tag subtle">Disabled</span>'}</td><td>${authStatus}</td><td>${lastLogin}</td><td><div class="inline-actions"><button class="btn secondary small" data-edit-account="${esc(a.auth_user_id)}"${disabled}>Edit</button><button class="btn secondary small" data-password="${esc(a.auth_user_id)}"${disabled}>Set Password</button></div></td></tr>`;
@@ -354,7 +352,7 @@ function renderAccounts() {
 }
 function openAccountModal(a = null) {
   state.editingAccount = a;
-  $('#accountModalTitle').textContent = a ? 'Edit Supabase Account' : 'Create Supabase Account';
+  $('#accountModalTitle').textContent = a ? 'Edit Nurse Memo Account' : 'Create Nurse Memo Account';
   $('#accountUserId').value = a?.auth_user_id || '';
   $('#accountLogin').value = a?.login_id || '';
   $('#accountDisplay').value = a?.display_name || '';
@@ -371,7 +369,8 @@ function updateAccountEmailPreview() {
   const entered = $('#accountLogin').value.trim();
   const output = $('#accountAuthEmailPreview');
   try {
-    output.textContent = loginIdToEmail(entered);
+    normalizeLoginId(entered);
+    output.textContent = state.editingAccount ? 'Existing Supabase Auth email stays unchanged.' : 'A separate internal Supabase Auth identity will be created.';
     output.classList.remove('invalid');
   } catch {
     output.textContent = 'Enter a valid Login ID (2–32 characters, starting with a letter).';
@@ -391,24 +390,26 @@ async function saveAccount(event) {
         login_id: loginId, display_name: $('#accountDisplay').value.trim(),
         role: $('#accountRole').value,
         ward_id: $('#accountRole').value === 'ward' ? ($('#accountWard').value || null) : null,
-        password: toStoredMaintenancePassword(loginId, enteredPassword, INSECURE_TEST_PASSWORDS, DB_MODE),
+        password: toStoredMaintenancePassword(loginId, enteredPassword, INSECURE_TEST_PASSWORDS),
       });
     } else {
       const a = state.editingAccount;
-      const renamed = loginId.toLowerCase() !== a.login_id.toLowerCase();
-      if (renamed) await adminAccount('rename_login', { auth_user_id: a.auth_user_id, login_id: loginId, display_name: $('#accountDisplay').value.trim() });
-      await adminAccount('update_access', {
-        auth_user_id: a.auth_user_id, role: $('#accountRole').value,
-        ward_id: $('#accountRole').value === 'ward' ? ($('#accountWard').value || null) : null,
-        active: $('#accountActive').value === 'true', display_name: $('#accountDisplay').value.trim(),
-      });
-      if (renamed && INSECURE_TEST_PASSWORDS) {
-        flash('Account renamed. Reset the password to the new matching account ID before logging in with it.', 'warning', 10000);
+      // Single atomic account update; no Auth email/password changes.
+      const changes = {auth_user_id:a.auth_user_id};
+      const proposed = {
+        login_id:loginId, display_name:$('#accountDisplay').value.trim(),
+        role:$('#accountRole').value,
+        ward_id:$('#accountRole').value === 'ward' ? ($('#accountWard').value || null) : null,
+        active:$('#accountActive').value === 'true',
+      };
+      for (const [key,value] of Object.entries(proposed)) {
+        if (value !== a[key]) changes[key] = value;
       }
+      await adminAccount('update_account', changes);
     }
     closeModal('#accountModal');
     await ensureAccountsLoaded(true);
-    flash('Supabase account saved.', 'success');
+    flash('Nurse Memo account saved.', 'success');
   } catch (error) { flash(error.message || String(error), 'error', 7000); }
 }
 async function savePassword(event) {
@@ -423,13 +424,13 @@ async function savePassword(event) {
     validateMaintenancePassword(account.login_id, password, INSECURE_TEST_PASSWORDS);
     await adminAccount('reset_password', {
       auth_user_id: account.auth_user_id,
-      password: toStoredMaintenancePassword(account.login_id, password, INSECURE_TEST_PASSWORDS, DB_MODE),
+      password: toStoredMaintenancePassword(account.login_id, password, INSECURE_TEST_PASSWORDS),
     });
     closeModal('#passwordModal');
     state.passwordAccount = null;
     $('#newPassword').value = '';
     $('#confirmNewPassword').value = '';
-    flash('Supabase Authentication password replaced. Existing passwords cannot be viewed.', 'success');
+    flash('Nurse Memo login password updated. Supabase Auth password unchanged.', 'success');
     await ensureAccountsLoaded(true);
   } catch (error) { flash(error.message || String(error), 'error', 7000); }
 }

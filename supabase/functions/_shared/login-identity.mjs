@@ -1,6 +1,6 @@
 /**
- * Night Memo short-ID credential scheme, shared by the website, privileged
- * account management and one-time bootstrap. This is NOT authorization:
+ * Nurse Memo short-ID account-validation scheme and legacy Auth-email helper,
+ * used by privileged account provisioning and bootstrap. This is NOT authorization:
  * Supabase Auth and user_access/RLS are the security boundaries.
  *
  * example.com is a reserved documentation domain. These internal addresses
@@ -34,10 +34,3 @@ export function expandedTestPassword(loginId) {
   return `NM-DEMO-${id}-Aa1!`;
 }
 
-export function passwordForSupabase(loginId, enteredPassword, easyTestPasswords = false) {
-  if (easyTestPasswords === true && typeof enteredPassword === 'string' &&
-      enteredPassword.toLowerCase() === normalizeLoginId(loginId).toLowerCase()) {
-    return expandedTestPassword(loginId);
-  }
-  return enteredPassword;
-}

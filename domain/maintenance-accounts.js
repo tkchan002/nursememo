@@ -1,25 +1,14 @@
-import { normalizeLoginId, passwordForSupabase } from '../supabase/functions/_shared/login-identity.mjs';
-
-/** Browser-side UX check. The privileged function independently enforces the
- * stronger 8-128 character rule on the actual stored password.
- */
+import { normalizeLoginId } from '../supabase/functions/_shared/login-identity.mjs';
+// The application password is independent of the account ID and Auth password.
+// Only disposable, synthetic-data demos permit short passwords.
 export function validateMaintenancePassword(loginId, typedPassword, easyTestPasswords = false) {
-  const id = normalizeLoginId(loginId);
-  if (typeof typedPassword !== 'string') throw new Error('Enter a new password.');
-  if (typedPassword.length > 128) throw new Error('Password must not exceed 128 characters.');
-  if (easyTestPasswords === true && typedPassword.toLowerCase() === id.toLowerCase()) return true;
-  if (typedPassword.length < 8) {
-    throw new Error('Use at least 8 characters, or the matching account ID in the explicitly enabled test environment.');
-  }
+  normalizeLoginId(loginId);
+  const minimum = easyTestPasswords ? 2 : 8;
+  if (typeof typedPassword !== 'string' || typedPassword.length < minimum || typedPassword.length > 128)
+    throw new Error(`Password must contain ${minimum} to 128 characters.`);
   return true;
 }
-
-/** A matching short ID is expanded ONLY in deliberately insecure test mode.
- * No environment toggles, hashes, or passwords are persisted by this module.
- */
-export function toStoredMaintenancePassword(loginId, typedPassword, easyTestPasswords = false, dbMode = 'supabase') {
+export function toStoredMaintenancePassword(loginId, typedPassword, easyTestPasswords = false) {
   validateMaintenancePassword(loginId, typedPassword, easyTestPasswords);
-  return dbMode === 'supabase'
-    ? passwordForSupabase(loginId, typedPassword, easyTestPasswords)
-    : typedPassword;
+  return typedPassword; // Server hashes it; never write plaintext to SQL or to logs.
 }

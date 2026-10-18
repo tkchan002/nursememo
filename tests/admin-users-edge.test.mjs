@@ -21,7 +21,7 @@ test('account creation requires valid short ID, sufficiently long password and w
     action: 'create', login_id: 'C10', role: 'ward', password: '12345678',
   }), InputError);
   assert.throws(() => parseAdminCommand({
-    action: 'create', login_id: 'C10', role: 'patrol', password: 'weak',
+    action: 'create', login_id: 'C10', role: 'patrol', password: 'x',
   }), InputError);
 });
 
@@ -64,6 +64,8 @@ test('admin-users endpoint is present and explicitly checks maintenance role', (
   assert.match(fn, /actorId/);
   assert.match(fn, /supabaseAdmin/);
   assert.match(fn, /auth\.admin\.createUser/);
-  assert.match(fn, /auth\.admin\.updateUserById/);
+  assert.doesNotMatch(fn, /auth\.admin\.updateUserById/);
+  assert.match(fn, /app_login_set_password/);
+  assert.match(fn, /app_update_account/);
   assert.match(config, /\[functions\.admin-users\][\s\S]*verify_jwt\s*=\s*true/);
 });

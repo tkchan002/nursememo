@@ -14,8 +14,8 @@ export function fullReportPayloadDefaults() {
     emptyBeds: { count: null, entries: [] }, earlyBirds: [],
     infBeds: {}, devBeds: {}, dynamicItems: {},
     nilSpecial: true, patients: [],
-    nilConsultation: true, consultations: [],
-    nilIntubation: true, intubations: [],
+    nilConsultation: false, consultations: [],
+    nilIntubation: false, intubations: [],
     nurses: [], staffAM: '', staffPM: '', sigRank: 'RN', sigName: '', sigAppt: '',
   };
 }

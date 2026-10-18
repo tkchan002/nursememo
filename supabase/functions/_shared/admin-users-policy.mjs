@@ -29,8 +29,8 @@ function accountId(value) {
 }
 
 function password(value) {
-  if (typeof value !== 'string' || value.length < 8 || value.length > 128) {
-    throw new InputError('Password must contain 8 to 128 characters.');
+  if (typeof value !== 'string' || value.length < 2 || value.length > 128) {
+    throw new InputError('Password must contain 2 to 128 characters.');
   }
   return value;
 }
@@ -68,6 +68,23 @@ export function parseAdminCommand(body) {
         display_name: optionalDisplayName(body.display_name),
         ...access(body), password: password(body.password),
       };
+    case 'update_account':
+      validateFields(body, ['action','auth_user_id','login_id','display_name','role','ward_id','active']);
+      {
+        const changes = {};
+        if (Object.hasOwn(body,'login_id')) changes.login_id = accountId(body.login_id);
+        if (Object.hasOwn(body,'display_name')) changes.display_name = optionalDisplayName(body.display_name);
+        if (Object.hasOwn(body,'role')) {
+          Object.assign(changes,access(body));
+        } else if (Object.hasOwn(body,'ward_id')) {
+          changes.ward_id = body.ward_id;
+        }
+        if (Object.hasOwn(body,'active')) {
+          if (typeof body.active !== 'boolean') throw new InputError('Invalid active status.');
+          changes.active = body.active;
+        }
+        return {action:'update_account',auth_user_id:userId(body.auth_user_id),changes};
+      }
     case 'rename_login':
       validateFields(body, ['action', 'auth_user_id', 'login_id', 'display_name']);
       return {

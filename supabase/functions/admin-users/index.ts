@@ -1,6 +1,5 @@
 import { withSupabase } from 'npm:@supabase/server@1';
 import { InputError, parseAdminCommand } from '../_shared/admin-users-policy.mjs';
-import { loginIdToEmail } from '../_shared/login-identity.mjs';
 import { loadAccountDirectory } from '../_shared/account-directory.mjs';
 
 // The browser MUST never receive a service-role/secret key. The wrapper supplies
@@ -71,9 +70,11 @@ export default {
       // Auth users and app permissions are separate records. If the second
       // write fails, clean up the newly-created Auth user rather than leave
       // an orphaned account that cannot log in.
+      const secretBytes = crypto.getRandomValues(new Uint8Array(48));
+      const internalPassword = Array.from(secretBytes, b => b.toString(16).padStart(2,'0')).join('');
       const { data: created, error: authError } = await db.auth.admin.createUser({
-        email: loginIdToEmail(command.login_id),
-        password: command.password,
+        email: `app-${crypto.randomUUID()}@accounts.nightmemo.example.com`,
+        password: internalPassword,
         email_confirm: true,
       });
       if (authError || !created?.user) {
@@ -91,6 +92,14 @@ export default {
         if (rollbackError) console.error('Auth rollback failed:', rollbackError.code || 'unknown');
         return databaseError(error);
       }
+      const { error: credentialError } = await db.rpc('app_login_set_password', {
+        p_actor:actorId,p_user_id:targetId,p_password:command.password,
+      });
+      if (credentialError) {
+        const { error: rollbackError } = await db.auth.admin.deleteUser(targetId);
+        if (rollbackError) console.error('Account rollback failed:', rollbackError.code || 'unknown');
+        return databaseError(credentialError);
+      }
       result = data;
     } else {
       targetId = command.auth_user_id;
@@ -100,53 +109,24 @@ export default {
       if (!existing) return reply('Account not found.', 404);
 
       if (command.action === 'reset_password') {
-        const { error: auditError } = await db.from('audit_log').insert({
-          actor_user_id: actorId, action: 'account.reset_password.requested',
-          entity_type: 'user_access', entity_id: targetId, details: {},
+        const { error } = await db.rpc('app_login_set_password', {
+          p_actor:actorId,p_user_id:targetId,p_password:command.password,
         });
-        if (auditError) return databaseError(auditError);
-        const { error } = await db.auth.admin.updateUserById(targetId, { password: command.password });
-        if (error) {
-          console.error('Password reset failed:', error.code || 'unknown');
-          return reply('Unable to reset password.', 500);
-        }
-        result = { auth_user_id: targetId, password_reset: true };
-      } else if (command.action === 'update_access') {
-        if (targetId === actorId && (command.role !== 'maintenance' || !command.active)) {
-          return reply('You cannot revoke your own maintenance access.', 400);
-        }
-        const { data, error } = await writeAccess(db, actorId, 'update_access', {
-          auth_user_id: targetId, role: command.role, ward_id: command.ward_id,
-          active: command.active, display_name: command.display_name,
+        if (error) return databaseError(error);
+        result = {auth_user_id:targetId,password_reset:true};
+      } else if (command.action === 'update_account') {
+        const { data, error } = await db.rpc('app_update_account', {
+          p_actor:actorId,p_target:targetId,p_changes:command.changes,
         });
         if (error) return databaseError(error);
         result = data;
-      } else if (command.action === 'rename_login') {
-        // Keep Auth email and the app login ID synchronized. Roll back Auth
-        // email if the database update fails (e.g., unique login constraint).
-        const { data: authUser, error: findError } = await db.auth.admin.getUserById(targetId);
-        if (findError || !authUser?.user?.email) return reply('Authentication account not found.', 404);
-        const previousEmail = authUser.user.email;
-        const { error: renameError } = await db.auth.admin.updateUserById(targetId, {
-          email: loginIdToEmail(command.login_id), email_confirm: true,
-        });
-        if (renameError) return reply('Unable to change account email.', 409);
-        const { data, error } = await writeAccess(db, actorId, 'rename_login', {
-          auth_user_id: targetId, login_id: command.login_id, display_name: command.display_name,
-        });
-        if (error) {
-          const { error: rollbackError } = await db.auth.admin.updateUserById(targetId, {
-            email: previousEmail, email_confirm: true,
-          });
-          if (rollbackError) console.error('Email rollback failed:', rollbackError.code || 'unknown');
-          return databaseError(error);
-        }
-        result = data;
+      } else {
+        return reply('This account operation is no longer available. Refresh Maintenance.', 400);
       }
     }
 
-    // Metadata writes are audited in the same PostgreSQL transaction. Password
-    // reset requests are audited before the Auth API is invoked. Never log a password.
+    // App account edits are audited atomically by PostgreSQL. Password hashes
+    // are stored only in protected database rows; never log a password.
     return Response.json(result);
   }),
 };

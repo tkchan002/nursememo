@@ -2,3 +2,7 @@
 # The function ALSO independently checks the user_access maintenance role.
 [functions.admin-users]
 verify_jwt = true
+
+# Demo username/password login verifies credentials before creating an Auth session.
+[functions.user-login]
+verify_jwt = false

@@ -5,7 +5,8 @@ const file = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
 test('same-project setup preserves user Auth IDs and account passwords', () => {
   const guide = file('REUSE_EXISTING_SUPABASE.md');
-  assert.match(guide, /same account IDs and passwords/i);
+  assert.match(guide, /Supabase Auth password stays unchanged/i);
+  assert.match(guide, /same account IDs/i);
   assert.match(guide, /auth\.users/);
   assert.match(guide, /old database names will not appear/i);
   assert.match(guide, /not included in this GitHub repository ZIP/i);

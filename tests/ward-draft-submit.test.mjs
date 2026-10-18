@@ -20,9 +20,9 @@ test('Ward UI exposes both memo types and their independent submission status', 
   const html=await readFile(new URL('../ward.html',import.meta.url),'utf8');
   assert.match(html, /id="submitBtn"/);
   assert.match(page, /\$\('#memoType'\)\.addEventListener\('change', handleMemoTypeChange\)/);
-  assert.match(page, /current \? 'Submitted' : 'Not submitted'/);
+  assert.match(page, /status = 'Submitted'/);
   assert.match(page, /Draft saved/);
-  assert.match(page, /Draft changes pending re-submit/);
+  assert.match(page, /Not re-submitted/);
   assert.match(page, /handleGen/);
   assert.match(page, /handleGen/);
 });

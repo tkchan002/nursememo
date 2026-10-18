@@ -43,9 +43,20 @@
       <div class="legacy-spacer"></div>
     </header>
     <div id="liveIndicator"></div>
-    <div id="submissionBanner" class="submission-banner pending">
-      <strong>Current memo cycle:</strong><span>Checking submission status...</span>
-    </div>
+    <!-- Persistent report identity and current editing state: not a temporary notification. -->
+    <section id="submissionBanner" class="submission-banner" data-state="loading" aria-label="Current Ward report">
+      <div class="ward-report-identity">
+        <div class="ward-report-heading"><strong id="wardStatusReportType">PM / Night Memo</strong><span class="ward-report-separator" aria-hidden="true">|</span><span id="wardStatusReportDate">Checking reporting date…</span></div>
+        <div class="ward-report-record" id="wardStatusRecord">Checking saved and submitted records…</div>
+      </div>
+      <div class="ward-report-current-state">
+        <span class="ward-report-state-marker" aria-hidden="true"></span>
+        <div class="ward-report-state-details">
+          <strong class="ward-report-state-label" id="wardStatusLabel" role="status" aria-live="polite" aria-atomic="true">Checking status…</strong>
+          <span class="ward-report-state-description" id="wardStatusExplanation">Please wait</span>
+        </div>
+      </div>
+    </section>
     <div class="tab-strip" id="tabStrip">
       <button type="button" class="tab active" data-main-tab="0">Header</button>
       <button type="button" class="tab" data-main-tab="1">Admission / Bed Count</button>

@@ -414,9 +414,6 @@
   .ward-page .ro-fr {min-height: 29px}
   .ward-page .ro-fl {font-size: 12px}
   .ward-page .ro-fc {font-size: 12px; border-radius: 1px}
-  .ward-page #submissionBanner {border-radius: 1px; padding: 7px 12px; font-size: 12px; min-height: 34px}
-  .ward-page #submissionBanner strong {font-size: 12px}
-  .ward-page #submissionBanner span {font-size: 11px}
   .ward-page .gd-btn {min-height: 27px}
   .ward-page #histSidebar {background: #f4f2e8; border: 1px solid #b8b8aa; border-right: 0}
   .ward-page #histSidebarTitle {background: linear-gradient(#ededeb,#d8d8d5)}

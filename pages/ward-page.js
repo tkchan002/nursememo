@@ -5,7 +5,7 @@ import {
   getRecentReports, getPreviousReport, listWardCycleDrafts, getWardCycleDraft,
 } from '../data/index.js';
 import { qs, qsa, esc } from '../core/dom.js';
-import { todayISO, toDisplayDate, fromDisplayDate, formatDateTime } from '../core/dates.js';
+import { todayISO, toDisplayDate, fromDisplayDate, formatDateTime, REPORT_TIME_ZONE } from '../core/dates.js';
 import { createRequestSequencer } from '../core/request-sequencer.js';
 import { initWardTabs } from '../components/ward-tabs.js';
 import {
@@ -28,7 +28,7 @@ const wardTabs = initWardTabs();
 const INF_MAP = { iCRE: 'i_CRE', iVRE: 'i_VRE', iCOV: 'i_COVID', iMDR: 'i_MDRA', iCD: 'i_CD', iInf: 'i_Inf', iCA: 'i_CA' };
 const DEV_MAP = { dMV: 'd_MV', dNIV: 'd_NIV', dHF: 'd_HFNC', dHD: 'd_HD', dCA: 'd_CAPD' };
 const FALLBACK_WARD_PRINT_SETTINGS = Object.freeze({ topTitle: 19, topContent: 13, boxTitle: 15, boxContent: 12, lineHeader: 9, lineContent: 11, consHeader: 10, consContent: 10, intubHeader: 9, intubContent: 10, nurseTitle: 9, nurseContent: 11, sigContent: 11, infLabel: 12, infValue: 12, devLabel: 12, devValue: 12 });
-const state = { access: null, ward: null, capacity: null, items: [], allItems: [], staff: [], report: null, draft: null, submissionStatus: null, memoType: 'night', history: [], currentHist: null, operational: true, loading: false, historyMode: false, staffMode: false, gdTab: null, gdPrev: null, loadedDate: null, editVersion: 0, dirty: false, saving: false, submitting: false };
+const state = { access: null, ward: null, capacity: null, items: [], allItems: [], staff: [], report: null, draft: null, submissionStatus: null, memoType: 'night', history: [], currentHist: null, operational: true, loading: false, historyMode: false, staffMode: false, gdTab: null, gdPrev: null, loadedDate: null, submissionStatusUnavailable: false, editVersion: 0, dirty: false, saving: false, submitting: false };
 let printModulePromise = null;
 let nurseCounter = 0;
 let pdfSettings = { ...FALLBACK_WARD_PRINT_SETTINGS };
@@ -47,23 +47,88 @@ function setupSubmissionUi() {
   }
 }
 
+function formatWardStatusTime(value) {
+  if (!value) return 'Time unavailable';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Time unavailable';
+  return `${new Intl.DateTimeFormat('en-GB', {
+    timeZone: REPORT_TIME_ZONE, day: '2-digit', month: 'short', year: 'numeric',
+    hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(date)} HKT`;
+}
+
+// A stable status bar: rendering never inserts/removes elements or changes the
+// workspace position. Updating the live label only when its text actually
+// changes also avoids repeatedly announcing every keystroke to screen readers.
 function renderSubmissionBanner() {
   const banner = $('#submissionBanner');
   if (!banner || !state.loadedDate) return;
-  const current = !!state.report || !!state.submissionStatus?.submitted;
-  const typeLabel = MEMO_LABELS[state.memoType];
+  const submitted = !!state.report || !!state.submissionStatus?.submitted;
   const submittedAt = state.report?.submitted_at || state.submissionStatus?.last_submitted_at;
   const savedAt = state.draft?.updated_at;
-  const draftNotice = state.draft && current ? 'Draft changes pending re-submit' : '';
-  const dirtyNotice = state.dirty ? 'Unsaved changes on this screen' : '';
-  const savedNotice = state.draft
-    ? `Draft saved ${formatDateTime(savedAt)} HKT${current ? ' · Not re-submitted' : ' · Not submitted'}`
-    : (current ? `Submitted ${formatDateTime(submittedAt)} HKT` : 'No saved draft or submission');
-  const actionNotice = state.saving ? ' · Saving…' : state.submitting ? ' · Submitting…' : '';
-  banner.className = `submission-banner ${current && !state.draft && !state.dirty ? 'submitted' : 'pending'}`;
-  banner.innerHTML = `<strong>${esc(typeLabel)}: ${current ? 'Submitted' : 'Not submitted'}</strong>`
-    + `<span>Reporting night: ${esc(toDisplayDate(state.loadedDate))} · ${esc(savedNotice)}`
-    + `${draftNotice ? ` · ${esc(draftNotice)}` : ''}${dirtyNotice ? ` · ${esc(dirtyNotice)}` : ''}${esc(actionNotice)}</span>`;
+  const submissionTime = formatWardStatusTime(submittedAt);
+  const draftTime = formatWardStatusTime(savedAt);
+  const hasDraft = !!state.draft;
+
+  let record = submitted ? `Last submitted: ${submissionTime}`
+    : hasDraft ? `Last draft saved: ${draftTime}` : 'No previous submission';
+  if (state.submissionStatusUnavailable) {
+    record = `Unable to verify latest submission · ${record}`;
+  }
+
+  let status = 'Not saved';
+  let explanation = 'No saved draft or submission';
+  let appearance = 'new';
+  if (submitted) {
+    status = 'Submitted';
+    explanation = 'Current version submitted';
+    appearance = 'submitted';
+  }
+  if (hasDraft) {
+    status = 'Draft saved';
+    explanation = submitted ? `Saved ${draftTime} · Not re-submitted` : 'Not submitted to Patrol Night';
+    appearance = 'draft';
+  }
+  if (state.dirty) {
+    status = 'Unsaved changes';
+    explanation = hasDraft ? `Earlier draft saved ${draftTime}`
+      : submitted ? 'Latest changes not saved or submitted' : 'Current changes not saved';
+    appearance = 'unsaved';
+  }
+  if (state.saving) {
+    status = 'Saving draft…';
+    explanation = 'Waiting for save confirmation';
+    appearance = 'working';
+  } else if (state.submitting) {
+    status = 'Submitting…';
+    explanation = 'Waiting for submission confirmation';
+    appearance = 'working';
+  } else if (state.submissionStatusUnavailable) {
+    explanation = `${explanation} · Submission status could not be verified`;
+    if (!state.dirty && !hasDraft && !submitted) {
+      status = 'Status unavailable';
+      explanation = 'Could not check the latest submission';
+      appearance = 'unknown';
+    }
+  }
+  if (!state.operational) {
+    status = 'Editing unavailable';
+    explanation = 'Ward not operational on this reporting night';
+    appearance = 'unknown';
+  }
+
+  banner.dataset.state = appearance;
+  const fields = {
+    '#wardStatusReportType': MEMO_LABELS[state.memoType] || 'Ward Memo',
+    '#wardStatusReportDate': toDisplayDate(state.loadedDate),
+    '#wardStatusRecord': record,
+    '#wardStatusLabel': status,
+    '#wardStatusExplanation': explanation,
+  };
+  for (const [selector, text] of Object.entries(fields)) {
+    const element = $(selector);
+    if (element && element.textContent !== text) element.textContent = text;
+  }
 }
 
 async function refreshSubmissionBanner() {
@@ -73,15 +138,13 @@ async function refreshSubmissionBanner() {
     const value = await loadWardSubmissionStatus(state.ward.id, date, type);
     if ($('#memoDate').value !== date || state.loadedDate !== date || state.memoType !== type) return;
     state.submissionStatus = value;
+    state.submissionStatusUnavailable = false;
     renderSubmissionBanner();
   } catch (error) {
     if ($('#memoDate').value !== date || state.loadedDate !== date || state.memoType !== type) return;
     console.error('Unable to load submission status', error);
-    const banner = $('#submissionBanner');
-    if (banner) {
-      banner.className = 'submission-banner unknown';
-      banner.innerHTML = '<strong>Submission status unavailable</strong><span>Check the PM/Night database configuration.</span>';
-    }
+    state.submissionStatusUnavailable = true;
+    renderSubmissionBanner();
   }
 }
 
@@ -210,7 +273,7 @@ async function loadForDate(date) {
   try {
     const result = await loadWardReportContext(state.ward.id, date, state.memoType);
     if (!loadRequests.isCurrent(requestId)) return;
-    Object.assign(state, result, { loadedDate: date, dirty: false });
+    Object.assign(state, result, { loadedDate: date, dirty: false, submissionStatusUnavailable: false });
     buildControls();
     fillPayload(result.draft?.payload || result.report?.payload || fullReportPayloadDefaults());
     renderStaffDataLists();
@@ -549,6 +612,9 @@ async function submitEntry() {
     state.report = report;
     state.draft = null;
     state.submissionStatus = { submitted: true, last_submitted_at: report?.submitted_at || null };
+    // The successful submission itself confirms the new submitted state,
+    // even when a previous standalone status lookup had failed.
+    state.submissionStatusUnavailable = false;
     state.dirty = state.editVersion !== submittingVersion;
     renderSubmissionBanner();
     await Promise.all([refreshHistory(), refreshSubmissionBanner()]);

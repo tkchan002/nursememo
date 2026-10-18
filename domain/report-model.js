@@ -13,7 +13,7 @@ export function fullReportPayloadDefaults() {
     admissionBySex: { admissionEC: { M: 0, F: 0 }, admissionCC: { M: 0, F: 0 }, transferIn: { M: 0, F: 0 } },
     emptyBeds: { count: null, entries: [] }, earlyBirds: [],
     infBeds: {}, devBeds: {}, dynamicItems: {},
-    nilSpecial: true, patients: [],
+    nilSpecial: false, patients: [],
     nilConsultation: false, consultations: [],
     nilIntubation: false, intubations: [],
     nurses: [], staffAM: '', staffPM: '', sigRank: 'RN', sigName: '', sigAppt: '',

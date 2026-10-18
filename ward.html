@@ -10,7 +10,7 @@
   <link rel="stylesheet" href="./css/theme.css">
 </head>
 <body class="legacy-page ward-page">
-<div id="statusBox"></div>
+<div id="statusBox" role="status" aria-live="polite" aria-atomic="true"></div>
 <!-- Get Data confirmation dialog: shared shared controls and Ward-specific data layout. -->
 <div id="gdOverlay" class="ui-dialog-overlay">
   <div id="gdModal" class="ui-dialog" role="dialog" aria-modal="true" aria-labelledby="gdTitleText" aria-describedby="gdFooterMsg" tabindex="-1">
@@ -30,7 +30,7 @@
 <div id="appWrapper">
   <!-- Left history sidebar -->
   <div id="histSidebar">
-    <div id="histSidebarTitle">History</div>
+    <div id="histSidebarTitle">History <span class="history-title-hint">Drafts &amp; submitted</span></div>
     <div id="histEntryList"><div id="histEmpty">No saved entries yet.</div></div>
   </div>
   <!-- Main app -->
@@ -184,7 +184,7 @@
     </div><!-- /.main-panel -->
     <div class="btn-bar">
       <div id="normalBar">
-        <button class="pill" id="saveBtn" data-ward-action="saveEntry">Save</button>
+        <button class="pill" id="saveBtn" data-ward-action="saveEntry">Save Draft</button>
         <button class="pill submit-pill" id="submitBtn" data-ward-action="submitEntry">Submit</button>
         <button class="pill" data-ward-action="handleGen">Print</button>
         <button class="pill" data-ward-action="openPdfSettings">Preview</button>
@@ -193,7 +193,7 @@
         <button class="pill" data-ward-action="reload">Reset</button>
         <button class="pill" id="logoutBtn">Logout</button>
       </div>
-      <div id="histBar"><button class="pill" id="hbReprint" disabled data-ward-action="histReprint">Reprint</button><button class="pill" id="hbDelete" disabled data-ward-action="histDeleteCurrent">Delete</button><button class="pill" id="historyCancelBtn" data-ward-action="toggleHistory">Cancel</button></div>
+      <div id="histBar"><button class="pill" id="hbResumeDraft" data-ward-action="resumeHistoryDraft" hidden>Resume Draft</button><button class="pill" id="hbReprint" disabled data-ward-action="histReprint">Reprint</button><button class="pill" id="hbDelete" disabled hidden data-ward-action="histDeleteCurrent">Delete</button><button class="pill" id="historyCancelBtn" data-ward-action="toggleHistory">Cancel</button></div>
       <div id="staffBar"><button class="pill" id="staffCloseBtn" data-ward-action="toggleStaffList">Close</button></div>
     </div>
     <!-- Original Night Memo print preview / font controls, now backed by Supabase report data. -->

@@ -2,7 +2,7 @@ import { requireRole, signOut } from '../services/auth-service.js';
 import { CONFIG } from '../config.js';
 import {
   DB_MODE, getWardById, getWardCapacity, getWardStaff, saveWardStaff, setStaffActive,
-  getRecentReports, getPreviousReport,
+  getRecentReports, getPreviousReport, listWardCycleDrafts, getWardCycleDraft,
 } from '../data/index.js';
 import { qs, qsa, esc } from '../core/dom.js';
 import { todayISO, toDisplayDate, fromDisplayDate, formatDateTime } from '../core/dates.js';
@@ -16,11 +16,14 @@ import { formatEmptyBedEntries } from '../domain/empty-bed-reporting.js';
 import { calculateEmptyBeds, resolveReportEmptyBeds, displayEmptyBeds } from '../domain/bed-occupancy.js';
 import { loadHistoricalReportContext, loadWardReportContext, loadWardSubmissionStatus, saveWardDraft, submitWardReport } from '../services/report-service.js';
 import { reportNightDate, defaultMemoType, MEMO_LABELS } from '../domain/report-cycle.js';
+import { mergeWardHistory, wardHistoryKey } from '../domain/ward-history.js';
 import { emptyBedEntryMarkup, bindEmptyBedType } from '../components/empty-bed-entry.js';
 
 const $ = qs;
 const $$ = qsa;
 const loadRequests = createRequestSequencer();
+const historyRequests = createRequestSequencer();
+const historyListRequests = createRequestSequencer();
 const wardTabs = initWardTabs();
 const INF_MAP = { iCRE: 'i_CRE', iVRE: 'i_VRE', iCOV: 'i_COVID', iMDR: 'i_MDRA', iCD: 'i_CD', iInf: 'i_Inf', iCA: 'i_CA' };
 const DEV_MAP = { dMV: 'd_MV', dNIV: 'd_NIV', dHF: 'd_HFNC', dHD: 'd_HD', dCA: 'd_CAPD' };
@@ -46,15 +49,21 @@ function setupSubmissionUi() {
 
 function renderSubmissionBanner() {
   const banner = $('#submissionBanner');
-  if (!banner) return;
-  const last = state.submissionStatus?.last_submitted_at || null;
-  const current = !!state.submissionStatus?.submitted;
+  if (!banner || !state.loadedDate) return;
+  const current = !!state.report || !!state.submissionStatus?.submitted;
   const typeLabel = MEMO_LABELS[state.memoType];
-  banner.className = `submission-banner ${current ? 'submitted' : 'pending'}`;
-  const draftNotice = state.draft ? ' · Draft changes pending re-submit' : '';
-  banner.innerHTML = current
-    ? `<strong>${esc(typeLabel)}: Submitted</strong><span>${esc(toDisplayDate(state.loadedDate))} · ${esc(formatDateTime(last))}${draftNotice}</span>`
-    : `<strong>${esc(typeLabel)}: Not submitted</strong><span>${state.draft ? 'Draft saved but not submitted' : 'No submission for this reporting night'}</span>`;
+  const submittedAt = state.report?.submitted_at || state.submissionStatus?.last_submitted_at;
+  const savedAt = state.draft?.updated_at;
+  const draftNotice = state.draft && current ? 'Draft changes pending re-submit' : '';
+  const dirtyNotice = state.dirty ? 'Unsaved changes on this screen' : '';
+  const savedNotice = state.draft
+    ? `Draft saved ${formatDateTime(savedAt)} HKT${current ? ' · Not re-submitted' : ' · Not submitted'}`
+    : (current ? `Submitted ${formatDateTime(submittedAt)} HKT` : 'No saved draft or submission');
+  const actionNotice = state.saving ? ' · Saving…' : state.submitting ? ' · Submitting…' : '';
+  banner.className = `submission-banner ${current && !state.draft && !state.dirty ? 'submitted' : 'pending'}`;
+  banner.innerHTML = `<strong>${esc(typeLabel)}: ${current ? 'Submitted' : 'Not submitted'}</strong>`
+    + `<span>Reporting night: ${esc(toDisplayDate(state.loadedDate))} · ${esc(savedNotice)}`
+    + `${draftNotice ? ` · ${esc(draftNotice)}` : ''}${dirtyNotice ? ` · ${esc(dirtyNotice)}` : ''}${esc(actionNotice)}</span>`;
 }
 
 async function refreshSubmissionBanner() {
@@ -62,10 +71,11 @@ async function refreshSubmissionBanner() {
   const type = state.memoType;
   try {
     const value = await loadWardSubmissionStatus(state.ward.id, date, type);
-    if ($('#memoDate').value !== date || state.memoType !== type) return;
+    if ($('#memoDate').value !== date || state.loadedDate !== date || state.memoType !== type) return;
     state.submissionStatus = value;
     renderSubmissionBanner();
   } catch (error) {
+    if ($('#memoDate').value !== date || state.loadedDate !== date || state.memoType !== type) return;
     console.error('Unable to load submission status', error);
     const banner = $('#submissionBanner');
     if (banner) {
@@ -83,8 +93,10 @@ async function handleMemoTypeChange() {
   if (state.dirty && !confirm('You have unsaved changes. Discard them and switch memo type?')) {
     select.value = state.memoType; return;
   }
+  const previousType = state.memoType;
   state.memoType = next;
-  await loadForDate($('#memoDate').value);
+  const loaded = await loadForDate($('#memoDate').value);
+  if (!loaded) { state.memoType = previousType; select.value = previousType; return; }
   await refreshSubmissionBanner();
 }
 
@@ -95,7 +107,7 @@ function bindWardActions() {
     gdClose, gdConfirm, getDataForTab, addEmptyDetail, addEB, addPt, addCs,
     addIt, addNR, addStaffRow, saveEntry, submitEntry, handleGen,
     openPdfSettings, closePdfSettings, printPdf, resetPdfSettings,
-    toggleHistory, toggleStaffList, histReprint, histDeleteCurrent,
+    toggleHistory, toggleStaffList, histReprint, histDeleteCurrent, resumeHistoryDraft,
     reload: () => location.reload(),
   };
   document.addEventListener('click', event => {
@@ -147,7 +159,7 @@ async function init() {
   // Status belongs to the selected reporting night and memo type, not a 120-minute timer.
 }
 
-function markDirty() { if (state.loadedDate) { state.editVersion += 1; state.dirty = true; } }
+function markDirty() { if (state.loadedDate) { state.editVersion += 1; state.dirty = true; renderSubmissionBanner(); } }
 
 async function handleDateChange() {
   const next = $('#memoDate').value;
@@ -156,18 +168,31 @@ async function handleDateChange() {
     $('#memoDate').value = state.loadedDate;
     return;
   }
-  await loadForDate(next);
+  const loaded = await loadForDate(next);
+  if (!loaded) { $('#memoDate').value = state.loadedDate; return; }
   await refreshSubmissionBanner();
 }
 
 function showStatus(type, msg) {
   const box = $('#statusBox');
   if (!box) return;
-  box.className = type || 'loading';
-  box.textContent = msg;
-  box.classList.add('is-visible');
   clearTimeout(showStatus._t);
-  if (type !== 'loading') showStatus._t = setTimeout(() => { box.classList.remove('is-visible'); }, 4500);
+  box.setAttribute('role', type === 'error' ? 'alert' : 'status');
+  box.setAttribute('aria-live', type === 'error' ? 'assertive' : 'polite');
+  box.className = type || 'loading';
+  box.replaceChildren(document.createTextNode(msg));
+  if (type === 'error' || type === 'warning') {
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'ward-status-dismiss';
+    dismiss.setAttribute('aria-label', 'Dismiss notification');
+    dismiss.textContent = '×';
+    dismiss.addEventListener('click', () => box.classList.remove('is-visible'));
+    box.append(dismiss);
+  }
+  box.classList.add('is-visible');
+  // Failures and warnings remain until superseded; only routine success auto-dismisses.
+  if (type === 'success') showStatus._t = setTimeout(() => { box.classList.remove('is-visible'); }, 2600);
 }
 
 function itemByKey(key) { return state.items.find(i => i.key === key); }
@@ -188,13 +213,17 @@ async function loadForDate(date) {
     buildControls();
     fillPayload(result.draft?.payload || result.report?.payload || fullReportPayloadDefaults());
     renderStaffDataLists();
+    state.submissionStatus = { submitted: !!result.report, last_submitted_at: result.report?.submitted_at || null };
+    renderSubmissionBanner();
     if (!state.operational) showStatus('error', `${state.ward.name} is not operational on ${toDisplayDate(date)}. Saving is disabled for this date.`);
     else if (state.draft) showStatus('success', `Loaded saved draft for ${toDisplayDate(date)}. This draft has not been submitted.`);
     else if (state.report) showStatus('success', `Loaded submitted ${MEMO_LABELS[state.memoType]} for ${toDisplayDate(date)}.`);
-    else showStatus('success', `Ready for ${toDisplayDate(date)}. Previous submissions are available through Get Data or History.`);
+    else showStatus('success', `New ${MEMO_LABELS[state.memoType]} for ${toDisplayDate(date)}. No saved draft or submission exists.`);
+    return true;
   } catch (error) {
     if (!loadRequests.isCurrent(requestId)) return;
     showStatus('error', error.message || String(error));
+    return false;
   } finally {
     if (loadRequests.isCurrent(requestId)) disableSave(false);
   }
@@ -436,6 +465,7 @@ async function saveEntry() {
   const savingVersion = state.editVersion;
   state.saving = true;
   disableSave(true);
+  renderSubmissionBanner();
   showStatus('loading', 'Saving draft...');
   try {
     const { draft, warnings } = await saveWardDraft({
@@ -451,6 +481,8 @@ async function saveEntry() {
     state.draft = draft;
     state.dirty = state.editVersion !== savingVersion;
     renderSubmissionBanner();
+    // A confirmed Save must be discoverable in History immediately.
+    void refreshHistory().catch(error => console.error('Draft history refresh failed', error));
     showStatus(state.dirty || warnings.length ? 'warning' : 'success', state.dirty ? 'Draft saved, but edits made during saving are still unsaved.' : warnings.length ? `Draft saved with warning: ${warnings.join(' ')}` : 'Draft saved. It has NOT been submitted to Patrol Night.');
     return draft;
   } catch (error) {
@@ -458,6 +490,7 @@ async function saveEntry() {
     return null;
   } finally {
     state.saving = false;
+    renderSubmissionBanner();
     disableSave(false);
   }
 }
@@ -471,6 +504,7 @@ async function submitEntry() {
   const submittingVersion = state.editVersion;
   state.submitting = true;
   disableSave(true);
+  renderSubmissionBanner();
   showStatus('loading', 'Submitting memo...');
   try {
     const { report, warnings } = await submitWardReport({
@@ -485,7 +519,9 @@ async function submitEntry() {
     });
     state.report = report;
     state.draft = null;
+    state.submissionStatus = { submitted: true, last_submitted_at: report?.submitted_at || null };
     state.dirty = state.editVersion !== submittingVersion;
+    renderSubmissionBanner();
     await Promise.all([refreshHistory(), refreshSubmissionBanner()]);
     const submittedAt = report?.submitted_at || report?.updated_at;
     const successText = submittedAt ? `Submitted successfully at ${formatDateTime(submittedAt)}.` : 'Submitted successfully.';
@@ -496,47 +532,104 @@ async function submitEntry() {
     return null;
   } finally {
     state.submitting = false;
+    renderSubmissionBanner();
     disableSave(false);
   }
 }
 
 async function refreshHistory() {
-  state.history = await getRecentReports(state.ward.id, CONFIG.RECENT_HISTORY_LIMIT);
+  const requestId = historyListRequests.begin();
+  const [submitted, drafts] = await Promise.all([
+    getRecentReports(state.ward.id, CONFIG.RECENT_HISTORY_LIMIT),
+    listWardCycleDrafts(state.ward.id, CONFIG.RECENT_HISTORY_LIMIT),
+  ]);
+  if (!historyListRequests.isCurrent(requestId)) return;
+  state.history = mergeWardHistory(submitted, drafts, CONFIG.RECENT_HISTORY_LIMIT);
   const host = $('#histEntryList');
   if (!state.history.length) {
-    host.innerHTML = '<div id="histEmpty">No saved entries yet.</div>';
+    host.innerHTML = '<div id="histEmpty">No saved drafts or submitted memos yet.</div>';
     return;
   }
   host.innerHTML = '';
-  state.history.forEach(report => {
-    const entry = document.createElement('div');
-    entry.className = 'hist-entry' + (state.currentHist?.id === report.id ? ' selected' : '');
-    entry.innerHTML = `<div class="he-body"><span class="he-date">${esc(toDisplayDate(report.report_date))} · ${esc(MEMO_LABELS[report.report_type] || 'Legacy')}</span><span class="he-sub">${esc(report.updated_at ? formatDateTime(report.updated_at) : '')}</span></div><button class="he-del" title="Historical deletion is disabled">x</button>`;
-    $('.he-body', entry).addEventListener('click', () => openHistory(report));
-    $('.he-del', entry).addEventListener('click', event => { event.stopPropagation(); showStatus('error', 'Historical report deletion is disabled in the Supabase version.'); });
-    host.append(entry);
+  state.history.forEach(entry => {
+    const isDraft = entry.kind === 'draft';
+    const label = isDraft ? (entry.hasSubmittedVersion ? 'Unsubmitted changes' : 'Draft saved') : 'Submitted';
+    const timestamp = entry.activity_at ? formatDateTime(entry.activity_at) : 'Unknown time';
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'hist-entry' + (state.currentHist && wardHistoryKey(state.currentHist) === wardHistoryKey(entry) ? ' selected' : '');
+    item.setAttribute('aria-label', `${MEMO_LABELS[entry.report_type]} for ${toDisplayDate(entry.report_date)}: ${label}. ${timestamp} Hong Kong time.`);
+    item.innerHTML = `<span class="he-body"><span class="he-date">${esc(toDisplayDate(entry.report_date))} · ${esc(MEMO_LABELS[entry.report_type])}</span>`
+      + `<span class="he-state ${isDraft ? 'draft' : 'submitted'}">${esc(label)}</span>`
+      + `<span class="he-sub">${isDraft ? 'Saved' : 'Submitted'} ${esc(timestamp)} HKT</span></span>`;
+    item.addEventListener('click', () => { void openHistory(entry); });
+    host.append(item);
   });
 }
 
-async function openHistory(report) {
-  state.currentHist = report;
+async function openHistory(entry) {
+  const requestId = historyRequests.begin();
   state.historyMode = true;
   state.staffMode = false;
   $('#formWrap').classList.add('hidden');
   $('#staffListWrap').classList.remove('open');
-  $('#histIdle').classList.remove('show');
-  $('#histDetailWrap').classList.add('open');
+  $('#histIdle').classList.add('show');
+  $('#histIdle').textContent = 'Loading selected history record…';
+  $('#histDetailWrap').classList.remove('open');
   wardTabs.setMainLocked(true);
   $('#normalBar').hidden = true;
   $('#staffBar').classList.remove('show');
   $('#histBar').classList.add('show');
-  $('#hbReprint').disabled = false;
+  $('#hbReprint').disabled = true;
+  $('#hbResumeDraft').hidden = true;
   $('#hbDelete').disabled = true;
-  $('#histViewLabel').textContent = `Viewing: ${toDisplayDate(report.report_date)}`;
-  $('#histViewSavedAt').textContent = report.updated_at ? `Saved ${formatDateTime(report.updated_at)}` : '';
-  const context = await loadHistoricalReportContext(state.ward.id, report);
-  renderHistorySections(report, context.items, context.capacity);
-  await refreshHistory();
+  try {
+    // The list returns metadata only. Re-fetch a draft under the existing ward access RPC.
+    const report = entry.kind === 'draft'
+      ? await getWardCycleDraft(state.ward.id, entry.report_date, entry.report_type)
+      : entry;
+    if (!report) throw new Error('This draft no longer exists. Refresh History to see the latest records.');
+    const context = await loadHistoricalReportContext(state.ward.id, report);
+    if (!historyRequests.isCurrent(requestId) || !state.historyMode) return;
+    state.currentHist = { ...report, kind: entry.kind };
+    $('#histViewLabel').textContent = `Viewing: ${toDisplayDate(report.report_date)} · ${MEMO_LABELS[report.report_type]} · ${entry.kind === 'draft' ? 'Draft (not submitted)' : 'Submitted'}`;
+    $('#histViewSavedAt').textContent = report[entry.kind === 'draft' ? 'updated_at' : 'submitted_at']
+      ? `${entry.kind === 'draft' ? 'Saved' : 'Submitted'} ${formatDateTime(report[entry.kind === 'draft' ? 'updated_at' : 'submitted_at'])} HKT` : '';
+    renderHistorySections(report, context.items, context.capacity);
+    $('#histDetailWrap').classList.add('open');
+    $('#histIdle').classList.remove('show');
+    $('#hbReprint').disabled = entry.kind === 'draft';
+    $('#hbResumeDraft').hidden = entry.kind !== 'draft';
+    qsa('#histEntryList .hist-entry').forEach((button, index) => {
+      button.classList.toggle('selected', wardHistoryKey(state.history[index]) === wardHistoryKey(state.currentHist));
+    });
+  } catch (error) {
+    if (!historyRequests.isCurrent(requestId) || !state.historyMode) return;
+    $('#histIdle').textContent = 'Unable to open this record. Select another item or reopen History.';
+    showStatus('error', error.message || String(error));
+  }
+}
+
+async function resumeHistoryDraft() {
+  const entry = state.currentHist;
+  if (!entry || entry.kind !== 'draft' || state.saving || state.submitting) return;
+  if (state.dirty && !confirm('You have unsaved edits in the current form. Discard them and open this draft?')) return;
+  const previousDate = $('#memoDate').value;
+  const previousType = state.memoType;
+  $('#hbResumeDraft').disabled = true;
+  $('#memoDate').value = entry.report_date;
+  state.memoType = entry.report_type;
+  $('#memoType').value = entry.report_type;
+  const loaded = await loadForDate(entry.report_date);
+  if (loaded) {
+    await refreshSubmissionBanner();
+    setFormMode();
+  } else {
+    $('#memoDate').value = previousDate;
+    state.memoType = previousType;
+    $('#memoType').value = previousType;
+  }
+  $('#hbResumeDraft').disabled = false;
 }
 
 function dynamicRows(items, payload, predicate) {
@@ -573,6 +666,7 @@ function renderHistorySections(report, items, capacity) {
 function roFr(label, value) { const v = Array.isArray(value) ? (value.length ? value.map(x => `<span class="ro-bch">${esc(x)}</span>`).join('') : 'Nil') : esc(value ?? ''); return `<div class="ro-fr"><span class="ro-fl">${esc(label)}</span><span class="ro-fc">${v || '—'}</span></div>`; }
 function roTable(headers, rows) { return `<table class="ro-tbl"><thead><tr>${headers.map(h => `<th>${esc(h)}</th>`).join('')}</tr></thead><tbody>${(rows || []).map(row => `<tr>${headers.map((_, i) => `<td>${esc(row[i] || '')}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${headers.length}">No entries</td></tr>`}</tbody></table>`; }
 function setFormMode() {
+  historyRequests.begin();
   state.historyMode = false;
   state.staffMode = false;
   $('#histSidebar').classList.remove('open');
@@ -603,13 +697,19 @@ async function toggleHistory() {
   $('#hbReprint').disabled = true;
   $('#hbDelete').disabled = true;
   $('#historyCancelBtn')?.focus();
-  await refreshHistory();
+  try {
+    await refreshHistory();
+  } catch (error) {
+    $('#histIdle').textContent = 'Unable to load History. Check the notification and try again.';
+    showStatus('error', error.message || String(error));
+  }
 }
 
 async function toggleStaffList() {
   if (state.staffMode) return setFormMode();
   state.staffMode = true;
   state.historyMode = false;
+  historyRequests.begin();
   $('#histSidebar').classList.remove('open');
   $('#formWrap').classList.add('hidden');
   $('#histDetailWrap').classList.remove('open');
@@ -702,13 +802,13 @@ function gdConfirm() {
     c.sigAppt = p.sigAppt;
   }
   fillPayload(c);
-  state.dirty = true;
+  markDirty();
   showStatus('success', `Copied data from ${toDisplayDate(state.gdPrev.report_date)}.`);
   gdClose();
 }
 
 function histDeleteCurrent() { showStatus('error', 'Historical report deletion is disabled in the Supabase version.'); }
-async function histReprint() { if (state.currentHist) await printReportObject(state.currentHist); }
+async function histReprint() { if (state.currentHist?.kind === 'submitted') await printReportObject(state.currentHist); }
 function printContext(report, items, capacity) { return { ward: state.ward, report, capacity, items, settings: pdfSettings, logoUrl: new URL('../assets/heart-logo.png', import.meta.url).href }; }
 async function getPrintContext(report) { const context = await loadHistoricalReportContext(state.ward.id, report); return printContext(report, context.items, context.capacity); }
 async function handleGen() { await printCurrent(true); }

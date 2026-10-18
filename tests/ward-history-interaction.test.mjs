@@ -34,6 +34,6 @@ test('History and Staff own their mode until explicitly closed', async () => {
   assert.match(js, /async function toggleHistory\(\)[\s\S]*?wardTabs\.setMainLocked\(true\)/);
   assert.match(js, /historyCancelBtn/);
   assert.match(js, /async function toggleStaffList\(\)[\s\S]*?wardTabs\.setMainLocked\(true\)/);
-  assert.match(js, /async function openHistory\(report\)[\s\S]*?wardTabs\.setMainLocked\(true\)/);
+  assert.match(js, /async function openHistory\(entry\)[\s\S]*?wardTabs\.setMainLocked\(true\)/);
   assert.doesNotMatch(js, /#tabStrip'\)\.classList\.(?:add|remove)\('disabled-strip'/, 'Page workflow must not bypass the tab controller lock API.');
 });

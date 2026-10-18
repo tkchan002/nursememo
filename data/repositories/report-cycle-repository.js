@@ -53,6 +53,21 @@ export async function getWardCycleDraft(wardId, date, type) {
   if (error) requireCurrentSchema(error);
   return data;
 }
+/** List saved draft metadata only; the full draft is fetched only on selection. */
+export async function listWardCycleDrafts(wardId, limit = 30) {
+  if (DB_MODE === 'demo') return (demoRead().ward_cycle_drafts || [])
+    .filter(d => d.ward_id === wardId && ['pm', 'night'].includes(d.report_type))
+    .sort((a, b) => String(b.updated_at || '').localeCompare(String(a.updated_at || '')))
+    .slice(0, limit)
+    .map(({ ward_id, report_date, report_type, revision, updated_at, created_at }) =>
+      ({ ward_id, report_date, report_type, revision, updated_at, created_at }));
+  const { data, error } = await supabase.rpc('list_ward_cycle_drafts', { p_ward_id: wardId, p_limit: limit });
+  if (error && /PGRST202|42883|could not find|does not exist/i.test(`${error.code || ''} ${error.message || ''}`)) {
+    throw new Error('Ward draft history is not installed in Supabase. Run supabase/UPGRADE_WARD_DRAFT_HISTORY.sql in the existing project SQL Editor.');
+  }
+  if (error) requireCurrentSchema(error);
+  return Array.isArray(data) ? data : [];
+}
 export async function saveWardCycleDraft(row) {
   requireMemoType(row.report_type);
   if (DB_MODE === 'demo') {
@@ -65,7 +80,7 @@ export async function saveWardCycleDraft(row) {
     }
     const now = new Date().toISOString();
     const { expected_report_revision, expected_draft_revision, ...data } = row;
-    const draft = { ...old, ...data, revision: (old?.revision || 0) + 1, updated_at: now };
+    const draft = { ...old, ...data, revision: (old?.revision || 0) + 1, updated_at: now, created_at: old?.created_at || now };
     if (index < 0) state.ward_cycle_drafts.push(draft); else state.ward_cycle_drafts[index] = draft;
     demoWrite(state); return draft;
   }

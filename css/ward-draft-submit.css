@@ -35,3 +35,45 @@
 @media print {
   #submissionBanner { display: none !important; }
 }
+
+/* Persistent record identity; no separate empty success-alert panel. */
+#submissionBanner { min-height: 42px; box-shadow: none; font-size: 12px; }
+#submissionBanner strong { font-size: 12px; flex: 0 0 auto; }
+#submissionBanner span { font-size: 11px; line-height: 1.45; text-align: right; }
+#submissionBanner.submitted { background: #edf4ed; border-color: #a3bca4; color: #24482a; }
+#submissionBanner.pending { background: #f6f3e8; border-color: #bdb6a0; color: #4b4531; }
+#histSidebarTitle .history-title-hint { display: block; font-size: 10px; font-weight: normal; color: #60646a; }
+#histEntryList .hist-entry {
+  width: 100%; appearance: none; text-align: left; font-family: inherit;
+  color: #282828; border: 0; border-bottom: 1px solid #ccc;
+  border-radius: 0; box-shadow: none;
+}
+#histEntryList .hist-entry:focus-visible { outline: 2px solid #1d63bb; outline-offset: -2px; }
+#histEntryList .hist-entry.selected { color: #fff; }
+#histEntryList .he-state { display: block; font-size: 11px; font-weight: 700; margin-bottom: 1px; }
+#histEntryList .he-state.draft { color: #75500b; }
+#histEntryList .he-state.submitted { color: #285d31; }
+#histEntryList .hist-entry.selected .he-state { color: inherit; }
+.ward-page #statusBox {
+  position: fixed; z-index: 1200; bottom: 14px; right: 14px; left: auto;
+  width: min(440px, calc(100vw - 28px)); max-width: none; margin: 0;
+  padding: 9px 13px; font: 12px/1.5 Tahoma, Arial, sans-serif;
+  background: #f7f7f3; border: 1px solid #a7a7a0; border-radius: 3px;
+  box-shadow: 0 2px 8px rgba(0,0,0,.12);
+}
+.ward-page #statusBox.warning { background: #fff7e8; color: #75500b; border-color: #bea76f; }
+@media (max-width: 700px) {
+  #submissionBanner span { text-align: left; }
+  .ward-page #statusBox { bottom: 8px; right: 8px; width: calc(100vw - 16px); }
+}
+@media print { .ward-page #statusBox { display: none !important; } }
+
+.ward-page #statusBox.warning.is-visible { display: block; }
+
+.ward-page #statusBox.error.is-visible, .ward-page #statusBox.warning.is-visible { padding-right: 42px; }
+.ward-page .ward-status-dismiss {
+  position: absolute; right: 7px; top: 5px; width: 28px; height: 28px;
+  border: 1px solid #b7b7b0; background: #fafaf7; color: #454545;
+  border-radius: 2px; cursor: pointer; font: 19px/24px Arial, sans-serif;
+}
+.ward-page .ward-status-dismiss:focus-visible { outline: 2px solid #1d63bb; outline-offset: 2px; }

@@ -26,5 +26,5 @@ export {
   getPatrolMemoCheckpoint,
 } from './repositories/patrol-memo-repository.js';
 // PM and Night are the only supported reporting types.
-export { getWardCycleReport, getCycleReports, submitWardCycleReport, getWardCycleDraft, saveWardCycleDraft, deleteWardCycleDraft } from './repositories/report-cycle-repository.js';
+export { getWardCycleReport, getCycleReports, submitWardCycleReport, getWardCycleDraft, listWardCycleDrafts, saveWardCycleDraft, deleteWardCycleDraft } from './repositories/report-cycle-repository.js';
 export { getPatrolDocxBytes, savePatrolDocxRecovery, savePatrolDocxRevision } from './repositories/patrol-memo-repository.js';

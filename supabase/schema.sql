@@ -1,5 +1,5 @@
 -- Nurse Memo / Patrol Night canonical schema. Run once on an EMPTY dedicated project.
--- This is not an in-place migration for an older project; see NEW_REPOSITORY_SETUP.md.
+-- This is not an in-place migration for an older project; see README.md section 7.
 begin;
 
 

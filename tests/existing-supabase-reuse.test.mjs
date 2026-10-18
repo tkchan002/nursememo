@@ -3,20 +3,26 @@ import assert from 'node:assert/strict';
 import { readFileSync, existsSync } from 'node:fs';
 const file = p => readFileSync(new URL(`../${p}`, import.meta.url), 'utf8');
 
-test('same-project setup preserves user Auth IDs and account passwords', () => {
-  const guide = file('REUSE_EXISTING_SUPABASE.md');
-  assert.match(guide, /Supabase Auth password stays unchanged/i);
-  assert.match(guide, /same account IDs/i);
-  assert.match(guide, /auth\.users/);
-  assert.match(guide, /old database names will not appear/i);
-  assert.match(guide, /not included in this GitHub repository ZIP/i);
+test('single technical README preserves existing-backend migration safeguards', () => {
+  const guide = file('README.md');
+  assert.match(guide, /Do not run `supabase\/schema\.sql` or `supabase\/seed\.sql` over an existing live database\./);
+  assert.match(guide, /EXISTING_PROJECT_LOGIN_UPGRADE\.sql/);
+  assert.match(guide, /UPGRADE_WARD_DRAFT_HISTORY\.sql/);
+  assert.match(guide, /existing.*Auth.*password|underlying Supabase Auth password/i);
+  assert.match(guide, /demo default-password initialization/i);
+  assert.match(guide, /hospital.*server.*frontend|hospital static frontend/i);
 });
 
-test('same-project package cannot accidentally ship a database reset', () => {
+test('only README markdown remains and no database reset script can be shipped', () => {
   assert.equal(existsSync(new URL('../supabase/reset_dedicated_demo_public.sql', import.meta.url)), false);
-  const guide = file('NEW_REPOSITORY_SETUP.md');
-  assert.match(guide, /REUSE_EXISTING_SUPABASE.md/);
-  assert.match(guide, /Do not run/);
+  const removed = [
+    'REUSE_EXISTING_SUPABASE.md', 'NEW_REPOSITORY_SETUP.md',
+    'ACCOUNT_LOGIN_UPGRADE.md', 'NURSE_MEMO_DEMO_ACCOUNTS.md',
+    'SELF_HOSTED_DOCUMENT_SETUP.md', 'WARD_DRAFT_HISTORY_UPGRADE.md',
+  ];
+  for (const legacy of removed) assert.equal(existsSync(new URL(`../${legacy}`, import.meta.url)), false, legacy);
+  assert.match(file('README.md'), /Full document-editor build and packaging/i);
+  assert.match(file('README.md'), /Production-grade password policies/i);
 });
 
 test('new site has a publishable key and never carries a service-role credential', () => {
